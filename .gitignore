@@ -1,0 +1,103 @@
+# ============================================
+# ESP32/Arduino Project .gitignore
+# ============================================
+
+# -------------------------------
+# Arduino/PlatformIO Build Files
+# -------------------------------
+.pio/                    # PlatformIO build directory
+.vscode/                 # VS Code settings (personal preferences)
+.clang_complete
+.gcc-flags.json
+.ccls
+*.elf                    # Compiled executable
+*.hex                    # Compiled hex file (firmware format)
+*.bin                    # Binary firmware file
+*.map                    # Memory map file
+*.o                      # Object files (intermediate compile step)
+*.a                      # Static library files
+*.so                     # Shared library files
+*.dylib                  # macOS library files
+
+# Arduino IDE files
+*.autosave              # Auto-save backup
+*~                      # Backup files
+
+# -------------------------------
+# SECURITY - NEVER COMMIT THESE
+# -------------------------------
+secrets.h               # Your API keys and passwords
+config_private.h        # Private configuration
+device_keys/            # Cryptographic keys for OTA
+*.pem                   # Private key files
+*.key                   # Certificate key files
+*.crt                   # Certificate files
+*.p12                   # Certificate bundles
+
+# Customer/Manufacturing Data
+customer_data/          # Any customer information
+device_registrations.csv
+manufacturing_keys/
+provisioning_secrets/
+*.db                    # Database files
+*.sqlite
+
+# -------------------------------
+# Operating System Files (Junk)
+# -------------------------------
+.DS_Store               # macOS folder metadata
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db            # Windows thumbnail cache
+Thumbs.db              # Windows thumbnail database
+desktop.ini            # Windows folder settings
+*.lnk                  # Windows shortcuts
+
+# -------------------------------
+# Personal Notes (Keep Private)
+# -------------------------------
+TODO_personal.md
+notes_private.md
+scratch/
+temp/
+
+# -------------------------------
+# Editor/IDE Files
+# -------------------------------
+*.swp                  # Vim swap files
+*.swo
+*.swn
+*~
+.idea/                 # JetBrains IDEs
+*.iml
+*.sublime-workspace
+*.sublime-project
+
+# -------------------------------
+# Dependencies & Libraries
+# -------------------------------
+node_modules/          # If you use Node.js tools
+.npm/
+vendor/                # Third-party code
+
+# -------------------------------
+# Build & Test Artifacts
+# -------------------------------
+build/
+dist/
+*.log
+test_output/
+coverage/
+
+# -------------------------------
+# Documentation Build Files
+# -------------------------------
+_site/                 # Jekyll (GitHub Pages)
+.sass-cache/
+.jekyll-metadata
+
+# But keep these important files
+!.gitignore
+!.gitattributes
