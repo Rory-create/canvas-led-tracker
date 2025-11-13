@@ -26,8 +26,8 @@
 # -------------------------------
 # SECURITY - NEVER COMMIT THESE
 # -------------------------------
-secrets.h               # Your API keys and passwords
-config_private.h        # Private configuration
+**/secrets.h            # Your API keys and passwords (anywhere in repo)
+**/config_private.h     # Private configuration (anywhere in repo)
 device_keys/            # Cryptographic keys for OTA
 *.pem                   # Private key files
 *.key                   # Certificate key files
@@ -36,7 +36,7 @@ device_keys/            # Cryptographic keys for OTA
 
 # Customer/Manufacturing Data
 customer_data/          # Any customer information
-device_registrations.csv
+**/device_registrations.csv  # Device registry (anywhere in repo)
 manufacturing_keys/
 provisioning_secrets/
 *.db                    # Database files
@@ -58,8 +58,8 @@ desktop.ini            # Windows folder settings
 # -------------------------------
 # Personal Notes (Keep Private)
 # -------------------------------
-TODO_personal.md
-notes_private.md
+**/TODO_personal.md     # Personal todos (anywhere in repo)
+**/notes_private.md     # Private notes (anywhere in repo)
 scratch/
 temp/
 
@@ -101,4 +101,3 @@ _site/                 # Jekyll (GitHub Pages)
 # But keep these important files
 !.gitignore
 !.gitattributes
-test_file.txt
