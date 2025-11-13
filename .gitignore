@@ -101,3 +101,4 @@ _site/                 # Jekyll (GitHub Pages)
 # But keep these important files
 !.gitignore
 !.gitattributes
+test_file.txt
