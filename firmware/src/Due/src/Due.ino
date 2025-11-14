@@ -65,8 +65,8 @@ bool timeSyncComplete = false;
 // ============================================
 // MACROS & HELPERS
 // ============================================
-#define PREFS_GET_STR(key, var, def) preferences.getString(key, var, sizeof(var)); if (strlen(var) == 0) strcpy(var, def)
-#define PREFS_SET_STR(key, var) preferences.putString(key, var)
+#define PREFS_GET_STR(key, var, def) do { preferences.getString(key, var, sizeof(var)); if (strlen(var) == 0) strcpy(var, def); } while(0)
+#define PREFS_SET_STR(key, var) do { preferences.putString(key, var); } while(0)
 #define PREFS_GET_INT(key, def) preferences.getInt(key, def)
 #define PREFS_GET_BOOL(key, def) preferences.getBool(key, def)
 #define LED_PINS {greenLED, yellowLED, redLED}
