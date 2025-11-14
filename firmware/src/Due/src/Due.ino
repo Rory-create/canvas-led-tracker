@@ -894,14 +894,18 @@ void setup() {
   Serial.println("║ Canvas LED Tracker - Optimized ║");
   Serial.println("╚════════════════════════════════════════╝\n");
   
-  // Initialize watchdog timer (30 second timeout)
-  // Watchdog configuration for ESP-IDF 5.x
-esp_task_wdt_config_t wdt_config = {
-  .timeout_ms = 30000,
-  .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,
-  .trigger_panic = true
-};
-esp_task_wdt_init(&wdt_config);
+#if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
+  // ESP32 Arduino Core 3.x (PlatformIO)
+  esp_task_wdt_config_t wdt_config = {
+    .timeout_ms = 30000,
+    .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,
+    .trigger_panic = true
+  };
+  esp_task_wdt_init(&wdt_config);
+#else
+  // ESP32 Arduino Core 2.x (Arduino IDE)
+  esp_task_wdt_init(30, true);
+#endif
   esp_task_wdt_add(NULL);
   
   int pins[] = LED_PINS;
