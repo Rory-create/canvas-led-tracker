@@ -7,8 +7,6 @@
 #include <Preferences.h>
 #include <ArduinoJson.h>
 #include <esp_task_wdt.h>
-#include "version.h"
-#include "ota_update.h"
 
 // ============================================
 // CONFIG STRUCTURES & GLOBAL VARIABLES
@@ -65,10 +63,6 @@ bool timeSyncComplete = false;
 // ============================================
 // MACROS & HELPERS
 // ============================================
-#define PREFS_GET_STR(key, var, def) do { preferences.getString(key, var, sizeof(var)); if (strlen(var) == 0) strcpy(var, def); } while(0)
-#define PREFS_SET_STR(key, var) do { preferences.putString(key, var); } while(0)
-#define PREFS_GET_INT(key, def) preferences.getInt(key, def)
-#define PREFS_GET_BOOL(key, def) preferences.getBool(key, def)
 #define LED_PINS {greenLED, yellowLED, redLED}
 
 void addToLog(String msg) {
@@ -82,18 +76,18 @@ void addToLog(String msg) {
 // ============================================
 void saveConfig() {
   preferences.begin("config", false);
-  
-  PREFS_SET_STR("ssid", wifiConfig.ssid);
-  PREFS_SET_STR("pass", wifiConfig.password);
-  PREFS_SET_STR("ssid2", wifiConfig.ssid2);
-  PREFS_SET_STR("pass2", wifiConfig.password2);
+
+  preferences.putString("ssid", wifiConfig.ssid);
+  preferences.putString("pass", wifiConfig.password);
+  preferences.putString("ssid2", wifiConfig.ssid2);
+  preferences.putString("pass2", wifiConfig.password2);
   preferences.putBool("use2nd", wifiConfig.useSecondaryNetwork);
-  
-  PREFS_SET_STR("apiUrl", canvasConfig.apiUrl);
-  PREFS_SET_STR("apiToken", canvasConfig.apiToken);
+
+  preferences.putString("apiUrl", canvasConfig.apiUrl);
+  preferences.putString("apiToken", canvasConfig.apiToken);
   preferences.putInt("itemsPer", canvasConfig.itemsPerPage);
   preferences.putULong("fetchInt", canvasConfig.fetchInterval);
-  
+
   preferences.putBool("useFlash", ledConfig.useFlashing);
   preferences.putInt("flashInt", ledConfig.flashInterval);
   preferences.putInt("flashStep", ledConfig.flashStep);
@@ -104,55 +98,75 @@ void saveConfig() {
   preferences.putInt("quietEnd", ledConfig.quietHourEnd);
   preferences.putInt("redDays", ledConfig.redLEDDaysAhead);
   preferences.putInt("yellowDays", ledConfig.yellowLEDDaysAhead);
-  
-  PREFS_SET_STR("tzString", timezoneConfig.tzString);
-  PREFS_SET_STR("tzName", timezoneConfig.displayName);
-  
+
+  preferences.putString("tzString", timezoneConfig.tzString);
+  preferences.putString("tzName", timezoneConfig.displayName);
+
   preferences.putBool("setupDone", systemConfig.setupComplete);
-  PREFS_SET_STR("devName", systemConfig.deviceName);
+  preferences.putString("devName", systemConfig.deviceName);
   preferences.putBool("debug", systemConfig.debugMode);
-  PREFS_SET_STR("apPass", systemConfig.apPassword);
-  
+  preferences.putString("apPass", systemConfig.apPassword);
+
   preferences.end();
-  Serial.println("✅ Configuration saved!");
+  Serial.println("âœ… Configuration saved!");
 }
 
 void loadConfig() {
   preferences.begin("config", true);
-  systemConfig.setupComplete = PREFS_GET_BOOL("setupDone", false);
-  
+  systemConfig.setupComplete = preferences.getBool("setupDone", false);
+
   if (systemConfig.setupComplete) {
-    PREFS_GET_STR("ssid", wifiConfig.ssid, "");
-    PREFS_GET_STR("pass", wifiConfig.password, "");
-    PREFS_GET_STR("ssid2", wifiConfig.ssid2, "");
-    PREFS_GET_STR("pass2", wifiConfig.password2, "");
-    wifiConfig.useSecondaryNetwork = PREFS_GET_BOOL("use2nd", false);
-    
-    PREFS_GET_STR("apiUrl", canvasConfig.apiUrl, "https://ojrsd.instructure.com/api/v1/users/self/todo");
-    PREFS_GET_STR("apiToken", canvasConfig.apiToken, "");
-    canvasConfig.itemsPerPage = PREFS_GET_INT("itemsPer", 6);
+    preferences.getString("ssid", wifiConfig.ssid, sizeof(wifiConfig.ssid));
+    if (strlen(wifiConfig.ssid) == 0) strcpy(wifiConfig.ssid, "");
+
+    preferences.getString("pass", wifiConfig.password, sizeof(wifiConfig.password));
+    if (strlen(wifiConfig.password) == 0) strcpy(wifiConfig.password, "");
+
+    preferences.getString("ssid2", wifiConfig.ssid2, sizeof(wifiConfig.ssid2));
+    if (strlen(wifiConfig.ssid2) == 0) strcpy(wifiConfig.ssid2, "");
+
+    preferences.getString("pass2", wifiConfig.password2, sizeof(wifiConfig.password2));
+    if (strlen(wifiConfig.password2) == 0) strcpy(wifiConfig.password2, "");
+
+    wifiConfig.useSecondaryNetwork = preferences.getBool("use2nd", false);
+
+    preferences.getString("apiUrl", canvasConfig.apiUrl, sizeof(canvasConfig.apiUrl));
+    if (strlen(canvasConfig.apiUrl) == 0) strcpy(canvasConfig.apiUrl, "https://ojrsd.instructure.com/api/v1/users/self/todo");
+
+    preferences.getString("apiToken", canvasConfig.apiToken, sizeof(canvasConfig.apiToken));
+    if (strlen(canvasConfig.apiToken) == 0) strcpy(canvasConfig.apiToken, "");
+
+    canvasConfig.itemsPerPage = preferences.getInt("itemsPer", 6);
     canvasConfig.fetchInterval = preferences.getULong("fetchInt", 10UL * 60UL * 1000UL);
-    
-    ledConfig.useFlashing = PREFS_GET_BOOL("useFlash", true);
-    ledConfig.flashInterval = PREFS_GET_INT("flashInt", 1);
-    ledConfig.flashStep = PREFS_GET_INT("flashStep", 1);
-    ledConfig.solidBrightness = PREFS_GET_INT("brightness", 100);
-    ledConfig.maxBrightness = PREFS_GET_INT("maxBright", 100);
-    ledConfig.quietHoursEnabled = PREFS_GET_BOOL("quietEn", false);
-    ledConfig.quietHourStart = PREFS_GET_INT("quietStart", 22);
-    ledConfig.quietHourEnd = PREFS_GET_INT("quietEnd", 7);
-    ledConfig.redLEDDaysAhead = PREFS_GET_INT("redDays", 0);
-    ledConfig.yellowLEDDaysAhead = PREFS_GET_INT("yellowDays", 1);
-    
-    PREFS_GET_STR("tzString", timezoneConfig.tzString, "EST5EDT,M3.2.0/2,M11.1.0/2");
-    PREFS_GET_STR("tzName", timezoneConfig.displayName, "US Eastern");
-    PREFS_GET_STR("devName", systemConfig.deviceName, "Canvas_LED_Tracker");
-    systemConfig.debugMode = PREFS_GET_BOOL("debug", true);
-    PREFS_GET_STR("apPass", systemConfig.apPassword, "canvas123");
-    
-    Serial.println("✅ Configuration loaded");
+
+    ledConfig.useFlashing = preferences.getBool("useFlash", true);
+    ledConfig.flashInterval = preferences.getInt("flashInt", 1);
+    ledConfig.flashStep = preferences.getInt("flashStep", 1);
+    ledConfig.solidBrightness = preferences.getInt("brightness", 100);
+    ledConfig.maxBrightness = preferences.getInt("maxBright", 100);
+    ledConfig.quietHoursEnabled = preferences.getBool("quietEn", false);
+    ledConfig.quietHourStart = preferences.getInt("quietStart", 22);
+    ledConfig.quietHourEnd = preferences.getInt("quietEnd", 7);
+    ledConfig.redLEDDaysAhead = preferences.getInt("redDays", 0);
+    ledConfig.yellowLEDDaysAhead = preferences.getInt("yellowDays", 1);
+
+    preferences.getString("tzString", timezoneConfig.tzString, sizeof(timezoneConfig.tzString));
+    if (strlen(timezoneConfig.tzString) == 0) strcpy(timezoneConfig.tzString, "EST5EDT,M3.2.0/2,M11.1.0/2");
+
+    preferences.getString("tzName", timezoneConfig.displayName, sizeof(timezoneConfig.displayName));
+    if (strlen(timezoneConfig.displayName) == 0) strcpy(timezoneConfig.displayName, "US Eastern");
+
+    preferences.getString("devName", systemConfig.deviceName, sizeof(systemConfig.deviceName));
+    if (strlen(systemConfig.deviceName) == 0) strcpy(systemConfig.deviceName, "Canvas_LED_Tracker");
+
+    systemConfig.debugMode = preferences.getBool("debug", true);
+
+    preferences.getString("apPass", systemConfig.apPassword, sizeof(systemConfig.apPassword));
+    if (strlen(systemConfig.apPassword) == 0) strcpy(systemConfig.apPassword, "canvas123");
+
+    Serial.println("âœ… Configuration loaded");
   } else {
-    Serial.println("⚠️ First time setup required");
+    Serial.println("âš ï¸ First time setup required");
   }
   preferences.end();
 }
@@ -163,18 +177,18 @@ void loadConfig() {
 time_t esp_timegm(struct tm* t) {
   time_t year = t->tm_year + 1900;
   time_t days = 0;
-  
+
   for (int y = 1970; y < year; y++) {
     days += (y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)) ? 366 : 365;
   }
-  
+
   int monthDays[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
   if (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) monthDays[1] = 29;
-  
+
   for (int m = 1; m < t->tm_mon + 1; m++) {
     days += monthDays[m - 1];
   }
-  
+
   days += t->tm_mday - 1;
   return days * 86400 + t->tm_hour * 3600 + t->tm_min * 60 + t->tm_sec;
 }
@@ -183,42 +197,42 @@ bool isQuietHours() {
   if (!ledConfig.quietHoursEnabled) return false;
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) return false;
-  
+
   int h = timeinfo.tm_hour;
-  return (ledConfig.quietHourStart < ledConfig.quietHourEnd) 
+  return (ledConfig.quietHourStart < ledConfig.quietHourEnd)
     ? (h >= ledConfig.quietHourStart && h < ledConfig.quietHourEnd)
     : (h >= ledConfig.quietHourStart || h < ledConfig.quietHourEnd);
 }
 
 void initTime() {
   configTzTime(timezoneConfig.tzString, "pool.ntp.org");
-  Serial.println("⏳ Waiting for NTP time sync...");
+  Serial.println("â³ Waiting for NTP time sync...");
   struct tm timeinfo;
   int attempts = 0;
-  
+
   while (!getLocalTime(&timeinfo) && attempts < 20) {
     delay(500);
     Serial.print(".");
     attempts++;
   }
-  
+
   if (attempts >= 20) {
-    Serial.println("\n⚠️ Time sync timeout - will retry later");
+    Serial.println("\nâš ï¸ Time sync timeout - will retry later");
     timeSyncComplete = false;
     return;
   }
-  
+
   timeSyncComplete = true;
-  Serial.println("\n✅ Time synced!");
+  Serial.println("\nâœ… Time synced!");
   char buffer[64];
   strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S %Z", &timeinfo);
-  Serial.printf("📅 %s: %s\n", timezoneConfig.displayName, buffer);
+  Serial.printf("ðŸ“… %s: %s\n", timezoneConfig.displayName, buffer);
 }
 
 void connectWiFi() {
   // Don't interrupt if already connected or connecting
   if (WiFi.status() == WL_CONNECTED) return;
-  
+
   // Check if connection is in progress
   wl_status_t status = WiFi.status();
   if (status == WL_IDLE_STATUS || status == WL_DISCONNECTED) {
@@ -227,9 +241,9 @@ void connectWiFi() {
     // Connection in progress, wait
     return;
   }
-  
-  Serial.println("📡 Connecting to WiFi...");
-  
+
+  Serial.println("ðŸ“¡ Connecting to WiFi...");
+
   // Only start AP if we're in first-time setup
   if (!systemConfig.setupComplete) {
     WiFi.mode(WIFI_AP_STA);
@@ -237,7 +251,7 @@ void connectWiFi() {
     WiFi.mode(WIFI_STA);
   }
   delay(100);
-  
+
   // Try primary network
   Serial.printf("Trying: %s\n", wifiConfig.ssid);
   WiFi.begin(wifiConfig.ssid, wifiConfig.password);
@@ -246,7 +260,7 @@ void connectWiFi() {
     delay(100);
     Serial.print(".");
   }
-  
+
   // Try secondary if available and primary failed
   if (WiFi.status() != WL_CONNECTED && wifiConfig.useSecondaryNetwork && strlen(wifiConfig.ssid2) > 0) {
     Serial.printf("\nTrying: %s\n", wifiConfig.ssid2);
@@ -257,24 +271,24 @@ void connectWiFi() {
       Serial.print(".");
     }
   }
-  
+
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("\n✅ Connected: %s\n", WiFi.SSID().c_str());
-    
+    Serial.printf("\nâœ… Connected: %s\n", WiFi.SSID().c_str());
+
     // Wait a moment for IP to stabilize
     delay(500);
-    Serial.printf("📍 IP: %s\n", WiFi.localIP().toString().c_str());
-    
+    Serial.printf("ðŸ“ IP: %s\n", WiFi.localIP().toString().c_str());
+
     String hostname = String(systemConfig.deviceName);
     hostname.replace(" ", "");
     hostname.replace("_", "");
     hostname.toLowerCase();
-    
+
     for (int i = 0; i < 3; i++) {
       if (MDNS.begin(hostname.c_str())) {
         MDNS.addService("http", "tcp", 80);
-        Serial.printf("🌐 mDNS: http://%s.local\n", hostname.c_str());
-        
+        Serial.printf("ðŸŒ mDNS: http://%s.local\n", hostname.c_str());
+
         // Try time sync if not already complete
         if (!timeSyncComplete) {
           initTime();
@@ -283,139 +297,139 @@ void connectWiFi() {
       }
       delay(500);
     }
-    Serial.println("⚠️ mDNS failed");
+    Serial.println("âš ï¸ mDNS failed");
   } else {
-    Serial.println("\n❌ WiFi connection failed");
+    Serial.println("\nâŒ WiFi connection failed");
   }
 }
 
 int fetchCanvasAssignments() {
   connectWiFi();
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("❌ WiFi not connected - keeping last status");
+    Serial.println("âŒ WiFi not connected - keeping last status");
     consecutiveErrors++;
     return assignmentStatus;
   }
-  
+
   // Don't fetch if time isn't synced
   if (!timeSyncComplete) {
-    Serial.println("⚠️ Time not synced - retrying sync...");
+    Serial.println("âš ï¸ Time not synced - retrying sync...");
     initTime();
     if (!timeSyncComplete) {
-      Serial.println("❌ Cannot fetch without valid time - keeping last status");
+      Serial.println("âŒ Cannot fetch without valid time - keeping last status");
       return assignmentStatus;
     }
   }
-  
+
   client.setInsecure();
   http.setTimeout(HTTPS_TIMEOUT);
   http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
-  
+
   int newStatus = 0;
   char fullUrl[512];
   snprintf(fullUrl, sizeof(fullUrl), "%s?per_page=%d", canvasConfig.apiUrl, canvasConfig.itemsPerPage);
-  
+
   for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    if (systemConfig.debugMode) Serial.printf("🔄 Attempt %d/%d\n", attempt + 1, MAX_RETRIES);
-    
+    if (systemConfig.debugMode) Serial.printf("ðŸ”„ Attempt %d/%d\n", attempt + 1, MAX_RETRIES);
+
     if (http.begin(client, fullUrl)) {
       http.addHeader("Authorization", String("Bearer ") + canvasConfig.apiToken);
       http.addHeader("Accept", "application/json");
-      
+
       int httpCode = http.GET();
-      if (systemConfig.debugMode) Serial.printf("📥 HTTP: %d\n", httpCode);
-      
+      if (systemConfig.debugMode) Serial.printf("ðŸ“¥ HTTP: %d\n", httpCode);
+
       if (httpCode == 200) {
         DynamicJsonDocument doc(8192);
         DeserializationError error = deserializeJson(doc, http.getString());
-        
+
         if (!error) {
           time_t now, redDeadline = 0, yellowDeadline = 0;
           time(&now);
           redDeadline = now + (ledConfig.redLEDDaysAhead * 86400);
           yellowDeadline = now + (ledConfig.yellowLEDDaysAhead * 86400);
-          
+
           if (systemConfig.debugMode) {
-            Serial.printf("📅 Checking: Red=%d days, Yellow=%d days\n", 
+            Serial.printf("ðŸ“… Checking: Red=%d days, Yellow=%d days\n",
                          ledConfig.redLEDDaysAhead, ledConfig.yellowLEDDaysAhead);
           }
-          
+
           for (JsonObject item : doc.as<JsonArray>()) {
             const char* dueDate = item["assignment"]["due_at"];
             if (dueDate && !item["completed"].as<bool>()) {
               struct tm due_tm = {0};
               if (strptime(dueDate, "%Y-%m-%dT%H:%M:%SZ", &due_tm)) {
                 time_t due_time = esp_timegm(&due_tm);
-                
+
                 // Validate date is reasonable (between 2020 and 2050)
                 if (due_time < 1577836800 || due_time > 2524608000) {
-                  Serial.printf("⚠️ Invalid date detected: %s\n", dueDate);
+                  Serial.printf("âš ï¸ Invalid date detected: %s\n", dueDate);
                   continue;
                 }
-                
+
                 if (due_time <= redDeadline) {
                   newStatus = 1;
-                  if (systemConfig.debugMode) Serial.println("🔴 RED");
+                  if (systemConfig.debugMode) Serial.println("ðŸ”´ RED");
                   break;
                 } else if (due_time <= yellowDeadline) {
                   newStatus = 2;
-                  if (systemConfig.debugMode) Serial.println("🟡 YELLOW");
+                  if (systemConfig.debugMode) Serial.println("ðŸŸ¡ YELLOW");
                 }
               }
             }
           }
           http.end();
-          
+
           // Success!
           consecutiveErrors = 0;
           lastSuccessfulFetch = millis();
-          Serial.println("✅ Canvas fetch successful");
+          Serial.println("âœ… Canvas fetch successful");
           return newStatus;
         } else {
-          Serial.printf("⚠️ JSON parse error: %s\n", error.c_str());
+          Serial.printf("âš ï¸ JSON parse error: %s\n", error.c_str());
         }
       } else if (httpCode == 401) {
-        Serial.println("❌ Canvas API: Invalid token (401)");
+        Serial.println("âŒ Canvas API: Invalid token (401)");
         http.end();
         consecutiveErrors++;
         return assignmentStatus; // Keep current status
       } else if (httpCode == 500 || httpCode == 502 || httpCode == 503 || httpCode == 504) {
-        Serial.printf("⚠️ Canvas server error (%d) - likely outage\n", httpCode);
+        Serial.printf("âš ï¸ Canvas server error (%d) - likely outage\n", httpCode);
         http.end();
         consecutiveErrors++;
         // Don't retry on server errors - save time
         break;
       } else if (httpCode == 429) {
-        Serial.println("⚠️ Canvas API: Rate limited (429)");
+        Serial.println("âš ï¸ Canvas API: Rate limited (429)");
         http.end();
         consecutiveErrors++;
         return assignmentStatus;
       } else if (httpCode < 0) {
-        Serial.printf("❌ HTTP request failed: %s\n", http.errorToString(httpCode).c_str());
+        Serial.printf("âŒ HTTP request failed: %s\n", http.errorToString(httpCode).c_str());
       } else {
-        Serial.printf("⚠️ Unexpected HTTP code: %d\n", httpCode);
+        Serial.printf("âš ï¸ Unexpected HTTP code: %d\n", httpCode);
       }
       http.end();
     } else {
-      Serial.println("❌ Could not connect to Canvas");
+      Serial.println("âŒ Could not connect to Canvas");
     }
-    
+
     if (attempt < MAX_RETRIES - 1) {
-      Serial.println("⏳ Retrying in 2 seconds...");
+      Serial.println("â³ Retrying in 2 seconds...");
       delay(2000);
     }
   }
-  
+
   consecutiveErrors++;
-  
+
   // If we've had many consecutive errors, warn the user
   if (consecutiveErrors >= 3) {
-    Serial.printf("⚠️ %d consecutive Canvas errors - keeping last known status\n", consecutiveErrors);
+    Serial.printf("âš ï¸ %d consecutive Canvas errors - keeping last known status\n", consecutiveErrors);
     if (consecutiveErrors == 5) {
-      Serial.println("💡 TIP: Canvas may be experiencing an outage. Device will keep trying.");
+      Serial.println("ðŸ’¡ TIP: Canvas may be experiencing an outage. Device will keep trying.");
     }
   }
-  
+
   return assignmentStatus; // Keep last known status on error
 }
 
@@ -453,11 +467,11 @@ void updateLEDs() {
     setAllLEDsOff();
     return;
   }
-  
+
   int targetLED = greenLED;
   if (assignmentStatus == 1) targetLED = redLED;
   else if (assignmentStatus == 2) targetLED = yellowLED;
-  
+
   if (ledConfig.useFlashing && assignmentStatus > 0) {
     setAllLEDsOff();
     pulseLED(targetLED, lastPulseTime, pulseBrightness, fadeDirection);
@@ -488,7 +502,7 @@ button:hover{opacity:0.9;}
 </style></head><body><div class="container">
 <h1>Canvas LED Tracker</h1>
 <p style="text-align:center;color:#666;">Initial Setup</p>
-<p><b>Get Canvas Token:</b> Open Canvas in browser → Account → Settings → Approved Integrations → + New Access Token</p>
+<p><b>Get Canvas Token:</b> Open Canvas in browser â†’ Account â†’ Settings â†’ Approved Integrations â†’ + New Access Token</p>
 <form method="POST" action="/save" onsubmit="return validateSetup()">
 <div class="section">
 <h3>WiFi Settings</h3>
@@ -620,31 +634,31 @@ void handleRoot() {
 void handleSettings() {
   String html = FPSTR(SETTINGS_HTML);
   html.replace("%DEVICE_NAME%", systemConfig.deviceName);
-  html.replace("%WIFI_STATUS%", WiFi.status() == WL_CONNECTED ? "●" : "○");
-  
+  html.replace("%WIFI_STATUS%", WiFi.status() == WL_CONNECTED ? "â—" : "â—‹");
+
   String statusText = "None";
   if (assignmentStatus == 1) statusText = "Today";
   else if (assignmentStatus == 2) statusText = "Tomorrow";
   html.replace("%ASSIGNMENT_STATUS%", statusText);
-  
+
   // Show time since last check and last successful fetch
   String lastCheckText = String((millis() - lastFetch) / 60000) + "m ago";
   if (consecutiveErrors > 0) {
     lastCheckText += " (" + String(consecutiveErrors) + " errors)";
   }
   html.replace("%LAST_CHECK%", lastCheckText);
-  
+
   // Add error alert if needed
   String errorAlert = "";
   if (consecutiveErrors >= 3) {
-    errorAlert = "<div class='alert alert-warning'>⚠️ Canvas API experiencing issues (" + 
+    errorAlert = "<div class='alert alert-warning'>âš ï¸ Canvas API experiencing issues (" +
                  String(consecutiveErrors) + " errors). Using last known status.</div>";
   }
   if (!timeSyncComplete) {
-    errorAlert += "<div class='alert alert-error'>❌ Time sync failed. Assignment checks disabled until time is synced.</div>";
+    errorAlert += "<div class='alert alert-error'>âŒ Time sync failed. Assignment checks disabled until time is synced.</div>";
   }
   html.replace("%ERROR_ALERT%", errorAlert);
-  
+
   html.replace("%SSID%", wifiConfig.ssid);
   html.replace("%PASSWORD%", wifiConfig.password);
   html.replace("%SSID2%", wifiConfig.ssid2);
@@ -662,7 +676,7 @@ void handleSettings() {
   html.replace("%FETCH_INT%", String(canvasConfig.fetchInterval / 60000));
   html.replace("%AP_PASSWORD%", systemConfig.apPassword);
   html.replace("%DEBUG_CHECKED%", systemConfig.debugMode ? "checked" : "");
-  
+
   server.send(200, "text/html", html);
 }
 
@@ -687,14 +701,14 @@ void handleHealth() {
   doc["assignment_status"] = assignmentStatus;
   doc["free_heap"] = ESP.getFreeHeap();
   doc["cpu_temp"] = temperatureRead();
-  
+
   String response;
   serializeJson(doc, response);
   server.send(200, "application/json", response);
 }
 
 void handleReboot() {
-  Serial.println("\n🔄 Reboot requested");
+  Serial.println("\nðŸ”„ Reboot requested");
   server.sendHeader("Connection", "close");
   server.send(200, "text/plain", "Rebooting...");
   delay(500);
@@ -702,22 +716,22 @@ void handleReboot() {
 }
 
 void handleFactoryReset() {
-  Serial.println("\n╔══════════════════════════════════════╗");
-  Serial.println("║ 🏭 FACTORY RESET INITIATED ║");
-  Serial.println("╚══════════════════════════════════════╝");
-  
+  Serial.println("\nâ•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—");
+  Serial.println("â•‘ ðŸ­ FACTORY RESET INITIATED â•‘");
+  Serial.println("â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•");
+
   server.sendHeader("Connection", "close");
   server.send(200, "text/plain", "Factory reset in progress...");
   delay(500);
-  
+
   server.stop();
   WiFi.disconnect(true);
   delay(100);
-  
+
   preferences.begin("config", false);
   preferences.clear();
   preferences.end();
-  
+
   // LED feedback
   for (int i = 0; i < 20; i++) {
     int pins[] = LED_PINS;
@@ -726,7 +740,7 @@ void handleFactoryReset() {
     for (int p : pins) digitalWrite(p, LOW);
     delay(100);
   }
-  
+
   Serial.println("Factory reset complete! Rebooting...\n");
   delay(1000);
   ESP.restart();
@@ -741,7 +755,7 @@ void handleSave() {
   }
   if (server.hasArg("password2")) server.arg("password2").toCharArray(wifiConfig.password2, sizeof(wifiConfig.password2));
   if (server.hasArg("apiToken")) server.arg("apiToken").toCharArray(canvasConfig.apiToken, sizeof(canvasConfig.apiToken));
-  
+
   if (server.hasArg("timezone")) {
     String tz = server.arg("timezone");
     int pipe = tz.indexOf('|');
@@ -750,53 +764,53 @@ void handleSave() {
       tz.substring(pipe + 1).toCharArray(timezoneConfig.displayName, sizeof(timezoneConfig.displayName));
     }
   }
-  
+
   ledConfig.useFlashing = server.hasArg("useFlashing");
   if (server.hasArg("flashInterval")) ledConfig.flashInterval = server.arg("flashInterval").toInt();
   if (server.hasArg("flashStep")) ledConfig.flashStep = server.arg("flashStep").toInt();
   if (server.hasArg("maxBrightness")) ledConfig.maxBrightness = constrain(server.arg("maxBrightness").toInt(), 10, 255);
-  
+
   // Validate and set LED days with constraint
   if (server.hasArg("redDays") && server.hasArg("yellowDays")) {
     int redDays = constrain(server.arg("redDays").toInt(), 0, 7);
     int yellowDays = constrain(server.arg("yellowDays").toInt(), 0, 14);
-    
+
     // Ensure yellow >= red
     if (yellowDays < redDays) {
       yellowDays = redDays;
     }
-    
+
     ledConfig.redLEDDaysAhead = redDays;
     ledConfig.yellowLEDDaysAhead = yellowDays;
   }
-  
+
   ledConfig.quietHoursEnabled = server.hasArg("quietHours");
   if (server.hasArg("quietStart")) ledConfig.quietHourStart = server.arg("quietStart").toInt();
   if (server.hasArg("quietEnd")) ledConfig.quietHourEnd = server.arg("quietEnd").toInt();
-  
+
   if (server.hasArg("deviceName")) server.arg("deviceName").toCharArray(systemConfig.deviceName, sizeof(systemConfig.deviceName));
   if (server.hasArg("fetchInterval")) canvasConfig.fetchInterval = server.arg("fetchInterval").toInt() * 60UL * 1000UL;
   if (server.hasArg("apPassword")) server.arg("apPassword").toCharArray(systemConfig.apPassword, sizeof(systemConfig.apPassword));
-  
+
   systemConfig.debugMode = server.hasArg("debug");
   systemConfig.setupComplete = true;
   saveConfig();
-  
+
   // Detect if accessed via AP or local WiFi
   IPAddress clientIP = server.client().remoteIP();
   IPAddress apIP = WiFi.softAPIP();
   bool isFromAP = (clientIP[0] == apIP[0] && clientIP[1] == apIP[1] && clientIP[2] == apIP[2]);
-  
+
   if (isFromAP) {
     // From AP - show simple success message that auto-closes
     String confirmHtml = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'>";
     confirmHtml += "<style>body{font-family:Arial;max-width:600px;margin:50px auto;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;text-align:center;}";
     confirmHtml += ".container{background:white;padding:40px;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,0.2);}";
     confirmHtml += "h1{color:#4CAF50;font-size:48px;margin:0;}p{font-size:18px;color:#666;}</style></head><body><div class='container'>";
-    confirmHtml += "<h1>✓</h1><h2>Settings Saved!</h2><p>Device is rebooting...<br>You can close this window.</p>";
+    confirmHtml += "<h1>âœ“</h1><h2>Settings Saved!</h2><p>Device is rebooting...<br>You can close this window.</p>";
     confirmHtml += "<p>Access settings at:<br><b>http://" + WiFi.localIP().toString() + "</b></p>";
     confirmHtml += "</div><script>setTimeout(function(){window.close();},3000);</script></body></html>";
-    
+
     server.sendHeader("Connection", "close");
     server.send(200, "text/html", confirmHtml);
     delay(2000);
@@ -811,14 +825,14 @@ void handleSave() {
     confirmHtml += ".note{background:#d4edda;padding:15px;border-radius:5px;margin:20px 0;border:2px solid #4CAF50;color:#155724;}</style></head><body><div class='container'>";
     confirmHtml += "<h1>Settings Saved Successfully!</h1>";
     confirmHtml += "<div class='note'>Your changes have been saved.<br>Reboot the device to apply all changes.</div>";
-    
+
     String localUrl = "http://" + WiFi.localIP().toString();
     confirmHtml += "<p>Bookmark this URL:<br><input type='text' id='url' value='" + localUrl + "' readonly onclick='this.select();document.execCommand(\"copy\");alert(\"Copied!\");'></p>";
     confirmHtml += "<button onclick='doReboot()'>Reboot Now</button>";
     confirmHtml += "<button onclick='location.href=\"/settings\"'>Back to Settings</button>";
     confirmHtml += "<script>function doReboot(){if(confirm('Reboot device now?')){fetch('/reboot',{method:'POST'}).then(()=>{document.body.innerHTML='<div class=\"container\"><h2>Rebooting...</h2><p>Please wait 10 seconds then refresh the page.</p></div>';});}}</script>";
     confirmHtml += "</div></body></html>";
-    
+
     server.send(200, "text/html", confirmHtml);
   }
 }
@@ -832,53 +846,53 @@ void startWebServer() {
   server.on("/factory-reset", HTTP_POST, handleFactoryReset);
   server.on("/save", HTTP_POST, handleSave);
   server.onNotFound(handleRoot);
-  
+
   server.begin();
   webServerRunning = true;
-  Serial.println("✅ Web server started");
+  Serial.println("âœ… Web server started");
 }
 
 void startSettingsAP() {
-  Serial.println("🔧 Starting Settings AP");
+  Serial.println("ðŸ”§ Starting Settings AP");
   WiFi.mode(WIFI_AP_STA);
-  
-  bool apStarted = systemConfig.setupComplete 
+
+  bool apStarted = systemConfig.setupComplete
     ? WiFi.softAP(systemConfig.deviceName, systemConfig.apPassword)
     : WiFi.softAP(systemConfig.deviceName);
-  
+
   if (!apStarted) {
-    Serial.println("❌ Failed to start AP!");
+    Serial.println("âŒ Failed to start AP!");
     return;
   }
-  
-  Serial.println("📡 AP: " + String(systemConfig.deviceName));
-  Serial.println("🌐 AP URL: http://" + WiFi.softAPIP().toString());
-  
+
+  Serial.println("ðŸ“¡ AP: " + String(systemConfig.deviceName));
+  Serial.println("ðŸŒ AP URL: http://" + WiFi.softAPIP().toString());
+
   dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
   if (!webServerRunning) startWebServer();
-  Serial.println("✓ Settings AP ready");
+  Serial.println("âœ“ Settings AP ready");
 }
 
 void monitorSystem() {
   static unsigned long lastTempCheck = 0, lastPowerCheck = 0;
   unsigned long now = millis();
-  
+
   // Temperature check every 5 minutes
   if (now - lastTempCheck >= 300000) {
     float temp = temperatureRead();
-    Serial.printf("🌡️ Temp: %.1f°C%s\n", temp, temp > 80 ? " ⚠️ HIGH" : (temp > 70 ? " (warm)" : ""));
+    Serial.printf("ðŸŒ¡ï¸ Temp: %.1fÂ°C%s\n", temp, temp > 80 ? " âš ï¸ HIGH" : (temp > 70 ? " (warm)" : ""));
     lastTempCheck = now;
   }
-  
+
   // Power estimate every 5 minutes
   if (now - lastPowerCheck >= 300000) {
     float currentMA = 80 + (WiFi.getMode() & WIFI_AP ? 100 : 0);
     int pins[] = LED_PINS;
     for (int p : pins) if (analogRead(p) > 0) currentMA += 20;
-    
+
     float watts = (3.3 * currentMA) / 1000.0;
     float wattHoursPerDay = watts * 24;
-    Serial.printf("⚡ Power: %.2fW | %.2f Wh/day | %.3f kWh/month\n", 
+    Serial.printf("âš¡ Power: %.2fW | %.2f Wh/day | %.3f kWh/month\n",
                   watts, wattHoursPerDay, (wattHoursPerDay * 30) / 1000.0);
     lastPowerCheck = now;
   }
@@ -890,39 +904,41 @@ void monitorSystem() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("\n╔════════════════════════════════════════╗");
-  Serial.println("║ Canvas LED Tracker - Optimized ║");
-  Serial.println("╚════════════════════════════════════════╝\n");
-  
-#if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
-  // ESP32 Arduino Core 3.x (PlatformIO)
-  esp_task_wdt_config_t wdt_config = {
-    .timeout_ms = 30000,
-    .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,
-    .trigger_panic = true
-  };
-  esp_task_wdt_init(&wdt_config);
-#else
-  // ESP32 Arduino Core 2.x (Arduino IDE)
-  esp_task_wdt_init(30, true);
-#endif
-  esp_task_wdt_add(NULL);
-  
+  Serial.println("\nâ•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—");
+  Serial.println("â•‘ Canvas LED Tracker - Optimized â•‘");
+  Serial.println("â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n");
+
+  // Initialize watchdog timer (30 second timeout)
+  // Support both old (IDF v4.x) and new (IDF v5.x) APIs
+  #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    // New API for ESP-IDF v5.x and later (Arduino core 3.x)
+    esp_task_wdt_config_t wdt_config = {
+        .timeout_ms = 30000,
+        .trigger_panic = true
+    };
+    esp_task_wdt_init(&wdt_config);
+    esp_task_wdt_add(NULL);
+  #else
+    // Old API for ESP-IDF v4.x and earlier (Arduino core 2.x)
+    esp_task_wdt_init(30, true);
+    esp_task_wdt_add(NULL);
+  #endif
+
   int pins[] = LED_PINS;
   for (int p : pins) pinMode(p, OUTPUT);
   setAllLEDsOff();
-  
-  Serial.printf("🌡️ CPU Temp: %.1f°C\n\n", temperatureRead());
-  
+
+  Serial.printf("ðŸŒ¡ï¸ CPU Temp: %.1fÂ°C\n\n", temperatureRead());
+
   loadConfig();
   startSettingsAP();
-  
+
   if (!systemConfig.setupComplete) {
-    Serial.println("⚠️ FIRST TIME SETUP REQUIRED\n");
+    Serial.println("âš ï¸ FIRST TIME SETUP REQUIRED\n");
     while (!systemConfig.setupComplete) {
       static unsigned long lastBlink = 0;
       static int brightness = 0, direction = 5;
-      
+
       if (millis() - lastBlink > 10) {
         brightness += direction;
         int maxBright = min(ledConfig.maxBrightness, 100);
@@ -940,62 +956,58 @@ void setup() {
       delay(10);
     }
   }
-  
+
   connectWiFi();
   initTime();
-  
-  Serial.println("📋 Configuration:");
-  Serial.printf(" • LED Mode: %s\n", ledConfig.useFlashing ? "Flashing" : "Solid");
-  Serial.printf(" • Red LED: %d days, Yellow LED: %d days\n", ledConfig.redLEDDaysAhead, ledConfig.yellowLEDDaysAhead);
-  Serial.printf(" • Check Interval: %lu min\n", canvasConfig.fetchInterval / 60000);
-  Serial.printf(" • Timezone: %s\n\n", timezoneConfig.displayName);
-  
+
+  Serial.println("ðŸ“‹ Configuration:");
+  Serial.printf(" â€¢ LED Mode: %s\n", ledConfig.useFlashing ? "Flashing" : "Solid");
+  Serial.printf(" â€¢ Red LED: %d days, Yellow LED: %d days\n", ledConfig.redLEDDaysAhead, ledConfig.yellowLEDDaysAhead);
+  Serial.printf(" â€¢ Check Interval: %lu min\n", canvasConfig.fetchInterval / 60000);
+  Serial.printf(" â€¢ Timezone: %s\n\n", timezoneConfig.displayName);
+
   if (timeSyncComplete) {
-    Serial.println("📡 Fetching initial status...");
+    Serial.println("ðŸ“¡ Fetching initial status...");
     assignmentStatus = fetchCanvasAssignments();
     lastFetch = millis();
     if (consecutiveErrors == 0) {
       lastSuccessfulFetch = lastFetch;
     }
   } else {
-    Serial.println("⚠️ Skipping initial fetch until time is synced\n");
+    Serial.println("âš ï¸ Skipping initial fetch until time is synced\n");
   }
 
-  initOTA();
-  
-  Serial.println("\n✅ Running!\n");
+  Serial.println("\nâœ… Running!\n");
 }
 
 void loop() {
   unsigned long now = millis();
-  
+
   // Reset watchdog
   esp_task_wdt_reset();
 
-  checkForOTAUpdate();
-  
   monitorSystem();
   dnsServer.processNextRequest();
   server.handleClient();
-  
+
   if (systemConfig.setupComplete) {
     if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("⚠️ WiFi disconnected, reconnecting...");
+      Serial.println("âš ï¸ WiFi disconnected, reconnecting...");
       connectWiFi();
     }
-    
+
     if (now - lastFetch >= canvasConfig.fetchInterval) {
       Serial.println("\n--- Canvas Check Cycle ---");
       assignmentStatus = fetchCanvasAssignments();
       lastFetch = now;
       pulseBrightness = 0;
       fadeDirection = 1;
-      
+
       // Show status summary
       if (consecutiveErrors == 0) {
-        Serial.println("✅ Status updated successfully");
+        Serial.println("âœ… Status updated successfully");
       } else {
-        Serial.printf("⚠️ Using cached status (last success: %lu min ago)\n", 
+        Serial.printf("âš ï¸ Using cached status (last success: %lu min ago)\n",
                      (now - lastSuccessfulFetch) / 60000);
       }
       Serial.println("--- End Check ---\n");
