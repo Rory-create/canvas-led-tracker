@@ -1013,7 +1013,7 @@ void loop() {
       Serial.println("--- End Check ---\n");
     }
   }
-  
+
   updateLEDs();
   delay(10);
 }
