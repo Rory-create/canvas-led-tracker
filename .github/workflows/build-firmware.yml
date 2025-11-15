@@ -53,7 +53,7 @@ jobs:
     - name: Get version from code
       id: version
       run: |
-        VERSION=$(grep '#define FIRMWARE_VERSION' firmware/src/Due/version.h | cut -d'"' -f2)
+        VERSION=$(grep '#define FIRMWARE_VERSION' firmware/src/Due/src/version.h | cut -d'"' -f2)
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Building version: $VERSION"
     
