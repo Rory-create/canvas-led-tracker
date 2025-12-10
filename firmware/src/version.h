@@ -2,7 +2,7 @@
 #define VERSION_H
 
 // Semantic versioning: MAJOR.MINOR.PATCH
-#define FIRMWARE_VERSION "1.1.6"
+#define FIRMWARE_VERSION "1.1.8"
 #define BUILD_TIMESTAMP __DATE__ " " __TIME__
 
 // Development mode - resets non-credential preferences on boot
@@ -17,5 +17,7 @@
 // 1.0.0 - Initial production release (first batch of 5 devices)
 // 1.1.5 - JSON parsing investigation (reverted to String buffering)
 // 1.1.6 - Production robustness: 80KB buffer, dynamic scaling, error state LEDs
+// 1.1.7 - DEV_MODE: Serial commands + web UI for LED pattern testing
+// 1.1.8 - Sequential error patterns (distinguishable blink sequences), AP mode command
 
 #endif

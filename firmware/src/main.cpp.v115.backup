@@ -49,34 +49,6 @@ const int greenLED = 32, yellowLED = 25, redLED = 27;
 const int MAX_RETRIES = 3, HTTPS_TIMEOUT = 60000, DNS_PORT = 53;
 const byte LOG_BUFFER_SIZE = 50;
 
-// Error codes for diagnostic LED patterns
-enum ErrorCode {
-  ERR_NONE = 0,
-  ERR_WIFI_DISCONNECT = 1,
-  ERR_CANVAS_AUTH = 2,
-  ERR_CANVAS_SERVER = 3,
-  ERR_TIME_SYNC = 4,
-  ERR_MEMORY_LOW = 5,
-  ERR_JSON_PARSE = 6,
-  ERR_BUFFER_EXHAUSTED = 7
-};
-
-int currentErrorCode = ERR_NONE;
-
-// Assignment storage for web UI display
-struct Assignment {
-  String name;
-  String dueAt;
-  String description;
-  String htmlUrl;
-  time_t dueTimestamp;
-  int urgency; // 0=none, 1=coming up (yellow), 2=urgent (red)
-};
-
-const int MAX_DISPLAYED_ASSIGNMENTS = 5;
-Assignment displayedAssignments[MAX_DISPLAYED_ASSIGNMENTS];
-int assignmentCount = 0;
-
 WiFiClientSecure client;
 HTTPClient http;
 WebServer server(80);
@@ -336,18 +308,18 @@ void connectWiFi() {
 int fetchCanvasAssignments() {
   connectWiFi();
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi not connected - returning error state");
+    Serial.println("âŒ WiFi not connected - keeping last status");
     consecutiveErrors++;
-    return 0;  // Return 0 = ERROR state (all LEDs flash)
+    return assignmentStatus;
   }
 
   // Don't fetch if time isn't synced
   if (!timeSyncComplete) {
-    Serial.println("Time not synced - retrying sync...");
+    Serial.println("âš ï¸ Time not synced - retrying sync...");
     initTime();
     if (!timeSyncComplete) {
-      Serial.println("Cannot fetch without valid time - returning error state");
-      return 0;  // Return 0 = ERROR state
+      Serial.println("âŒ Cannot fetch without valid time - keeping last status");
+      return assignmentStatus;
     }
   }
 
@@ -355,131 +327,63 @@ int fetchCanvasAssignments() {
   http.setTimeout(HTTPS_TIMEOUT);
   http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
 
-  int newStatus = 1;  // Default: GREEN (1) = all clear
+  int newStatus = 0;
   char fullUrl[512];
   snprintf(fullUrl, sizeof(fullUrl), "%s?per_page=%d", canvasConfig.apiUrl, canvasConfig.itemsPerPage);
-  
   for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    if (systemConfig.debugMode) Serial.printf("Attempt %d/%d\n", attempt + 1, MAX_RETRIES);
+    if (systemConfig.debugMode) Serial.printf("ðŸ”„ Attempt %d/%d\n", attempt + 1, MAX_RETRIES);
 
     if (http.begin(client, fullUrl)) {
       http.addHeader("Authorization", String("Bearer ") + canvasConfig.apiToken);
       http.addHeader("Accept", "application/json");
 
       int httpCode = http.GET();
-      if (systemConfig.debugMode) Serial.printf("HTTP: %d\n", httpCode);
+      if (systemConfig.debugMode) Serial.printf("ðŸ“¥ HTTP: %d\n", httpCode);
 
       if (httpCode == 200) {
         String response = http.getString();
-        size_t bufferSize = canvasConfig.jsonBufferSize;
-        size_t freeHeap = ESP.getFreeHeap();
-        size_t maxBuffer = (freeHeap * 90) / 100;  // 90% of free heap
 
         // Memory analysis
-        Serial.printf("\nCanvas Response Analysis:\n");
+        Serial.printf("\n📊 Canvas Response Analysis:\n");
         Serial.printf("   Response size: %d bytes\n", response.length());
-        Serial.printf("   JSON buffer:   %d bytes\n", bufferSize);
-        Serial.printf("   Buffer usage:  %.1f%%\n", (response.length() / (float)bufferSize) * 100);
-        Serial.printf("   Free heap:     %d bytes\n", freeHeap);
-        Serial.printf("   Max buffer:    %d bytes (90%% of heap)\n", maxBuffer);
+        Serial.printf("   JSON buffer:   51,200 bytes\n");
+        Serial.printf("   Buffer usage:  %.1f%%\n", (response.length() / 51200.0) * 100);
+        Serial.printf("   Free heap:     %d bytes\n", ESP.getFreeHeap());
 
-        DynamicJsonDocument doc(bufferSize);
+        DynamicJsonDocument doc(51200);  // 50KB buffer
         DeserializationError error = deserializeJson(doc, response);
 
         if (!error) {
           time_t now, redDeadline = 0, yellowDeadline = 0;
           time(&now);
-          
-          // Debug: Check if time(&now) is UTC or local
-          struct tm now_tm_local, now_tm_utc;
-          localtime_r(&now, &now_tm_local);  // Convert to local
-          gmtime_r(&now, &now_tm_utc);       // Convert to UTC
-          
-          if (systemConfig.debugMode) {
-            char buf_local[32], buf_utc[32];
-            strftime(buf_local, sizeof(buf_local), "%H:%M:%S", &now_tm_local);
-            strftime(buf_utc, sizeof(buf_utc), "%H:%M:%S", &now_tm_utc);
-            Serial.printf("time(&now) = %ld\n", now);
-            Serial.printf("  As local: %s\n", buf_local);
-            Serial.printf("  As UTC:   %s\n", buf_utc);
-          }
-          
           redDeadline = now + (ledConfig.redLEDDaysAhead * 86400);
           yellowDeadline = now + (ledConfig.yellowLEDDaysAhead * 86400);
 
           if (systemConfig.debugMode) {
-            Serial.printf("Checking: Red=%d days, Yellow=%d days\n",
+            Serial.printf("ðŸ“… Checking: Red=%d days, Yellow=%d days\n",
                          ledConfig.redLEDDaysAhead, ledConfig.yellowLEDDaysAhead);
-            Serial.printf("Current time (now): %ld\n", now);
-            Serial.printf("Red deadline: %ld\n", redDeadline);
-            Serial.printf("Yellow deadline: %ld\n", yellowDeadline);
           }
 
-          assignmentCount = 0; // Reset assignment list
-          
           for (JsonObject item : doc.as<JsonArray>()) {
             const char* dueDate = item["assignment"]["due_at"];
             if (dueDate && !item["completed"].as<bool>()) {
               struct tm due_tm = {0};
               if (strptime(dueDate, "%Y-%m-%dT%H:%M:%SZ", &due_tm)) {
-                // Parse Canvas UTC timestamp
-                time_t due_time_utc = esp_timegm(&due_tm);
-                
-                // Calculate timezone offset from current time
-                struct tm now_tm_local, now_tm_utc;
-                localtime_r(&now, &now_tm_local);
-                gmtime_r(&now, &now_tm_utc);
-                
-                // Calculate offset in seconds
-                time_t now_as_local = mktime(&now_tm_local);
-                time_t now_as_utc = mktime(&now_tm_utc);
-                int offset_seconds = now_as_local - now_as_utc;
-                
-                // Apply offset to due time
-                time_t due_time_local = due_time_utc + offset_seconds;
-                
-                if (systemConfig.debugMode) {
-                  Serial.printf("Assignment due_at: %s\n", dueDate);
-                  Serial.printf("  UTC: %ld, Offset: %d sec, Local: %ld\n", 
-                               due_time_utc, offset_seconds, due_time_local);
-                }
+                time_t due_time = esp_timegm(&due_tm);
 
                 // Validate date is reasonable (between 2020 and 2050)
-                if (due_time_local < 1577836800 || due_time_local > 2524608000) {
-                  Serial.printf("Invalid date detected: %s\n", dueDate);
+                if (due_time < 1577836800 || due_time > 2524608000) {
+                  Serial.printf("âš ï¸ Invalid date detected: %s\n", dueDate);
                   continue;
                 }
 
-                // Store assignment for web UI display (up to 5)
-                if (assignmentCount < MAX_DISPLAYED_ASSIGNMENTS && due_time_local <= yellowDeadline) {
-                  Assignment &a = displayedAssignments[assignmentCount++];
-                  a.name = item["assignment"]["name"].as<String>();
-                  a.dueAt = String(dueDate);
-                  a.dueTimestamp = due_time_local;
-                  a.htmlUrl = item["assignment"]["html_url"].as<String>();
-                  
-                  // Get description (limit to 200 chars)
-                  String desc = item["assignment"]["description"].as<String>();
-                  if (desc.length() > 200) {
-                    desc = desc.substring(0, 197) + "...";
-                  }
-                  a.description = desc;
-                  
-                  // Determine urgency based on user thresholds
-                  if (due_time_local <= redDeadline) {
-                    a.urgency = 2; // Urgent (red threshold)
-                  } else {
-                    a.urgency = 1; // Coming up (yellow threshold)
-                  }
-                }
-
-                if (due_time_local <= redDeadline) {
-                  newStatus = 3;  // RED (3) = due today
-                  if (systemConfig.debugMode) Serial.println("RED");
+                if (due_time <= redDeadline) {
+                  newStatus = 1;
+                  if (systemConfig.debugMode) Serial.println("ðŸ”´ RED");
                   break;
-                } else if (due_time_local <= yellowDeadline) {
-                  newStatus = 2;  // YELLOW (2) = due soon
-                  if (systemConfig.debugMode) Serial.println("YELLOW");
+                } else if (due_time <= yellowDeadline) {
+                  newStatus = 2;
+                  if (systemConfig.debugMode) Serial.println("ðŸŸ¡ YELLOW");
                 }
               }
             }
@@ -489,69 +393,51 @@ int fetchCanvasAssignments() {
           // Success!
           consecutiveErrors = 0;
           lastSuccessfulFetch = millis();
-          Serial.println("Canvas fetch successful");
+          Serial.println("âœ… Canvas fetch successful");
           return newStatus;
         } else {
-          // ============ DYNAMIC BUFFER INCREASE ============
-          Serial.printf("\nJSON Parse Error: %s\n", error.c_str());
+          // ============ ENHANCED ERROR OUTPUT ============
+          Serial.printf("\n❌ JSON Parse Error: %s\n", error.c_str());
           Serial.printf("   Error code: %d\n", error.code());
+          Serial.println("   (Streaming mode - response not buffered)\n");
 
           if (error.code() == DeserializationError::NoMemory) {
-            Serial.println("\nNoMemory Error - Attempting Dynamic Buffer Increase");
-            Serial.printf("   Current buffer: %d bytes\n", bufferSize);
-            Serial.printf("   Response size:  %d bytes\n", response.length());
-            Serial.printf("   Free heap:      %d bytes\n", freeHeap);
-            
-            // Calculate new buffer size (150% of current, or response size + 20KB, whichever is smaller)
-            size_t newBufferSize = min((bufferSize * 3) / 2, response.length() + 20480);
-            
-            if (newBufferSize <= maxBuffer && newBufferSize > bufferSize) {
-              Serial.printf("   Increasing buffer: %d -> %d bytes\n", bufferSize, newBufferSize);
-              canvasConfig.jsonBufferSize = newBufferSize;
-              
-              // Retry with new buffer size
-              Serial.println("   Retrying with increased buffer...\n");
-              continue;  // Retry this attempt with new buffer
-            } else {
-              Serial.println("\nCRITICAL: Cannot increase buffer further!");
-              Serial.printf("   New buffer would be: %d bytes\n", newBufferSize);
-              Serial.printf("   Max allowed (90%% heap): %d bytes\n", maxBuffer);
-              Serial.println("   Returning ERROR state - all LEDs will flash");
-              http.end();
-              consecutiveErrors++;
-              return 0;  // Return ERROR state
-            }
-          } else {
-            Serial.println("   (Non-memory error)\n");
+            Serial.println("⚠️  NoMemory Error Details:");
+            Serial.printf("   Buffer:   51,200 bytes\n");
+            Serial.printf("   itemsPerPage: %d\n", canvasConfig.itemsPerPage);
+            Serial.println("\n💡 Solutions:");
+            Serial.println("   1. Reduce itemsPerPage in settings");
+            Serial.println("   2. Check if filter is working properly");
           }
         }
       } else if (httpCode == 401) {
-        Serial.println("Canvas API: Invalid token (401)");
+        Serial.println("❌ Canvas API: Invalid token (401)");
         http.end();
         consecutiveErrors++;
-        return 0;  // Return ERROR state
+        return assignmentStatus;
       } else if (httpCode == 500 || httpCode == 502 || httpCode == 503 || httpCode == 504) {
-        Serial.printf("Canvas server error (%d) - likely outage\n", httpCode);
+        Serial.printf("âš ï¸ Canvas server error (%d) - likely outage\n", httpCode);
         http.end();
         consecutiveErrors++;
-        break;  // Don't retry on server errors
+        // Don't retry on server errors - save time
+        break;
       } else if (httpCode == 429) {
-        Serial.println("Canvas API: Rate limited (429)");
+        Serial.println("âš ï¸ Canvas API: Rate limited (429)");
         http.end();
         consecutiveErrors++;
-        return assignmentStatus;  // Keep last status on rate limit
+        return assignmentStatus;
       } else if (httpCode < 0) {
-        Serial.printf("HTTP request failed: %s\n", http.errorToString(httpCode).c_str());
+        Serial.printf("âŒ HTTP request failed: %s\n", http.errorToString(httpCode).c_str());
       } else {
-        Serial.printf("Unexpected HTTP code: %d\n", httpCode);
+        Serial.printf("âš ï¸ Unexpected HTTP code: %d\n", httpCode);
       }
       http.end();
     } else {
-      Serial.println("Could not connect to Canvas");
+      Serial.println("âŒ Could not connect to Canvas");
     }
 
     if (attempt < MAX_RETRIES - 1) {
-      Serial.println("Retrying in 2 seconds...");
+      Serial.println("â³ Retrying in 2 seconds...");
       delay(2000);
     }
   }
@@ -560,15 +446,14 @@ int fetchCanvasAssignments() {
 
   // If we've had many consecutive errors, warn the user
   if (consecutiveErrors >= 3) {
-    Serial.printf("%d consecutive Canvas errors - returning ERROR state\n", consecutiveErrors);
+    Serial.printf("âš ï¸ %d consecutive Canvas errors - keeping last known status\n", consecutiveErrors);
     if (consecutiveErrors == 5) {
-      Serial.println("TIP: Canvas may be experiencing an outage. All LEDs will flash.");
+      Serial.println("ðŸ’¡ TIP: Canvas may be experiencing an outage. Device will keep trying.");
     }
   }
 
-  return 0;  // Return ERROR state after all retries failed
+  return assignmentStatus; // Keep last known status on error
 }
-
 
 // ============================================
 // LED CONTROL
@@ -599,85 +484,17 @@ void pulseLED(int ledPin, unsigned long &lastTime, int &brightness, int &directi
   }
 }
 
-void displayErrorPattern(int errorCode) {
-  unsigned long now = millis();
-  static unsigned long lastFlash = 0;
-  static int stepIndex = 0;
-  static bool isInPause = false;
-  static unsigned long pauseStart = 0;
-  
-  // Define patterns: array of LED pins to light in sequence
-  // 0 = all off, greenLED/yellowLED/redLED = specific LED
-  int pattern[7][6] = {
-    {redLED, 0, redLED, 0, 0, 0},           // WiFi: Red blink twice
-    {yellowLED, redLED, 0, 0, 0, 0},        // Auth: Yellow-Red
-    {redLED, yellowLED, redLED, 0, 0, 0},   // Server: Red-Yellow-Red
-    {greenLED, yellowLED, 0, 0, 0, 0},      // Time: Green-Yellow
-    {redLED, redLED, redLED, 0, 0, 0},      // Memory: Red-Red-Red
-    {yellowLED, greenLED, yellowLED, 0, 0, 0}, // JSON: Yellow-Green-Yellow
-    {-1, -1, -1, -1, -1, -1}                // Buffer: all solid (handled separately)
-  };
-  
-  // Buffer exhausted: all solid
-  if (errorCode == ERR_BUFFER_EXHAUSTED) {
-    analogWrite(greenLED, ledConfig.maxBrightness);
-    analogWrite(yellowLED, ledConfig.maxBrightness);
-    analogWrite(redLED, ledConfig.maxBrightness);
-    return;
-  }
-  
-  int patternIndex = errorCode - 1; // ERR_WIFI_DISCONNECT=1 → pattern[0]
-  if (patternIndex < 0 || patternIndex >= 6) patternIndex = 0;
-  
-  // Handle 3-second pause between pattern loops
-  if (isInPause) {
-    if (now - pauseStart >= 3000) {
-      isInPause = false;
-      stepIndex = 0;
-    }
-    setAllLEDsOff();
-    return;
-  }
-  
-  // Flash each LED in pattern for 500ms
-  if (now - lastFlash >= 500) {
-    lastFlash = now;
-    
-    int ledPin = pattern[patternIndex][stepIndex];
-    
-    if (ledPin == 0 || ledPin == -1) {
-      // End of pattern, start pause
-      setAllLEDsOff();
-      isInPause = true;
-      pauseStart = now;
-      stepIndex = 0;
-    } else {
-      // Light up the LED
-      setAllLEDsOff();
-      analogWrite(ledPin, ledConfig.maxBrightness);
-      stepIndex++;
-    }
-  }
-}
-
 void updateLEDs() {
   if (isQuietHours()) {
     setAllLEDsOff();
     return;
   }
 
-  // ERROR state (0) = all LEDs flash rapidly
-  // ERROR state (0) = display diagnostic pattern based on error code
-  if (assignmentStatus == 0) {
-    displayErrorPattern(currentErrorCode);
-    return;
-  }
+  int targetLED = greenLED;
+  if (assignmentStatus == 1) targetLED = redLED;
+  else if (assignmentStatus == 2) targetLED = yellowLED;
 
-  int targetLED = greenLED;  // Default: GREEN (1)
-  if (assignmentStatus == 3) targetLED = redLED;    // RED (3)
-  else if (assignmentStatus == 2) targetLED = yellowLED;  // YELLOW (2)
-
-  if (ledConfig.useFlashing && assignmentStatus > 1) {  // Flash for YELLOW/RED only
+  if (ledConfig.useFlashing && assignmentStatus > 0) {
     setAllLEDsOff();
     pulseLED(targetLED, lastPulseTime, pulseBrightness, fadeDirection);
   } else {
@@ -723,37 +540,6 @@ button:hover{opacity:0.9;}
 <textarea name="apiToken" id="apiToken" rows="3" required placeholder="Paste your Canvas API token here"></textarea>
 <button type="button" onclick="testCanvas()" style="background:#28a745;margin:5px 0;">Test Canvas Token</button>
 <div id="canvasResult" style="padding:8px;margin:5px 0;border-radius:5px;display:none;"></div>
-</div>
-<div class="section">
-<h3>Timezone</h3>
-<label>Your Timezone
-<select name="timezone" style="width:100%;padding:10px;">
-<option value="EST5EDT,M3.2.0/2,M11.1.0/2|US Eastern">US Eastern (EST/EDT)</option>
-<option value="CST6CDT,M3.2.0/2,M11.1.0/2|US Central">US Central (CST/CDT)</option>
-<option value="MST7MDT,M3.2.0/2,M11.1.0/2|US Mountain">US Mountain (MST/MDT)</option>
-<option value="PST8PDT,M3.2.0/2,M11.1.0/2|US Pacific">US Pacific (PST/PDT)</option>
-<option value="AKST9AKDT,M3.2.0/2,M11.1.0/2|Alaska">Alaska (AKST/AKDT)</option>
-<option value="HST10|Hawaii">Hawaii (HST)</option>
-<option value="AST4ADT,M3.2.0/2,M11.1.0/2|Atlantic">Atlantic (AST/ADT)</option>
-<option value="GMT0BST,M3.5.0/1,M10.5.0/2|UK">UK (GMT/BST)</option>
-<option value="CET-1CEST,M3.5.0/2,M10.5.0/3|Central Europe">Central Europe (CET/CEST)</option>
-<option value="EET-2EEST,M3.5.0/3,M10.5.0/4|Eastern Europe">Eastern Europe (EET/EEST)</option>
-<option value="MSK-3|Moscow">Moscow (MSK)</option>
-<option value="GST-4|Gulf">Gulf (GST)</option>
-<option value="PKT-5|Pakistan">Pakistan (PKT)</option>
-<option value="IST-5:30|India">India (IST)</option>
-<option value="BST-6|Bangladesh">Bangladesh (BST)</option>
-<option value="ICT-7|Indochina">Indochina (ICT)</option>
-<option value="CST-8|China">China (CST)</option>
-<option value="JST-9|Japan">Japan (JST)</option>
-<option value="KST-9|Korea">Korea (KST)</option>
-<option value="AEST-10AEDT,M10.1.0/2,M4.1.0/3|Australia East">Australia East (AEST/AEDT)</option>
-<option value="ACST-9:30ACDT,M10.1.0/2,M4.1.0/3|Australia Central">Australia Central (ACST/ACDT)</option>
-<option value="AWST-8|Australia West">Australia West (AWST)</option>
-<option value="NZST-12NZDT,M9.5.0/2,M4.1.0/3|New Zealand">New Zealand (NZST/NZDT)</option>
-<option value="UTC0|UTC">UTC (Universal)</option>
-</select>
-</label>
 </div>
 <div class="section">
 <h3>LED Settings</h3>
@@ -843,7 +629,6 @@ label{display:block;margin:8px 0;font-size:14px;}
 Device: <span>%DEVICE_NAME%</span> | WiFi: %WIFI_STATUS% | Assignment: <span>%ASSIGNMENT_STATUS%</span> | Checked: <span>%LAST_CHECK%</span>
 </div>
 %ERROR_ALERT%
-%ASSIGNMENTS_SECTION%
 <form method="POST" action="/save" onsubmit="return validateSettings()">
 <div class="section"><h3>WiFi</h3>
 <label>Primary SSID<input type="text" name="ssid" value="%SSID%"></label>
@@ -853,37 +638,6 @@ Device: <span>%DEVICE_NAME%</span> | WiFi: %WIFI_STATUS% | Assignment: <span>%AS
 </div>
 <div class="section"><h3>Canvas API</h3>
 <label>API Token<textarea name="apiToken" rows="3">%API_TOKEN%</textarea></label>
-</div>
-<div class="section"><h3>Timezone</h3>
-<label>Your Timezone
-<select name="timezone">
-<option value="EST5EDT,M3.2.0/2,M11.1.0/2|US Eastern">US Eastern (EST/EDT)</option>
-<option value="CST6CDT,M3.2.0/2,M11.1.0/2|US Central">US Central (CST/CDT)</option>
-<option value="MST7MDT,M3.2.0/2,M11.1.0/2|US Mountain">US Mountain (MST/MDT)</option>
-<option value="PST8PDT,M3.2.0/2,M11.1.0/2|US Pacific">US Pacific (PST/PDT)</option>
-<option value="AKST9AKDT,M3.2.0/2,M11.1.0/2|Alaska">Alaska (AKST/AKDT)</option>
-<option value="HST10|Hawaii">Hawaii (HST)</option>
-<option value="AST4ADT,M3.2.0/2,M11.1.0/2|Atlantic">Atlantic (AST/ADT)</option>
-<option value="GMT0BST,M3.5.0/1,M10.5.0/2|UK">UK (GMT/BST)</option>
-<option value="CET-1CEST,M3.5.0/2,M10.5.0/3|Central Europe">Central Europe (CET/CEST)</option>
-<option value="EET-2EEST,M3.5.0/3,M10.5.0/4|Eastern Europe">Eastern Europe (EET/EEST)</option>
-<option value="MSK-3|Moscow">Moscow (MSK)</option>
-<option value="GST-4|Gulf">Gulf (GST)</option>
-<option value="PKT-5|Pakistan">Pakistan (PKT)</option>
-<option value="IST-5:30|India">India (IST)</option>
-<option value="BST-6|Bangladesh">Bangladesh (BST)</option>
-<option value="ICT-7|Indochina">Indochina (ICT)</option>
-<option value="CST-8|China">China (CST)</option>
-<option value="JST-9|Japan">Japan (JST)</option>
-<option value="KST-9|Korea">Korea (KST)</option>
-<option value="AEST-10AEDT,M10.1.0/2,M4.1.0/3|Australia East">Australia East (AEST/AEDT)</option>
-<option value="ACST-9:30ACDT,M10.1.0/2,M4.1.0/3|Australia Central">Australia Central (ACST/ACDT)</option>
-<option value="AWST-8|Australia West">Australia West (AWST)</option>
-<option value="NZST-12NZDT,M9.5.0/2,M4.1.0/3|New Zealand">New Zealand (NZST/NZDT)</option>
-<option value="UTC0|UTC">UTC (Universal)</option>
-</select>
-</label>
-<small style="color:#666;">Current: %TIMEZONE%</small>
 </div>
 <div class="section"><h3>LED Settings</h3>
 <label><input type="checkbox" name="useFlashing" %FLASH_CHECKED%> Use Pulsing Effect</label>
@@ -951,10 +705,8 @@ void handleSettings() {
   html.replace("%WIFI_STATUS%", WiFi.status() == WL_CONNECTED ? "â—" : "â—‹");
 
   String statusText = "None";
-  if (assignmentStatus == 0) statusText = "ERROR - Check Device";
-  else if (assignmentStatus == 3) statusText = "Today";
+  if (assignmentStatus == 1) statusText = "Today";
   else if (assignmentStatus == 2) statusText = "Tomorrow";
-  else statusText = "All Clear";
   html.replace("%ASSIGNMENT_STATUS%", statusText);
 
   // Show time since last check and last successful fetch
@@ -975,50 +727,11 @@ void handleSettings() {
   }
   html.replace("%ERROR_ALERT%", errorAlert);
 
-  // Build assignments section
-  String assignmentsSection = "";
-  if (assignmentCount > 0) {
-    assignmentsSection = "<div class='section'><h3>Upcoming Assignments</h3>";
-    for (int i = 0; i < assignmentCount; i++) {
-      Assignment &a = displayedAssignments[i];
-      
-      // Format due date
-      char dueDateStr[50];
-      struct tm due_tm;
-      localtime_r(&a.dueTimestamp, &due_tm);
-      strftime(dueDateStr, sizeof(dueDateStr), "%a %b %d, %I:%M %p", &due_tm);
-      
-      // Urgency badge
-      String urgencyBadge = a.urgency == 2 ? 
-        "<span style='background:#f44336;color:white;padding:3px 8px;border-radius:3px;font-size:12px;'>URGENT</span>" :
-        "<span style='background:#ff9800;color:white;padding:3px 8px;border-radius:3px;font-size:12px;'>COMING UP</span>";
-      
-      assignmentsSection += "<div style='border-left:3px solid " + 
-        String(a.urgency == 2 ? "#f44336" : "#ff9800") + 
-        ";padding:10px;margin:10px 0;background:#f9f9f9;'>";
-      assignmentsSection += urgencyBadge + " <strong>" + a.name + "</strong><br>";
-      assignmentsSection += "<small style='color:#666;'>Due: " + String(dueDateStr) + "</small><br>";
-      
-      if (a.description.length() > 0) {
-        assignmentsSection += "<small>" + a.description + "</small><br>";
-      }
-      
-      if (a.htmlUrl.length() > 0) {
-        assignmentsSection += "<a href='" + a.htmlUrl + "' target='_blank' style='font-size:12px;'>Open in Canvas</a>";
-      }
-      
-      assignmentsSection += "</div>";
-    }
-    assignmentsSection += "</div>";
-  }
-  html.replace("%ASSIGNMENTS_SECTION%", assignmentsSection);
-
   html.replace("%SSID%", wifiConfig.ssid);
   html.replace("%PASSWORD%", wifiConfig.password);
   html.replace("%SSID2%", wifiConfig.ssid2);
   html.replace("%PASSWORD2%", wifiConfig.password2);
   html.replace("%API_TOKEN%", canvasConfig.apiToken);
-  html.replace("%TIMEZONE%", timezoneConfig.displayName);
   html.replace("%FLASH_CHECKED%", ledConfig.useFlashing ? "checked" : "");
   html.replace("%FLASH_INT%", String(ledConfig.flashInterval));
   html.replace("%FLASH_STEP%", String(ledConfig.flashStep));
@@ -1060,124 +773,6 @@ void handleHealth() {
   String response;
   serializeJson(doc, response);
   server.send(200, "application/json", response);
-}
-
-
-void handleTestMode() {
-  if (!DEV_MODE) {
-    server.send(403, "text/plain", "Test mode disabled");
-    return;
-  }
-  
-  String html = R"rawliteral(
-<!DOCTYPE html><html><head>
-<title>LED Test Mode</title>
-<meta name="viewport" content="width=device-width">
-<style>
-body{font-family:Arial;max-width:600px;margin:20px auto;padding:20px;background:#1a1a1a;color:#fff;}
-.container{background:#2a2a2a;padding:30px;border-radius:10px;}
-h1{color:#667eea;text-align:center;}
-button{width:100%;padding:15px;margin:8px 0;border:none;cursor:pointer;border-radius:5px;font-size:16px;font-weight:bold;color:white;}
-.err{background:#f44336;} .norm{background:#4caf50;} .clr{background:#2196f3;}
-button:hover{opacity:0.8;}
-#status{padding:15px;background:#1a1a1a;border-radius:5px;margin-top:20px;font-family:monospace;}
-</style>
-</head><body><div class="container">
-<h1>LED Test Mode</h1>
-<p style="text-align:center;color:#ffa500;">DEV_MODE Active</p>
-
-<h3>Error Patterns</h3>
-<button class="err" onclick="test('wifi')">WiFi (Red-Red)</button>
-<button class="err" onclick="test('auth')">Auth (Yellow-Red)</button>
-<button class="err" onclick="test('server')">Server (Red-Yellow-Red)</button>
-<button class="err" onclick="test('time')">Time Sync (Green-Yellow)</button>
-<button class="err" onclick="test('memory')">Memory (Red-Red-Red)</button>
-<button class="err" onclick="test('json')">JSON Parse (Yellow-Green-Yellow)</button>
-<button class="err" onclick="test('buffer')">Buffer Full (All Solid)</button>
-
-<h3>Normal States</h3>
-<button class="norm" onclick="test('green')">Green LED</button>
-<button class="norm" onclick="test('yellow')">Yellow LED</button>
-<button class="norm" onclick="test('red')">Red LED</button>
-
-<button class="clr" onclick="test('clear')">Clear Test</button>
-
-<div id="status">Ready</div>
-</div>
-
-<script>
-function test(type) {
-  fetch('/test-trigger?type=' + type)
-    .then(r => r.text())
-    .then(msg => {
-      document.getElementById('status').innerHTML = msg;
-    })
-    .catch(() => {
-      document.getElementById('status').innerHTML = 'Error';
-    });
-}
-</script>
-</body></html>
-)rawliteral";
-  
-  server.send(200, "text/html", html);
-}
-
-void handleTestTrigger() {
-  if (!DEV_MODE) {
-    server.send(403, "text/plain", "Not authorized");
-    return;
-  }
-  
-  String type = server.arg("type");
-  
-  if (type == "wifi") {
-    currentErrorCode = ERR_WIFI_DISCONNECT;
-    assignmentStatus = 0;
-    server.send(200, "text/plain", "[ACTIVE] WiFi error - slow flash");
-  } else if (type == "auth") {
-    currentErrorCode = ERR_CANVAS_AUTH;
-    assignmentStatus = 0;
-    server.send(200, "text/plain", "[ACTIVE] Auth error - double flash");
-  } else if (type == "server") {
-    currentErrorCode = ERR_CANVAS_SERVER;
-    assignmentStatus = 0;
-    server.send(200, "text/plain", "[ACTIVE] Server error - triple flash");
-  } else if (type == "time") {
-    currentErrorCode = ERR_TIME_SYNC;
-    assignmentStatus = 0;
-    server.send(200, "text/plain", "[ACTIVE] Time sync - medium flash");
-  } else if (type == "memory") {
-    currentErrorCode = ERR_MEMORY_LOW;
-    assignmentStatus = 0;
-    server.send(200, "text/plain", "[ACTIVE] Memory low - quad flash");
-  } else if (type == "json") {
-    currentErrorCode = ERR_JSON_PARSE;
-    assignmentStatus = 0;
-    server.send(200, "text/plain", "[ACTIVE] JSON parse - fast flash");
-  } else if (type == "buffer") {
-    currentErrorCode = ERR_BUFFER_EXHAUSTED;
-    assignmentStatus = 0;
-    server.send(200, "text/plain", "[ACTIVE] Buffer full - all solid");
-  } else if (type == "green") {
-    currentErrorCode = ERR_NONE;
-    assignmentStatus = 1;
-    server.send(200, "text/plain", "[NORMAL] Green LED");
-  } else if (type == "yellow") {
-    currentErrorCode = ERR_NONE;
-    assignmentStatus = 2;
-    server.send(200, "text/plain", "[NORMAL] Yellow LED");
-  } else if (type == "red") {
-    currentErrorCode = ERR_NONE;
-    assignmentStatus = 3;
-    server.send(200, "text/plain", "[NORMAL] Red LED");
-  } else if (type == "clear") {
-    currentErrorCode = ERR_NONE;
-    assignmentStatus = 1;
-    server.send(200, "text/plain", "[CLEARED] Normal operation");
-  } else {
-    server.send(400, "text/plain", "Unknown type");
-  }
 }
 
 void handleReboot() {
@@ -1437,8 +1032,7 @@ void handleRefresh() {
   assignmentStatus = fetchCanvasAssignments();
   lastFetch = millis();
   
-  String statusName = assignmentStatus == 0 ? "ERROR (check device)" :
-                      assignmentStatus == 3 ? "RED (due today)" : 
+  String statusName = assignmentStatus == 1 ? "RED (due today)" : 
                       assignmentStatus == 2 ? "YELLOW (due soon)" : "GREEN (all clear)";
   
   String response = "{\"success\":true,\"status\":" + String(assignmentStatus) + 
@@ -1452,8 +1046,6 @@ void startWebServer() {
   server.on("/settings", handleSettings);
   server.on("/logs", handleLogs);
   server.on("/health", handleHealth);
-  server.on("/test", handleTestMode);
-  server.on("/test-trigger", handleTestTrigger);
   server.on("/scan", handleScan);
   server.on("/test-wifi", HTTP_POST, handleTestWifi);
   server.on("/test-canvas", HTTP_POST, handleTestCanvas);
@@ -1502,7 +1094,14 @@ void monitorSystem() {
 
   // Power estimate every 5 minutes
   if (now - lastPowerCheck >= 300000) {
-    // Power calculation removed - analogRead() conflicts with WiFi on ADC2 pins (GPIO 25/27)
+    float currentMA = 80 + (WiFi.getMode() & WIFI_AP ? 100 : 0);
+    int pins[] = LED_PINS;
+    for (int p : pins) if (analogRead(p) > 0) currentMA += 20;
+
+    float watts = (3.3 * currentMA) / 1000.0;
+    float wattHoursPerDay = watts * 24;
+    Serial.printf("âš¡ Power: %.2fW | %.2f Wh/day | %.3f kWh/month\n",
+                  watts, wattHoursPerDay, (wattHoursPerDay * 30) / 1000.0);
     lastPowerCheck = now;
   }
 }
@@ -1622,99 +1221,7 @@ void setup() {
   Serial.println("\nâœ… Running!\n");
 }
 
-
-// DEV_MODE: Serial command handler for LED testing
-void handleSerialCommands() {
-  if (!DEV_MODE || !Serial.available()) return;
-  
-  String cmd = Serial.readStringUntil('\n');
-  cmd.trim();
-  
-  if (cmd == "help") {
-    Serial.println("\n=== DEV MODE COMMANDS ===");
-    Serial.println("test:wifi     - WiFi error (slow 1s)");
-    Serial.println("test:auth     - Auth error (double)");
-    Serial.println("test:server   - Server error (triple)");
-    Serial.println("test:time     - Time sync (medium 500ms)");
-    Serial.println("test:memory   - Memory low (quad)");
-    Serial.println("test:json     - JSON parse (fast 200ms)");
-    Serial.println("test:buffer   - Buffer full (all solid)");
-    Serial.println("test:green    - Normal green");
-    Serial.println("test:yellow   - Normal yellow");
-    Serial.println("test:red      - Normal red");
-    Serial.println("test:clear    - Exit test mode");
-    Serial.println("ap:start      - Start AP mode for web UI testing\n");
-    return;
-  }
-  
-  if (cmd == "ap:start") {
-    Serial.println("[AP] Starting Access Point mode...");
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP("Canvas_LED_Tracker", systemConfig.apPassword);
-    Serial.printf("[AP] SSID: Canvas_LED_Tracker\n");
-    Serial.printf("[AP] Password: %s\n", systemConfig.apPassword);
-    Serial.printf("[AP] IP: %s\n", WiFi.softAPIP().toString().c_str());
-    Serial.println("[AP] Navigate to: http://192.168.4.1/test");
-    return;
-  }
-  
-  if (!cmd.startsWith("test:")) return;
-  
-  String type = cmd.substring(5);
-  
-  if (type == "wifi") {
-    currentErrorCode = ERR_WIFI_DISCONNECT;
-    assignmentStatus = 0;
-    Serial.println("[TEST] WiFi error active");
-  } else if (type == "auth") {
-    currentErrorCode = ERR_CANVAS_AUTH;
-    assignmentStatus = 0;
-    Serial.println("[TEST] Auth error active");
-  } else if (type == "server") {
-    currentErrorCode = ERR_CANVAS_SERVER;
-    assignmentStatus = 0;
-    Serial.println("[TEST] Server error active");
-  } else if (type == "time") {
-    currentErrorCode = ERR_TIME_SYNC;
-    assignmentStatus = 0;
-    Serial.println("[TEST] Time sync error active");
-  } else if (type == "memory") {
-    currentErrorCode = ERR_MEMORY_LOW;
-    assignmentStatus = 0;
-    Serial.println("[TEST] Memory error active");
-  } else if (type == "json") {
-    currentErrorCode = ERR_JSON_PARSE;
-    assignmentStatus = 0;
-    Serial.println("[TEST] JSON error active");
-  } else if (type == "buffer") {
-    currentErrorCode = ERR_BUFFER_EXHAUSTED;
-    assignmentStatus = 0;
-    Serial.println("[TEST] Buffer error active");
-  } else if (type == "green") {
-    currentErrorCode = ERR_NONE;
-    assignmentStatus = 1;
-    Serial.println("[TEST] Green LED");
-  } else if (type == "yellow") {
-    currentErrorCode = ERR_NONE;
-    assignmentStatus = 2;
-    Serial.println("[TEST] Yellow LED");
-  } else if (type == "red") {
-    currentErrorCode = ERR_NONE;
-    assignmentStatus = 3;
-    Serial.println("[TEST] Red LED");
-  } else if (type == "clear") {
-    currentErrorCode = ERR_NONE;
-    assignmentStatus = 1;
-    Serial.println("[TEST] Cleared");
-  } else {
-    Serial.println("[TEST] Unknown. Type 'help'");
-  }
-}
-
-
 void loop() {
-  handleSerialCommands();  // DEV_MODE: Test LED patterns via serial
-  
   unsigned long now = millis();
 
   // Reset watchdog
