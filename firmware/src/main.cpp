@@ -978,7 +978,34 @@ void handleSettings() {
   html.replace("%WIFI_STATUS%", WiFi.status() == WL_CONNECTED ? "â—" : "â—‹");
 
   String statusText = "None";
-  if (assignmentStatus == 0) statusText = "ERROR - Check Device";
+  if (assignmentStatus == 0) {
+    // Provide specific error message based on error code
+    switch(currentErrorCode) {
+      case ERR_WIFI_DISCONNECT:
+        statusText = "WiFi Disconnected";
+        break;
+      case ERR_CANVAS_AUTH:
+        statusText = "Canvas Auth Error (Check Token)";
+        break;
+      case ERR_CANVAS_SERVER:
+        statusText = "Canvas Server Error";
+        break;
+      case ERR_TIME_SYNC:
+        statusText = "Time Sync Failed";
+        break;
+      case ERR_MEMORY_LOW:
+        statusText = "Memory Critical";
+        break;
+      case ERR_JSON_PARSE:
+        statusText = "JSON Parse Error";
+        break;
+      case ERR_BUFFER_EXHAUSTED:
+        statusText = "Buffer Exhausted (Too Many Assignments)";
+        break;
+      default:
+        statusText = "ERROR - Check Device";
+    }
+  }
   else if (assignmentStatus == 3) statusText = "Today";
   else if (assignmentStatus == 2) statusText = "Tomorrow";
   else statusText = "All Clear";
@@ -1460,13 +1487,34 @@ void handleTestCanvas() {
   }
 }
 
+String getErrorMessage() {
+  switch(currentErrorCode) {
+    case ERR_WIFI_DISCONNECT:
+      return "WiFi Disconnected";
+    case ERR_CANVAS_AUTH:
+      return "Canvas Auth Error (401 - Check Token)";
+    case ERR_CANVAS_SERVER:
+      return "Canvas Server Error (500+)";
+    case ERR_TIME_SYNC:
+      return "Time Sync Failed";
+    case ERR_MEMORY_LOW:
+      return "Memory Critical (<15KB)";
+    case ERR_JSON_PARSE:
+      return "JSON Parse Failed";
+    case ERR_BUFFER_EXHAUSTED:
+      return "Too Many Assignments (Buffer Full)";
+    default:
+      return "ERROR - Check Device";
+  }
+}
+
 void handleRefresh() {
-  Serial.println("🔄 Manual refresh requested");
+  Serial.println("Manual refresh requested");
   int oldStatus = assignmentStatus;
   assignmentStatus = fetchCanvasAssignments();
   lastFetch = millis();
   
-  String statusName = assignmentStatus == 0 ? "ERROR (check device)" :
+  String statusName = assignmentStatus == 0 ? getErrorMessage() :
                       assignmentStatus == 3 ? "RED (due today)" : 
                       assignmentStatus == 2 ? "YELLOW (due soon)" : "GREEN (all clear)";
   

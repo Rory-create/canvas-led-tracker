@@ -2,12 +2,12 @@
 #define VERSION_H
 
 // Semantic versioning: MAJOR.MINOR.PATCH
-#define FIRMWARE_VERSION "1.2.0"
+#define FIRMWARE_VERSION "1.2.1"
 #define BUILD_TIMESTAMP __DATE__ " " __TIME__
 
 // Development mode - resets non-credential preferences on boot
 // Set to false for production builds
-#define DEV_MODE true
+#define DEV_MODE false
 
 // GitHub bug reporting
 #define GITHUB_TOKEN "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"
@@ -25,5 +25,6 @@
 // 1.1.8 - Sequential error patterns (distinguishable blink sequences), AP mode command
 // 1.1.9 - Assignment display on web UI (name, due date, description, Canvas link)
 // 1.2.0 - GitHub bug logging (auto-report critical errors to GitHub Issues)
+// 1.2.1 - Production ready: Specific error messages, DEV_MODE disabled
 
 #endif
