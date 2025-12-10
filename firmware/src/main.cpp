@@ -9,6 +9,9 @@
 #include <esp_task_wdt.h>
 #include "version.h"
 
+// Forward declarations
+void createGitHubIssue();
+
 // ============================================
 // CONFIG STRUCTURES & GLOBAL VARIABLES
 // ============================================
@@ -43,6 +46,8 @@ struct SystemConfig {
   char deviceName[32] = "Canvas_LED_Tracker";
   bool debugMode = true;
   char apPassword[64] = "canvas123";
+  bool bugReportEnabled = true;
+  unsigned long lastBugReport = 0;
 } systemConfig;
 
 const int greenLED = 32, yellowLED = 25, redLED = 27;
@@ -136,9 +141,11 @@ void saveConfig() {
   preferences.putString("devName", systemConfig.deviceName);
   preferences.putBool("debug", systemConfig.debugMode);
   preferences.putString("apPass", systemConfig.apPassword);
+  preferences.putBool("bugReport", systemConfig.bugReportEnabled);
+  preferences.putULong("lastReport", systemConfig.lastBugReport);
 
   preferences.end();
-  Serial.println("âœ… Configuration saved!");
+  Serial.println("Configuration saved!");
 }
 
 void loadConfig() {
@@ -193,8 +200,11 @@ void loadConfig() {
 
     preferences.getString("apPass", systemConfig.apPassword, sizeof(systemConfig.apPassword));
     if (strlen(systemConfig.apPassword) == 0) strcpy(systemConfig.apPassword, "canvas123");
+    
+    systemConfig.bugReportEnabled = preferences.getBool("bugReport", true);
+    systemConfig.lastBugReport = preferences.getULong("lastReport", 0);
 
-    Serial.println("âœ… Configuration loaded");
+    Serial.println("Configuration loaded");
   } else {
     Serial.println("âš ï¸ First time setup required");
   }
@@ -338,6 +348,12 @@ int fetchCanvasAssignments() {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi not connected - returning error state");
     consecutiveErrors++;
+    
+    // Report critical errors to GitHub
+    if (consecutiveErrors >= 10) {
+      createGitHubIssue();
+    }
+    
     return 0;  // Return 0 = ERROR state (all LEDs flash)
   }
 
@@ -374,6 +390,13 @@ int fetchCanvasAssignments() {
         size_t bufferSize = canvasConfig.jsonBufferSize;
         size_t freeHeap = ESP.getFreeHeap();
         size_t maxBuffer = (freeHeap * 90) / 100;  // 90% of free heap
+        
+        // Check for critical memory condition
+        if (freeHeap < 15000) {
+          currentErrorCode = ERR_MEMORY_LOW;
+          Serial.println("[CRITICAL] Memory below 15KB threshold!");
+          createGitHubIssue();
+        }
 
         // Memory analysis
         Serial.printf("\nCanvas Response Analysis:\n");
@@ -517,6 +540,8 @@ int fetchCanvasAssignments() {
               Serial.printf("   New buffer would be: %d bytes\n", newBufferSize);
               Serial.printf("   Max allowed (90%% heap): %d bytes\n", maxBuffer);
               Serial.println("   Returning ERROR state - all LEDs will flash");
+              currentErrorCode = ERR_BUFFER_EXHAUSTED;
+              createGitHubIssue();
               http.end();
               consecutiveErrors++;
               return 0;  // Return ERROR state
@@ -903,6 +928,8 @@ Device: <span>%DEVICE_NAME%</span> | WiFi: %WIFI_STATUS% | Assignment: <span>%AS
 <label>Device Name<input type="text" name="deviceName" value="%DEVICE_NAME%"></label>
 <label>Check Interval (minutes)<input type="number" name="fetchInterval" value="%FETCH_INT%" min="1"></label>
 <label>AP Password<input type="text" name="apPassword" value="%AP_PASSWORD%"></label>
+<label><input type="checkbox" name="bugReport" %BUG_REPORT_CHECKED%> Enable Auto Bug Reports</label>
+<small style="color:#666;">Automatically report critical errors to GitHub for faster support</small>
 <label><input type="checkbox" name="debug" %DEBUG_CHECKED%> Debug Mode</label>
 </div>
 <button type="submit" class="btn-save">Save Settings</button>
@@ -1030,6 +1057,7 @@ void handleSettings() {
   html.replace("%QUIET_END%", String(ledConfig.quietHourEnd));
   html.replace("%FETCH_INT%", String(canvasConfig.fetchInterval / 60000));
   html.replace("%AP_PASSWORD%", systemConfig.apPassword);
+  html.replace("%BUG_REPORT_CHECKED%", systemConfig.bugReportEnabled ? "checked" : "");
   html.replace("%DEBUG_CHECKED%", systemConfig.debugMode ? "checked" : "");
 
   server.send(200, "text/html", html);
@@ -1265,6 +1293,7 @@ void handleSave() {
   if (server.hasArg("fetchInterval")) canvasConfig.fetchInterval = server.arg("fetchInterval").toInt() * 60UL * 1000UL;
   if (server.hasArg("apPassword")) server.arg("apPassword").toCharArray(systemConfig.apPassword, sizeof(systemConfig.apPassword));
 
+  systemConfig.bugReportEnabled = server.hasArg("bugReport");
   systemConfig.debugMode = server.hasArg("debug");
   systemConfig.setupComplete = true;
   saveConfig();
@@ -1510,6 +1539,154 @@ void monitorSystem() {
 // ============================================
 // SETUP & LOOP
 // ============================================
+// GitHub Bug Reporting Functions
+
+bool shouldReportBug() {
+  // Check if bug reporting is enabled
+  if (!systemConfig.bugReportEnabled) {
+    return false;
+  }
+  
+  // Check cooldown (1 hour = 3600000ms)
+  unsigned long now = millis();
+  if (now - systemConfig.lastBugReport < 3600000) {
+    if (systemConfig.debugMode) {
+      unsigned long remaining = (3600000 - (now - systemConfig.lastBugReport)) / 60000;
+      Serial.printf("[BUG] Cooldown active: %lu minutes remaining\n", remaining);
+    }
+    return false;
+  }
+  
+  return true;
+}
+
+String collectDiagnostics() {
+  String diagnostics = "{";
+  
+  // Device info
+  uint8_t mac[6];
+  WiFi.macAddress(mac);
+  char macStr[18];
+  sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", 
+          mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  
+  diagnostics += "\"device_id\":\"" + String(macStr) + "\",";
+  diagnostics += "\"firmware_version\":\"" + String(FIRMWARE_VERSION) + "\",";
+  diagnostics += "\"error_code\":" + String(currentErrorCode) + ",";
+  
+  // Error name
+  const char* errorNames[] = {
+    "NONE", "WIFI_DISCONNECT", "CANVAS_AUTH", "CANVAS_SERVER",
+    "TIME_SYNC", "MEMORY_LOW", "JSON_PARSE", "BUFFER_EXHAUSTED"
+  };
+  diagnostics += "\"error_name\":\"ERR_" + String(errorNames[currentErrorCode]) + "\",";
+  
+  // Timestamp
+  time_t now;
+  time(&now);
+  char timestamp[32];
+  struct tm timeinfo;
+  gmtime_r(&now, &timeinfo);
+  strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+  diagnostics += "\"timestamp\":\"" + String(timestamp) + "\",";
+  
+  // System metrics
+  diagnostics += "\"uptime_seconds\":" + String(millis() / 1000) + ",";
+  diagnostics += "\"free_heap\":" + String(ESP.getFreeHeap()) + ",";
+  diagnostics += "\"max_heap_used\":" + String(ESP.getMaxAllocHeap()) + ",";
+  diagnostics += "\"consecutive_errors\":" + String(consecutiveErrors) + ",";
+  diagnostics += "\"wifi_rssi\":" + String(WiFi.RSSI()) + ",";
+  diagnostics += "\"cpu_temp\":" + String(temperatureRead()) + ",";
+  diagnostics += "\"assignment_count\":" + String(assignmentCount) + ",";
+  
+  // Configuration
+  diagnostics += "\"config\":{";
+  diagnostics += "\"timezone\":\"" + String(timezoneConfig.displayName) + "\",";
+  diagnostics += "\"fetch_interval\":" + String(canvasConfig.fetchInterval / 60000) + ",";
+  diagnostics += "\"red_days\":" + String(ledConfig.redLEDDaysAhead) + ",";
+  diagnostics += "\"yellow_days\":" + String(ledConfig.yellowLEDDaysAhead);
+  diagnostics += "}";
+  
+  diagnostics += "}";
+  return diagnostics;
+}
+
+void createGitHubIssue() {
+  if (!shouldReportBug()) {
+    return;
+  }
+  
+  Serial.println("[BUG] Creating GitHub issue...");
+  
+  // Collect diagnostics
+  String diagnostics = collectDiagnostics();
+  
+  // Get MAC for title
+  uint8_t mac[6];
+  WiFi.macAddress(mac);
+  char last4[5];
+  sprintf(last4, "%02X%02X", mac[4], mac[5]);
+  
+  // Error name for title
+  const char* errorNames[] = {
+    "None", "WiFi Disconnect", "Canvas Auth", "Canvas Server",
+    "Time Sync", "Memory Low", "JSON Parse", "Buffer Exhausted"
+  };
+  String errorName = errorNames[currentErrorCode];
+  
+  // Build issue title
+  String title = "[AUTO] " + errorName + " - Device " + String(last4);
+  
+  // Build issue body (markdown)
+  String body = "### Automatic Bug Report\\n\\n";
+  body += "**Firmware:** " + String(FIRMWARE_VERSION) + "\\n";
+  body += "**Error Code:** " + String(currentErrorCode) + " (" + errorName + ")\\n\\n";
+  body += "---\\n\\n### Diagnostics\\n\\n```json\\n";
+  body += diagnostics;
+  body += "\\n```\\n\\n";
+  body += "---\\n\\n*Note: Device will not report again for 1 hour.*";
+  
+  // Build JSON payload for GitHub API
+  String payload = "{";
+  payload += "\"title\":\"" + title + "\",";
+  payload += "\"body\":\"" + body + "\",";
+  payload += "\"labels\":[\"auto-bug-report\",\"critical\",\"firmware-" + String(FIRMWARE_VERSION) + "\"]";
+  payload += "}";
+  
+  // Make HTTPS request to GitHub
+  WiFiClientSecure client;
+  client.setInsecure(); // Skip cert validation for simplicity
+  
+  HTTPClient https;
+  String url = "https://api.github.com/repos/" + String(GITHUB_REPO) + "/issues";
+  https.begin(client, url);
+  https.addHeader("Content-Type", "application/json");
+  https.addHeader("Accept", "application/vnd.github.v3+json");
+  https.addHeader("Authorization", "Bearer " + String(GITHUB_TOKEN));
+  https.setTimeout(10000);
+  
+  int httpCode = https.POST(payload);
+  
+  if (httpCode > 0) {
+    if (httpCode == 201) {
+      Serial.println("[BUG] GitHub issue created successfully!");
+      systemConfig.lastBugReport = millis();
+      preferences.begin("config", false);
+      preferences.putULong("lastReport", systemConfig.lastBugReport);
+      preferences.end();
+    } else {
+      Serial.printf("[BUG] GitHub API returned: %d\n", httpCode);
+      if (systemConfig.debugMode) {
+        Serial.println(https.getString());
+      }
+    }
+  } else {
+    Serial.printf("[BUG] GitHub request failed: %s\n", https.errorToString(httpCode).c_str());
+  }
+  
+  https.end();
+}
+
 void setup() {
   Serial.begin(115200);
   delay(1000);

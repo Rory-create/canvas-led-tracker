@@ -34,36 +34,23 @@ jobs:
       run: |
         pip install platformio
     
-    - name: Create PlatformIO project
-      run: |
-        cd firmware/src/Due
-        cat > platformio.ini << 'EOINI'
-        [env:esp32dev]
-        platform = espressif32
-        board = esp32dev
-        framework = arduino
-        monitor_speed = 115200
-        lib_deps = 
-            bblanchon/ArduinoJson@^6.21.3
-        EOINI
-    
     - name: Build firmware
       run: |
-        cd firmware/src/Due
+        cd firmware
         pio run
     
     - name: Get version from code
       id: version
       run: |
-        VERSION=$(grep '#define FIRMWARE_VERSION' firmware/src/Due/src/version.h | cut -d'"' -f2)
+        VERSION=$(grep '#define FIRMWARE_VERSION' firmware/src/version.h | cut -d'"' -f2)
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Building version: $VERSION"
     
     - name: Rename firmware binary
       run: |
         mkdir -p firmware/builds
-        cp firmware/src/Due/.pio/build/esp32dev/firmware.bin firmware/builds/firmware-${{ steps.version.outputs.version }}.bin
-        cp firmware/src/Due/.pio/build/esp32dev/firmware.bin firmware/builds/firmware-latest.bin
+        cp firmware/.pio/build/esp32dev/firmware.bin firmware/builds/firmware-${{ steps.version.outputs.version }}.bin
+        cp firmware/.pio/build/esp32dev/firmware.bin firmware/builds/firmware-latest.bin
     
     - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4

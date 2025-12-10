@@ -2,12 +2,16 @@
 #define VERSION_H
 
 // Semantic versioning: MAJOR.MINOR.PATCH
-#define FIRMWARE_VERSION "1.1.8"
+#define FIRMWARE_VERSION "1.2.0"
 #define BUILD_TIMESTAMP __DATE__ " " __TIME__
 
 // Development mode - resets non-credential preferences on boot
 // Set to false for production builds
 #define DEV_MODE true
+
+// GitHub bug reporting
+#define GITHUB_TOKEN "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"
+#define GITHUB_REPO "Rory-create/canvas-led-tracker"
 
 // OTA Configuration
 #define OTA_UPDATE_URL "https://raw.githubusercontent.com/Rory-create/canvas-led-tracker/main/ota/version.json"
@@ -19,5 +23,7 @@
 // 1.1.6 - Production robustness: 80KB buffer, dynamic scaling, error state LEDs
 // 1.1.7 - DEV_MODE: Serial commands + web UI for LED pattern testing
 // 1.1.8 - Sequential error patterns (distinguishable blink sequences), AP mode command
+// 1.1.9 - Assignment display on web UI (name, due date, description, Canvas link)
+// 1.2.0 - GitHub bug logging (auto-report critical errors to GitHub Issues)
 
 #endif
