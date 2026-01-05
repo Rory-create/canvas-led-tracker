@@ -2,7 +2,7 @@
 #define VERSION_H
 
 // Semantic versioning: MAJOR.MINOR.PATCH
-#define FIRMWARE_VERSION "1.2.1"
+#define FIRMWARE_VERSION "1.2.3"
 #define BUILD_TIMESTAMP __DATE__ " " __TIME__
 
 // Development mode - resets non-credential preferences on boot
@@ -26,5 +26,7 @@
 // 1.1.9 - Assignment display on web UI (name, due date, description, Canvas link)
 // 1.2.0 - GitHub bug logging (auto-report critical errors to GitHub Issues)
 // 1.2.1 - Production ready: Specific error messages, DEV_MODE disabled
+// 1.2.2 - Bug fixes: Smart buffer scaling logic, flashing LEDs for buffer exhaustion
+// 1.2.3 - Watchdog management: Disable during slow JSON parsing (HTML-heavy responses)
 
 #endif

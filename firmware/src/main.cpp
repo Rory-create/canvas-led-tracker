@@ -284,12 +284,13 @@ void connectWiFi() {
 
   Serial.println("ðŸ“¡ Connecting to WiFi...");
 
-  // Only start AP if we're in first-time setup
-  if (!systemConfig.setupComplete) {
-    WiFi.mode(WIFI_AP_STA);
-  } else {
-    WiFi.mode(WIFI_STA);
-  }
+  // Don't change WiFi mode here - startSettingsAP() already set it correctly
+  // This prevents mode conflicts that kill the AP broadcast during setup
+  // if (!systemConfig.setupComplete) {
+  //   WiFi.mode(WIFI_AP_STA);
+  // } else {
+  //   WiFi.mode(WIFI_STA);
+  // }
   delay(100);
 
   // Try primary network
@@ -407,7 +408,18 @@ int fetchCanvasAssignments() {
         Serial.printf("   Max buffer:    %d bytes (90%% of heap)\n", maxBuffer);
 
         DynamicJsonDocument doc(bufferSize);
+        
+        // Temporarily remove loop task from watchdog during slow JSON parsing
+        // (HTML-heavy Canvas responses can take 10+ seconds to parse)
+        esp_task_wdt_delete(NULL);  // Remove current task
+        Serial.println("   Parsing JSON (watchdog disabled for this task)...");
+        
         DeserializationError error = deserializeJson(doc, response);
+        
+        // Re-add loop task to watchdog
+        esp_task_wdt_add(NULL);  // Add current task back
+        esp_task_wdt_reset();    // Reset timer
+        Serial.println("   Parse complete (watchdog re-enabled)");
 
         if (!error) {
           time_t now, redDeadline = 0, yellowDeadline = 0;
@@ -525,10 +537,25 @@ int fetchCanvasAssignments() {
             Serial.printf("   Response size:  %d bytes\n", response.length());
             Serial.printf("   Free heap:      %d bytes\n", freeHeap);
             
-            // Calculate new buffer size (150% of current, or response size + 20KB, whichever is smaller)
-            size_t newBufferSize = min((bufferSize * 3) / 2, response.length() + 20480);
+            // Smart buffer increase: scale up intelligently or go to max
+            size_t newBufferSize;
+            if (bufferSize < maxBuffer * 0.7) {
+              // We have room to grow - try response size + 40KB headroom for JSON overhead
+              size_t targetSize = response.length() + 40960;
+              size_t scaledSize = bufferSize + (bufferSize / 2); // 1.5x current
+              newBufferSize = max(targetSize, scaledSize);
+            } else {
+              // Near max already - try going to absolute maximum
+              newBufferSize = maxBuffer;
+            }
             
-            if (newBufferSize <= maxBuffer && newBufferSize > bufferSize) {
+            // Cap at maxBuffer
+            if (newBufferSize > maxBuffer) {
+              newBufferSize = maxBuffer;
+            }
+            
+            // Only increase if we can actually grow
+            if (newBufferSize > bufferSize) {
               Serial.printf("   Increasing buffer: %d -> %d bytes\n", bufferSize, newBufferSize);
               canvasConfig.jsonBufferSize = newBufferSize;
               
@@ -537,7 +564,7 @@ int fetchCanvasAssignments() {
               continue;  // Retry this attempt with new buffer
             } else {
               Serial.println("\nCRITICAL: Cannot increase buffer further!");
-              Serial.printf("   New buffer would be: %d bytes\n", newBufferSize);
+              Serial.printf("   Already at maximum: %d bytes\n", bufferSize);
               Serial.printf("   Max allowed (90%% heap): %d bytes\n", maxBuffer);
               Serial.println("   Returning ERROR state - all LEDs will flash");
               currentErrorCode = ERR_BUFFER_EXHAUSTED;
@@ -640,14 +667,20 @@ void displayErrorPattern(int errorCode) {
     {greenLED, yellowLED, 0, 0, 0, 0},      // Time: Green-Yellow
     {redLED, redLED, redLED, 0, 0, 0},      // Memory: Red-Red-Red
     {yellowLED, greenLED, yellowLED, 0, 0, 0}, // JSON: Yellow-Green-Yellow
-    {-1, -1, -1, -1, -1, -1}                // Buffer: all solid (handled separately)
+    {-1, -1, -1, -1, -1, -1}                // Buffer: all flash together (handled separately)
   };
   
-  // Buffer exhausted: all solid
+  // Buffer exhausted: all three LEDs flash together rapidly
   if (errorCode == ERR_BUFFER_EXHAUSTED) {
-    analogWrite(greenLED, ledConfig.maxBrightness);
-    analogWrite(yellowLED, ledConfig.maxBrightness);
-    analogWrite(redLED, ledConfig.maxBrightness);
+    static bool allLEDState = false;
+    if (now - lastFlash >= 300) { // Fast flash: 300ms on/off
+      lastFlash = now;
+      allLEDState = !allLEDState;
+      int brightness = allLEDState ? ledConfig.maxBrightness : 0;
+      analogWrite(greenLED, brightness);
+      analogWrite(yellowLED, brightness);
+      analogWrite(redLED, brightness);
+    }
     return;
   }
   
