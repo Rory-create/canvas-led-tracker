@@ -1,0 +1,6 @@
+{
+  "version": "1.2.5",
+  "firmware_url": "https://raw.githubusercontent.com/Rory-create/canvas-led-tracker/main/ota/firmware.bin",
+  "release_notes": "Initial OTA-enabled release with overdue filtering, mDNS support, and memory optimization",
+  "mandatory": false
+}

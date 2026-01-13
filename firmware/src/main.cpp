@@ -8,6 +8,7 @@
 #include <ArduinoJson.h>
 #include <esp_task_wdt.h>
 #include "version.h"
+#include "ota_update.h"
 
 // Forward declarations
 void createGitHubIssue();
@@ -34,6 +35,7 @@ struct CanvasConfig {
   int itemsPerPage = 5;  // Balanced coverage with 80KB buffer
   unsigned long fetchInterval = 10UL * 60UL * 1000UL;
   size_t jsonBufferSize = 81920;  // 80KB starting buffer
+  bool includeOverdue = false;  // Default: exclude overdue assignments
 } canvasConfig;
 
 struct TimezoneConfig {
@@ -122,6 +124,7 @@ void saveConfig() {
   preferences.putString("apiToken", canvasConfig.apiToken);
   preferences.putInt("itemsPer", canvasConfig.itemsPerPage);
   preferences.putULong("fetchInt", canvasConfig.fetchInterval);
+  preferences.putBool("inclOverdue", canvasConfig.includeOverdue);
 
   preferences.putBool("useFlash", ledConfig.useFlashing);
   preferences.putInt("flashInt", ledConfig.flashInterval);
@@ -175,6 +178,7 @@ void loadConfig() {
 
     canvasConfig.itemsPerPage = preferences.getInt("itemsPer", 2);  // Default 2 - Canvas responses are huge
     canvasConfig.fetchInterval = preferences.getULong("fetchInt", 10UL * 60UL * 1000UL);
+    canvasConfig.includeOverdue = preferences.getBool("inclOverdue", false);  // Default: exclude overdue
 
     ledConfig.useFlashing = preferences.getBool("useFlash", true);
     ledConfig.flashInterval = preferences.getInt("flashInt", 1);
@@ -388,7 +392,10 @@ int fetchCanvasAssignments() {
 
       if (httpCode == 200) {
         String response = http.getString();
-        size_t bufferSize = canvasConfig.jsonBufferSize;
+        
+        // With ArduinoJson filtering, responses are ~2KB instead of 49KB
+        // Start with 8KB buffer (4x expected size for safety margin)
+        size_t bufferSize = min(canvasConfig.jsonBufferSize, (size_t)8192);
         size_t freeHeap = ESP.getFreeHeap();
         size_t maxBuffer = (freeHeap * 90) / 100;  // 90% of free heap
         
@@ -407,6 +414,17 @@ int fetchCanvasAssignments() {
         Serial.printf("   Free heap:     %d bytes\n", freeHeap);
         Serial.printf("   Max buffer:    %d bytes (90%% of heap)\n", maxBuffer);
 
+        // ArduinoJson Filter: Skip description field to avoid HTML/image bloat
+        // This reduces memory usage from ~49KB to ~2KB per response
+        StaticJsonDocument<256> filter;
+        filter[0]["assignment"]["name"] = true;
+        filter[0]["assignment"]["due_at"] = true;
+        filter[0]["assignment"]["html_url"] = true;
+        // NOTE: "description" intentionally excluded (contains embedded images)
+        filter[0]["completed"] = true;
+        
+        Serial.println("   Using ArduinoJson filter to skip description field");
+
         DynamicJsonDocument doc(bufferSize);
         
         // Temporarily remove loop task from watchdog during slow JSON parsing
@@ -414,7 +432,8 @@ int fetchCanvasAssignments() {
         esp_task_wdt_delete(NULL);  // Remove current task
         Serial.println("   Parsing JSON (watchdog disabled for this task)...");
         
-        DeserializationError error = deserializeJson(doc, response);
+        DeserializationError error = deserializeJson(doc, response, 
+                                                     DeserializationOption::Filter(filter));
         
         // Re-add loop task to watchdog
         esp_task_wdt_add(NULL);  // Add current task back
@@ -473,6 +492,15 @@ int fetchCanvasAssignments() {
                 // Apply offset to due time
                 time_t due_time_local = due_time_utc + offset_seconds;
                 
+                // Skip overdue assignments unless user enabled them
+                if (!canvasConfig.includeOverdue && due_time_local < now) {
+                  if (systemConfig.debugMode) {
+                    Serial.printf("Skipping overdue assignment: %s (due %s)\n", 
+                                 item["assignment"]["name"].as<const char*>(), dueDate);
+                  }
+                  continue;  // Skip this assignment
+                }
+                
                 if (systemConfig.debugMode) {
                   Serial.printf("Assignment due_at: %s\n", dueDate);
                   Serial.printf("  UTC: %ld, Offset: %d sec, Local: %ld\n", 
@@ -493,12 +521,8 @@ int fetchCanvasAssignments() {
                   a.dueTimestamp = due_time_local;
                   a.htmlUrl = item["assignment"]["html_url"].as<String>();
                   
-                  // Get description (limit to 200 chars)
-                  String desc = item["assignment"]["description"].as<String>();
-                  if (desc.length() > 200) {
-                    desc = desc.substring(0, 197) + "...";
-                  }
-                  a.description = desc;
+                  // Description field excluded via ArduinoJson filter (contained HTML/images)
+                  a.description = "(Description not available)";
                   
                   // Determine urgency based on user thresholds
                   if (due_time_local <= redDeadline) {
@@ -960,6 +984,8 @@ Device: <span>%DEVICE_NAME%</span> | WiFi: %WIFI_STATUS% | Assignment: <span>%AS
 <div class="section"><h3>System</h3>
 <label>Device Name<input type="text" name="deviceName" value="%DEVICE_NAME%"></label>
 <label>Check Interval (minutes)<input type="number" name="fetchInterval" value="%FETCH_INT%" min="1"></label>
+<label><input type="checkbox" name="includeOverdue" %INCLUDE_OVERDUE_CHECKED%> Include Overdue Assignments</label>
+<small style="color:#666;">⚠️ Note: If you use browser extensions like BetterCanvas to mark assignments complete, they may not sync with Canvas API. Leave this OFF to avoid seeing old completed assignments.</small>
 <label>AP Password<input type="text" name="apPassword" value="%AP_PASSWORD%"></label>
 <label><input type="checkbox" name="bugReport" %BUG_REPORT_CHECKED%> Enable Auto Bug Reports</label>
 <small style="color:#666;">Automatically report critical errors to GitHub for faster support</small>
@@ -1117,6 +1143,7 @@ void handleSettings() {
   html.replace("%QUIET_END%", String(ledConfig.quietHourEnd));
   html.replace("%FETCH_INT%", String(canvasConfig.fetchInterval / 60000));
   html.replace("%AP_PASSWORD%", systemConfig.apPassword);
+  html.replace("%INCLUDE_OVERDUE_CHECKED%", canvasConfig.includeOverdue ? "checked" : "");
   html.replace("%BUG_REPORT_CHECKED%", systemConfig.bugReportEnabled ? "checked" : "");
   html.replace("%DEBUG_CHECKED%", systemConfig.debugMode ? "checked" : "");
 
@@ -1353,6 +1380,7 @@ void handleSave() {
   if (server.hasArg("fetchInterval")) canvasConfig.fetchInterval = server.arg("fetchInterval").toInt() * 60UL * 1000UL;
   if (server.hasArg("apPassword")) server.arg("apPassword").toCharArray(systemConfig.apPassword, sizeof(systemConfig.apPassword));
 
+  canvasConfig.includeOverdue = server.hasArg("includeOverdue");
   systemConfig.bugReportEnabled = server.hasArg("bugReport");
   systemConfig.debugMode = server.hasArg("debug");
   systemConfig.setupComplete = true;
@@ -1986,6 +2014,15 @@ void loop() {
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("âš ï¸ WiFi disconnected, reconnecting...");
       connectWiFi();
+    }
+
+
+    // Check for OTA updates once per day
+    static unsigned long lastOTACheck = 0;
+    if (now - lastOTACheck >= OTA_CHECK_INTERVAL_MS) {
+      Serial.println("\n🔄 Checking for firmware updates...");
+      checkForOTAUpdate();
+      lastOTACheck = now;
     }
 
     if (now - lastFetch >= canvasConfig.fetchInterval) {
