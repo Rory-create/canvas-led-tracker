@@ -32,7 +32,7 @@ struct WiFiConfig {
 struct CanvasConfig {
   char apiUrl[256] = "https://ojrsd.instructure.com/api/v1/users/self/todo";
   char apiToken[128] = "";
-  int itemsPerPage = 5;  // Balanced coverage with 80KB buffer
+  int itemsPerPage = 8;  // Balanced coverage with 80KB buffer
   unsigned long fetchInterval = 10UL * 60UL * 1000UL;
   size_t jsonBufferSize = 81920;  // 80KB starting buffer
   bool includeOverdue = false;  // Default: exclude overdue assignments
@@ -1929,7 +1929,18 @@ void handleSerialCommands() {
     Serial.println("test:yellow   - Normal yellow");
     Serial.println("test:red      - Normal red");
     Serial.println("test:clear    - Exit test mode");
+    Serial.println("ota:check     - Force OTA update check now");
+    Serial.println("version:info  - Show firmware version and build info");
     Serial.println("ap:start      - Start AP mode for web UI testing\n");
+    return;
+  }
+  
+  if (cmd == "version:info") {
+    Serial.println("\n=== Firmware Information ===");
+    Serial.printf("Version: %s\n", FIRMWARE_VERSION);
+    Serial.printf("Build: %s\n", BUILD_TIMESTAMP);
+    Serial.printf("Device: %s\n", systemConfig.deviceName);
+    Serial.println("===========================\n");
     return;
   }
   
@@ -1941,6 +1952,17 @@ void handleSerialCommands() {
     Serial.printf("[AP] Password: %s\n", systemConfig.apPassword);
     Serial.printf("[AP] IP: %s\n", WiFi.softAPIP().toString().c_str());
     Serial.println("[AP] Navigate to: http://192.168.4.1/test");
+    return;
+  }
+
+  if (cmd == "ota:check") {
+    Serial.println("[OTA] 🔄 Forcing OTA update check...");
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("[OTA] ❌ Not connected to WiFi. Connect first.");
+      return;
+    }
+    checkForOTAUpdate();
+    Serial.println("[OTA] ✅ Check complete. See output above.");
     return;
   }
   

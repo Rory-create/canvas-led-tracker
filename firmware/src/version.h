@@ -2,7 +2,7 @@
 #define VERSION_H
 
 // Semantic versioning: MAJOR.MINOR.PATCH
-#define FIRMWARE_VERSION "1.2.3"
+#define FIRMWARE_VERSION "1.2.6"
 #define BUILD_TIMESTAMP __DATE__ " " __TIME__
 
 // Development mode - resets non-credential preferences on boot
@@ -28,5 +28,8 @@
 // 1.2.1 - Production ready: Specific error messages, DEV_MODE disabled
 // 1.2.2 - Bug fixes: Smart buffer scaling logic, flashing LEDs for buffer exhaustion
 // 1.2.3 - Watchdog management: Disable during slow JSON parsing (HTML-heavy responses)
+// 1.2.4 - ArduinoJson filtering: Skip description field, 8KB initial buffer (was 81KB)
+// 1.2.5 - Overdue assignment filtering: Add toggle to exclude overdue (default OFF)
+// 1.2.6 - OTA test release: Added version:info command for update verification
 
 #endif
