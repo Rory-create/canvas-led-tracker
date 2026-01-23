@@ -1,0 +1,6 @@
+{
+  "version": "1.2.7",
+  "firmware_url": "https://raw.githubusercontent.com/Rory-create/canvas-led-tracker/main/ota/firmware-full.bin",
+  "release_notes": "Full firmware with OTA watchdog fix - normal operation restored",
+  "mandatory": true
+}
