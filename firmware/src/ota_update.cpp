@@ -1,6 +1,6 @@
 #include "ota_update.h"
 #include <WiFi.h>
-#include "esp_task_wdt.h"
+#include <esp_task_wdt.h>
 
 // Global variables for OTA
 static unsigned long lastOTACheck = 0;
@@ -142,16 +142,11 @@ void checkForOTAUpdate() {
   }
   
   WiFiClient* stream = httpFirmware.getStreamPtr();
-  
-  // Disable watchdog during firmware download (can take 10-15 seconds)
+
+  // CRITICAL: Disable watchdog during OTA write - large downloads can take 30+ seconds
   esp_task_wdt_delete(NULL);
-  Serial.println("⏸️  Watchdog disabled for OTA download...");
-  
   size_t written = Update.writeStream(*stream);
-  
-  // Re-enable watchdog after download
   esp_task_wdt_add(NULL);
-  Serial.println("▶️  Watchdog re-enabled");
   
   httpFirmware.end();
   

@@ -2,7 +2,7 @@
 #define VERSION_H
 
 // Semantic versioning: MAJOR.MINOR.PATCH
-#define FIRMWARE_VERSION "1.2.7"
+#define FIRMWARE_VERSION "1.2.9"
 #define BUILD_TIMESTAMP __DATE__ " " __TIME__
 
 // Development mode - resets non-credential preferences on boot
@@ -32,5 +32,7 @@
 // 1.2.5 - Overdue assignment filtering: Add toggle to exclude overdue (default OFF)
 // 1.2.6 - OTA test release: Added version:info command for update verification
 // 1.2.7 - CRITICAL: Fix OTA watchdog timeout causing boot loops during updates
+// 1.2.8 - RESCUE FIX: Fixed namespace mismatch (canvas-led→config) and key mismatch (password→pass)
+// 1.2.9 - Full firmware with OTA watchdog fix - production ready
 
 #endif
