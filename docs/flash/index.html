@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DueLight Firmware Updater</title>
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      max-width: 520px;
+      width: 100%;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 24px;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    .version {
+      font-size: 14px;
+      color: #999;
+      margin-bottom: 24px;
+    }
+    .steps {
+      text-align: left;
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 20px 0;
+    }
+    .steps h3 {
+      font-size: 14px;
+      color: #667eea;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    .steps ol {
+      padding-left: 20px;
+      color: #555;
+      line-height: 1.8;
+      font-size: 15px;
+    }
+    .install-wrap {
+      margin: 28px 0 20px;
+    }
+    esp-web-install-button button {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      padding: 14px 40px;
+      font-size: 17px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    esp-web-install-button button:hover {
+      opacity: 0.9;
+    }
+    .note {
+      font-size: 13px;
+      color: #888;
+      line-height: 1.5;
+      margin-top: 16px;
+    }
+    .note strong { color: #666; }
+    .whats-new {
+      text-align: left;
+      margin: 20px 0 0;
+      padding: 16px 20px;
+      background: #d4edda;
+      border-radius: 8px;
+      border: 1px solid #c3e6cb;
+    }
+    .whats-new h3 {
+      font-size: 14px;
+      color: #155724;
+      margin-bottom: 8px;
+    }
+    .whats-new ul {
+      padding-left: 18px;
+      color: #155724;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .no-serial {
+      display: none;
+      background: #f8d7da;
+      border: 1px solid #f5c6cb;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 20px 0 0;
+      color: #721c24;
+      font-size: 14px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DueLight Firmware Updater</h1>
+    <p class="version">v1.3.0</p>
+
+    <div class="steps">
+      <h3>Instructions</h3>
+      <ol>
+        <li>Plug the DueLight into your computer via USB</li>
+        <li>Click <strong>Install Firmware</strong> below</li>
+        <li>Select the USB serial port when prompted</li>
+        <li>Wait for the install to complete (~30 seconds)</li>
+      </ol>
+    </div>
+
+    <div class="install-wrap">
+      <esp-web-install-button manifest="manifest.json">
+        <button slot="activate">Install Firmware</button>
+        <span slot="unsupported">
+          <div class="no-serial" style="display:block;">
+            <strong>Browser not supported.</strong> Your browser does not support WebSerial.
+            Please use <strong>Google Chrome</strong> or <strong>Microsoft Edge</strong> (version 89+) on a desktop computer.
+            School-managed Chromebooks may have this feature disabled by an administrator.
+          </div>
+        </span>
+        <span slot="not-allowed">
+          <div class="no-serial" style="display:block;">
+            <strong>Serial access blocked.</strong> Your browser or device policy is preventing access to USB serial ports.
+            This is common on school-managed Chromebooks. You may need to flash the device on a different computer.
+          </div>
+        </span>
+      </esp-web-install-button>
+    </div>
+
+    <div class="whats-new">
+      <h3>What's new in v1.3.0</h3>
+      <ul>
+        <li>WiFi scan now retries automatically if it fails</li>
+        <li>You can now type a network name manually if scanning doesn't find it</li>
+        <li>Firmware version and diagnostic links shown during setup</li>
+        <li>Re-scan button added to WiFi setup</li>
+      </ul>
+    </div>
+
+    <p class="note">
+      <strong>Note:</strong> This requires a Chrome-based browser with WebSerial support.
+      If the button above doesn't work, the firmware can be installed via USB at school.
+    </p>
+  </div>
+</body>
+</html>

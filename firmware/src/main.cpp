@@ -789,16 +789,19 @@ button:hover{opacity:0.9;}
 </style></head><body><div class="container">
 <h1>Canvas LED Tracker</h1>
 <p style="text-align:center;color:#666;">Initial Setup</p>
+<p style="text-align:center;font-size:12px;color:#999;">Firmware v%FW_VERSION% | <a href="/health" target="_blank" style="color:#667eea;">Health</a> | <a href="/logs" target="_blank" style="color:#667eea;">Logs</a></p>
 <p><b>Get Canvas Token:</b> Open Canvas in browser â†’ Account â†’ Settings â†’ Approved Integrations â†’ + New Access Token</p>
 <form method="POST" action="/save" onsubmit="return validateSetup()">
 <div class="section">
 <h3>WiFi Settings</h3>
-<label>Network Name<select name="ssid" id="ssidSelect" style="width:100%;padding:10px;"><option value="">-- Loading... --</option></select></label>
+<label>Network Name<input type="text" name="ssid" id="ssidSelect" list="ssidList" placeholder="Scanning..." style="width:100%;padding:10px;" autocomplete="off"><datalist id="ssidList"></datalist></label>
 <label>WiFi Password<div class="pass-wrap"><input type="password" name="password" id="wifiPass" class="pwd"><span class="show-pass" onclick="togglePass(this)">SHOW</span></div></label>
 <button type="button" onclick="testWifi()" style="background:#28a745;margin:5px 0;">Test WiFi</button>
 <div id="wifiResult" style="padding:8px;margin:5px 0;border-radius:5px;display:none;"></div>
-<label>Backup SSID<select name="ssid2" id="ssid2Select" style="width:100%;padding:10px;"><option value="">-- None --</option></select></label>
+<label>Backup SSID<input type="text" name="ssid2" id="ssid2Select" list="ssid2List" placeholder="Optional backup network" style="width:100%;padding:10px;" autocomplete="off"><datalist id="ssid2List"></datalist></label>
 <label>Backup Password<div class="pass-wrap"><input type="password" name="password2" class="pwd"><span class="show-pass" onclick="togglePass(this)">SHOW</span></div></label>
+<div id="scanStatus" style="font-size:13px;color:#666;margin:8px 0;"></div>
+<button type="button" id="scanBtn" onclick="scanWifi()" style="background:#17a2b8;margin:5px 0;">Re-scan Networks</button>
 </div>
 <div class="section">
 <h3>Canvas API Token</h3>
@@ -861,17 +864,37 @@ function validateSetup(){
   err.style.display='none';return true;
 }
 function scanWifi(){
-  let s=document.getElementById('ssidSelect'),s2=document.getElementById('ssid2Select');
-  s.innerHTML='<option>-- Scanning... --</option>';
-  fetch('/scan').then(r=>r.json()).then(nets=>{
-    s.innerHTML='<option value="">-- Select Network --</option>';
-    s2.innerHTML='<option value="">-- None --</option>';
+  let s=document.getElementById('ssidSelect'),dl=document.getElementById('ssidList'),dl2=document.getElementById('ssid2List');
+  let sb=document.getElementById('scanBtn'),st=document.getElementById('scanStatus');
+  s.placeholder='Scanning...';if(sb)sb.disabled=true;
+  if(st)st.textContent='Scanning for networks...';
+  let opts={};
+  try{opts.signal=AbortSignal.timeout(15000);}catch(e){}
+  fetch('/scan',opts).then(r=>r.json()).then(data=>{
+    let nets=data.networks||data;
+    dl.innerHTML='';dl2.innerHTML='';
+    if(data.error){
+      if(st)st.textContent='Scan issue: '+(data.errorDetail||data.error)+' Type your network name manually.';
+      s.placeholder='Type network name';if(sb)sb.disabled=false;return;
+    }
+    if(!nets||nets.length===0){
+      if(st)st.textContent='No networks found. Type your network name manually.';
+      s.placeholder='Type network name';if(sb)sb.disabled=false;return;
+    }
     nets.forEach(n=>{
-      let sig=n.rssi>-50?'▓▓▓▓':n.rssi>-60?'▓▓▓░':n.rssi>-70?'▓▓░░':'▓░░░';
-      let o='<option value="'+n.ssid+'">'+n.ssid+' '+sig+(n.secure?' 🔒':'')+'</option>';
-      s.innerHTML+=o;s2.innerHTML+=o;
+      let sig=n.rssi>-50?'Strong':n.rssi>-60?'Good':n.rssi>-70?'Fair':'Weak';
+      let lbl=n.ssid+' ('+sig+(n.secure?', secured':'')+')';
+      dl.innerHTML+='<option value="'+n.ssid+'">'+lbl+'</option>';
+      dl2.innerHTML+='<option value="'+n.ssid+'">'+lbl+'</option>';
     });
-  }).catch(()=>{s.innerHTML='<option value="">Scan failed</option>';});
+    s.placeholder='Select or type network name';
+    if(st)st.textContent='Found '+nets.length+' network(s). You can also type a name manually.';
+    if(sb)sb.disabled=false;
+  }).catch(e=>{
+    s.placeholder='Type network name';
+    if(st)st.textContent='Scan failed (timeout or connection error). Type your network name manually.';
+    if(sb)sb.disabled=false;
+  });
 }
 function testWifi(){
   let ssid=document.getElementById('ssidSelect').value;
@@ -1027,7 +1050,9 @@ void handleRoot() {
     server.sendHeader("Location", "/settings");
     server.send(302);
   } else {
-    server.send(200, "text/html", FPSTR(WELCOME_HTML));
+    String html = FPSTR(WELCOME_HTML);
+    html.replace("%FW_VERSION%", FIRMWARE_VERSION);
+    server.send(200, "text/html", html);
   }
 }
 
@@ -1432,20 +1457,68 @@ void handleSave() {
 // ============================================
 void handleScan() {
   Serial.println("📡 Scanning WiFi networks...");
-  int n = WiFi.scanNetworks();
-  
-  StaticJsonDocument<2048> doc;
-  JsonArray networks = doc.to<JsonArray>();
-  
-  for (int i = 0; i < n && i < 15; i++) {
-    JsonObject net = networks.createNestedObject();
-    net["ssid"] = WiFi.SSID(i);
-    net["rssi"] = WiFi.RSSI(i);
-    net["secure"] = WiFi.encryptionType(i) != WIFI_AUTH_OPEN;
-  }
-  
+
+  // Clear any previous scan results
   WiFi.scanDelete();
-  
+  delay(100);
+
+  // Attempt scan with retries (AP+STA mode can fail intermittently)
+  int n = -1;
+  for (int attempt = 0; attempt < 3 && n < 0; attempt++) {
+    if (attempt > 0) {
+      Serial.printf("  Scan retry %d/3...\n", attempt + 1);
+      delay(500);
+    }
+    n = WiFi.scanNetworks(false, false, false, 300);  // sync, no hidden, no passive, 300ms/channel
+    Serial.printf("  Scan attempt %d result: %d\n", attempt + 1, n);
+  }
+
+  StaticJsonDocument<2048> doc;
+  JsonObject root = doc.to<JsonObject>();
+  JsonArray networks = root.createNestedArray("networks");
+
+  if (n < 0) {
+    root["error"] = (n == -1) ? "scan_failed" : "scan_busy";
+    root["errorDetail"] = (n == -1)
+      ? "WiFi scan returned no results after 3 attempts. Try re-scanning or type your network name manually."
+      : "A scan is already in progress. Please wait a moment and try again.";
+    Serial.printf("  ❌ Scan failed with code: %d after retries\n", n);
+  } else if (n == 0) {
+    root["error"] = "no_networks";
+    root["errorDetail"] = "No networks found. Your network may be hidden or out of range.";
+    Serial.println("  ⚠️ No networks found");
+  } else {
+    Serial.printf("  ✅ Found %d raw networks, deduplicating...\n", n);
+    for (int i = 0; i < n && i < 20; i++) {
+      String ssid = WiFi.SSID(i);
+      if (ssid.length() == 0) continue;  // Skip hidden networks
+
+      // Check for duplicate SSID (same network on multiple channels)
+      bool isDuplicate = false;
+      for (size_t j = 0; j < networks.size(); j++) {
+        if (networks[j]["ssid"].as<String>() == ssid) {
+          if (WiFi.RSSI(i) > networks[j]["rssi"].as<int>()) {
+            networks[j]["rssi"] = WiFi.RSSI(i);
+          }
+          isDuplicate = true;
+          break;
+        }
+      }
+
+      if (!isDuplicate && networks.size() < 15) {
+        JsonObject net = networks.createNestedObject();
+        net["ssid"] = ssid;
+        net["rssi"] = WiFi.RSSI(i);
+        net["secure"] = WiFi.encryptionType(i) != WIFI_AUTH_OPEN;
+      }
+    }
+    Serial.printf("  📋 Returning %d unique networks\n", networks.size());
+  }
+
+  root["count"] = networks.size();
+
+  WiFi.scanDelete();
+
   String response;
   serializeJson(doc, response);
   server.send(200, "application/json", response);
