@@ -393,11 +393,13 @@ int fetchCanvasAssignments() {
       if (httpCode == 200) {
         String response = http.getString();
         
-        // With ArduinoJson filtering, responses are ~2KB instead of 49KB
-        // Start with 8KB buffer (4x expected size for safety margin)
-        size_t bufferSize = min(canvasConfig.jsonBufferSize, (size_t)8192);
+        // With ArduinoJson filtering, responses are ~2KB instead of 49KB.
+        // Track buffer size in a static local so it never permanently inflates canvasConfig.
+        // Capped at 75% of free heap (not 90%) to leave headroom for other allocations.
+        static size_t adaptiveBufferSize = 8192;
+        size_t bufferSize = adaptiveBufferSize;
         size_t freeHeap = ESP.getFreeHeap();
-        size_t maxBuffer = (freeHeap * 90) / 100;  // 90% of free heap
+        size_t maxBuffer = (freeHeap * 75) / 100;  // 75% of free heap
         
         // Check for critical memory condition
         if (freeHeap < 15000) {
@@ -547,9 +549,10 @@ int fetchCanvasAssignments() {
           }
           http.end();
 
-          // Success!
+          // Success! Reset adaptive buffer so transient spikes don't permanently grow it.
           consecutiveErrors = 0;
           lastSuccessfulFetch = millis();
+          adaptiveBufferSize = 8192;
           Serial.println("Canvas fetch successful");
           return newStatus;
         } else {
@@ -583,7 +586,7 @@ int fetchCanvasAssignments() {
             // Only increase if we can actually grow
             if (newBufferSize > bufferSize) {
               Serial.printf("   Increasing buffer: %d -> %d bytes\n", bufferSize, newBufferSize);
-              canvasConfig.jsonBufferSize = newBufferSize;
+              adaptiveBufferSize = newBufferSize;
               
               // Retry with new buffer size
               Serial.println("   Retrying with increased buffer...\n");
@@ -1818,24 +1821,26 @@ void createGitHubIssue() {
   };
   String errorName = errorNames[currentErrorCode];
   
-  // Build issue title
+  // Build issue title and body
   String title = "[AUTO] " + errorName + " - Device " + String(last4);
-  
-  // Build issue body (markdown)
-  String body = "### Automatic Bug Report\\n\\n";
-  body += "**Firmware:** " + String(FIRMWARE_VERSION) + "\\n";
-  body += "**Error Code:** " + String(currentErrorCode) + " (" + errorName + ")\\n\\n";
-  body += "---\\n\\n### Diagnostics\\n\\n```json\\n";
+  String body = "### Automatic Bug Report\n\n";
+  body += "**Firmware:** " + String(FIRMWARE_VERSION) + "\n";
+  body += "**Error Code:** " + String(currentErrorCode) + " (" + errorName + ")\n\n";
+  body += "---\n\n### Diagnostics\n\n```json\n";
   body += diagnostics;
-  body += "\\n```\\n\\n";
-  body += "---\\n\\n*Note: Device will not report again for 1 hour.*";
-  
-  // Build JSON payload for GitHub API
-  String payload = "{";
-  payload += "\"title\":\"" + title + "\",";
-  payload += "\"body\":\"" + body + "\",";
-  payload += "\"labels\":[\"auto-bug-report\",\"critical\",\"firmware-" + String(FIRMWARE_VERSION) + "\"]";
-  payload += "}";
+  body += "\n```\n\n";
+  body += "---\n\n*Note: Device will not report again for 1 hour.*";
+
+  // Build JSON payload via ArduinoJson so special chars in title/body are safely escaped
+  DynamicJsonDocument issueDoc(2048);
+  issueDoc["title"] = title;
+  issueDoc["body"] = body;
+  JsonArray labels = issueDoc.createNestedArray("labels");
+  labels.add("auto-bug-report");
+  labels.add("critical");
+  labels.add(String("firmware-") + FIRMWARE_VERSION);
+  String payload;
+  serializeJson(issueDoc, payload);
   
   // Make HTTPS request to GitHub
   WiFiClientSecure client;
@@ -2108,19 +2113,23 @@ void loop() {
   server.handleClient();
 
   if (systemConfig.setupComplete) {
-    if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("âš ï¸ WiFi disconnected, reconnecting...");
+    // WiFi reconnect with 30-second backoff to avoid hammering the AP on poor signal
+    static unsigned long lastReconnectAttempt = 0;
+    if (WiFi.status() != WL_CONNECTED && now - lastReconnectAttempt > 30000UL) {
+      Serial.println("WiFi disconnected, reconnecting...");
       connectWiFi();
+      lastReconnectAttempt = now;
     }
 
-
-    // Check for OTA updates once per day
-    static unsigned long lastOTACheck = 0;
-    if (now - lastOTACheck >= OTA_CHECK_INTERVAL_MS) {
-      Serial.println("\n🔄 Checking for firmware updates...");
-      checkForOTAUpdate();
-      lastOTACheck = now;
+    // Periodic NTP retry if time sync failed on boot
+    static unsigned long lastNTPRetry = 0;
+    if (!timeSyncComplete && WiFi.status() == WL_CONNECTED && now - lastNTPRetry > 60000UL) {
+      initTime();
+      lastNTPRetry = now;
     }
+
+    // OTA rate-limiting is handled internally by checkForOTAUpdate()
+    checkForOTAUpdate();
 
     if (now - lastFetch >= canvasConfig.fetchInterval) {
       Serial.println("\n--- Canvas Check Cycle ---");
