@@ -10,7 +10,11 @@
 #define DEV_MODE false
 
 // GitHub bug reporting
-#define GITHUB_TOKEN "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"
+// GITHUB_TOKEN must be injected at build time via platformio.ini build_flags:
+//   build_flags = -DGITHUB_TOKEN=\"${sysenv.GITHUB_TOKEN}\"
+// For local builds, copy secrets.h.template to secrets.h and fill in the value.
+// secrets.h is listed in .gitignore and must NEVER be committed.
+#include "secrets.h"
 #define GITHUB_REPO "Rory-create/canvas-led-tracker"
 
 // OTA Configuration
