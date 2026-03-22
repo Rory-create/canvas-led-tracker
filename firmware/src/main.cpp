@@ -428,16 +428,18 @@ int fetchCanvasAssignments() {
         DynamicJsonDocument doc(bufferSize);
         
         // Temporarily remove loop task from watchdog during slow JSON parsing
-        // (HTML-heavy Canvas responses can take 10+ seconds to parse)
-        esp_task_wdt_delete(NULL);  // Remove current task
+        // (HTML-heavy Canvas responses can take 10+ seconds to parse).
+        // WDT is always re-added before evaluating the result so it is never
+        // left disabled regardless of what deserializeJson does internally.
+        esp_task_wdt_delete(NULL);
         Serial.println("   Parsing JSON (watchdog disabled for this task)...");
-        
-        DeserializationError error = deserializeJson(doc, response, 
+
+        DeserializationError error = deserializeJson(doc, response,
                                                      DeserializationOption::Filter(filter));
-        
-        // Re-add loop task to watchdog
-        esp_task_wdt_add(NULL);  // Add current task back
-        esp_task_wdt_reset();    // Reset timer
+
+        // Re-add unconditionally — must happen before any branch on `error`
+        esp_task_wdt_add(NULL);
+        esp_task_wdt_reset();
         Serial.println("   Parse complete (watchdog re-enabled)");
 
         if (!error) {

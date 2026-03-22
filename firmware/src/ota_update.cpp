@@ -73,7 +73,7 @@ void checkForOTAUpdate() {
   String payload = http.getString();
   http.end();
   
-  DynamicJsonDocument doc(1024);
+  DynamicJsonDocument doc(2048);
   DeserializationError error = deserializeJson(doc, payload);
   
   if (error) {
@@ -143,26 +143,28 @@ void checkForOTAUpdate() {
   
   WiFiClient* stream = httpFirmware.getStreamPtr();
 
-  // CRITICAL: Disable watchdog during OTA write - large downloads can take 30+ seconds
+  // CRITICAL: Disable watchdog during OTA write - large downloads can take 30+ seconds.
+  // Always re-add the task before evaluating results so WDT is never left disabled.
   esp_task_wdt_delete(NULL);
   size_t written = Update.writeStream(*stream);
-  esp_task_wdt_add(NULL);
-  
+  esp_task_wdt_add(NULL);   // Re-add unconditionally before any early return
+  esp_task_wdt_reset();
+
   httpFirmware.end();
-  
-  if (written != contentLength) {
-    Serial.printf("❌ Write failed. Written: %d, Expected: %d\n", written, contentLength);
+
+  if (written != (size_t)contentLength) {
+    Serial.printf("❌ Write failed. Written: %u, Expected: %d\n", (unsigned)written, contentLength);
     Update.abort();
     otaInProgress = false;
     return;
   }
-  
+
   if (!Update.end()) {
     Serial.printf("❌ Update failed: %s\n", Update.errorString());
     otaInProgress = false;
     return;
   }
-  
+
   if (!Update.isFinished()) {
     Serial.println("❌ Update not finished");
     otaInProgress = false;
