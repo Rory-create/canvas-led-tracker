@@ -32,9 +32,9 @@ struct WiFiConfig {
 struct CanvasConfig {
   char apiUrl[256] = "https://ojrsd.instructure.com/api/v1/users/self/todo";
   char apiToken[128] = "";
-  int itemsPerPage = 8;  // Balanced coverage with 80KB buffer
+  int itemsPerPage = 8;
   unsigned long fetchInterval = 10UL * 60UL * 1000UL;
-  size_t jsonBufferSize = 81920;  // 80KB starting buffer
+  size_t jsonBufferSize = 8192;  // 8KB; adaptive scaling is in fetchCanvasAssignments()
   bool includeOverdue = false;  // Default: exclude overdue assignments
 } canvasConfig;
 
@@ -1748,54 +1748,50 @@ bool shouldReportBug() {
 }
 
 String collectDiagnostics() {
-  String diagnostics = "{";
-  
-  // Device info
+  // Use ArduinoJson to build diagnostics JSON — avoids heap fragmentation from
+  // repeated String concatenation and handles field escaping automatically.
+  StaticJsonDocument<512> doc;
+
   uint8_t mac[6];
   WiFi.macAddress(mac);
   char macStr[18];
-  sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", 
+  sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X",
           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  
-  diagnostics += "\"device_id\":\"" + String(macStr) + "\",";
-  diagnostics += "\"firmware_version\":\"" + String(FIRMWARE_VERSION) + "\",";
-  diagnostics += "\"error_code\":" + String(currentErrorCode) + ",";
-  
-  // Error name
+
   const char* errorNames[] = {
     "NONE", "WIFI_DISCONNECT", "CANVAS_AUTH", "CANVAS_SERVER",
     "TIME_SYNC", "MEMORY_LOW", "JSON_PARSE", "BUFFER_EXHAUSTED"
   };
-  diagnostics += "\"error_name\":\"ERR_" + String(errorNames[currentErrorCode]) + "\",";
-  
-  // Timestamp
+
   time_t now;
   time(&now);
   char timestamp[32];
   struct tm timeinfo;
   gmtime_r(&now, &timeinfo);
   strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
-  diagnostics += "\"timestamp\":\"" + String(timestamp) + "\",";
-  
-  // System metrics
-  diagnostics += "\"uptime_seconds\":" + String(millis() / 1000) + ",";
-  diagnostics += "\"free_heap\":" + String(ESP.getFreeHeap()) + ",";
-  diagnostics += "\"max_heap_used\":" + String(ESP.getMaxAllocHeap()) + ",";
-  diagnostics += "\"consecutive_errors\":" + String(consecutiveErrors) + ",";
-  diagnostics += "\"wifi_rssi\":" + String(WiFi.RSSI()) + ",";
-  diagnostics += "\"cpu_temp\":" + String(temperatureRead()) + ",";
-  diagnostics += "\"assignment_count\":" + String(assignmentCount) + ",";
-  
-  // Configuration
-  diagnostics += "\"config\":{";
-  diagnostics += "\"timezone\":\"" + String(timezoneConfig.displayName) + "\",";
-  diagnostics += "\"fetch_interval\":" + String(canvasConfig.fetchInterval / 60000) + ",";
-  diagnostics += "\"red_days\":" + String(ledConfig.redLEDDaysAhead) + ",";
-  diagnostics += "\"yellow_days\":" + String(ledConfig.yellowLEDDaysAhead);
-  diagnostics += "}";
-  
-  diagnostics += "}";
-  return diagnostics;
+
+  doc["device_id"] = macStr;
+  doc["firmware_version"] = FIRMWARE_VERSION;
+  doc["error_code"] = currentErrorCode;
+  doc["error_name"] = String("ERR_") + errorNames[currentErrorCode];
+  doc["timestamp"] = timestamp;
+  doc["uptime_seconds"] = millis() / 1000;
+  doc["free_heap"] = ESP.getFreeHeap();
+  doc["max_heap_used"] = ESP.getMaxAllocHeap();
+  doc["consecutive_errors"] = consecutiveErrors;
+  doc["wifi_rssi"] = WiFi.RSSI();
+  doc["cpu_temp"] = temperatureRead();
+  doc["assignment_count"] = assignmentCount;
+
+  JsonObject cfg = doc.createNestedObject("config");
+  cfg["timezone"] = timezoneConfig.displayName;
+  cfg["fetch_interval"] = canvasConfig.fetchInterval / 60000;
+  cfg["red_days"] = ledConfig.redLEDDaysAhead;
+  cfg["yellow_days"] = ledConfig.yellowLEDDaysAhead;
+
+  String out;
+  serializeJson(doc, out);
+  return out;
 }
 
 void createGitHubIssue() {
