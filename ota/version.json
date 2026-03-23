@@ -1,6 +1,6 @@
 {
-  "version": "1.2.8",
-  "firmware_url": "https://raw.githubusercontent.com/Rory-create/canvas-led-tracker/main/ota/firmware-minimal.bin",
-  "release_notes": "RESCUE: Fixed WiFi credential reading (namespace/key mismatch bug)",
-  "mandatory": true
+  "version": "1.4.0",
+  "firmware_url": "https://raw.githubusercontent.com/Rory-create/canvas-led-tracker/main/ota/firmware.bin",
+  "release_notes": "Refactor: modular codebase, security hardening, WiFi backoff, NTP retry, safe JSON encoding",
+  "mandatory": false
 }

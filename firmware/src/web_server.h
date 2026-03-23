@@ -4,3 +4,5 @@
 // Declarations for web server startup functions
 void startWebServer();
 void startSettingsAP();
+void monitorSystem();
+String getErrorMessage();

@@ -2,7 +2,7 @@
 #define VERSION_H
 
 // Semantic versioning: MAJOR.MINOR.PATCH
-#define FIRMWARE_VERSION "1.3.0"
+#define FIRMWARE_VERSION "1.4.0"
 #define BUILD_TIMESTAMP __DATE__ " " __TIME__
 
 // Development mode - resets non-credential preferences on boot
@@ -39,5 +39,6 @@
 // 1.2.8 - RESCUE FIX: Fixed namespace mismatch (canvas-led→config) and key mismatch (password→pass)
 // 1.2.9 - Full firmware with OTA watchdog fix - production ready
 // 1.3.0 - WiFi scan fix: retry logic, manual SSID entry, scan diagnostics on setup page
+// 1.4.0 - Refactor: split 2150-line main.cpp into 7 focused modules; security hardening, WiFi backoff, NTP retry, safe JSON
 
 #endif
