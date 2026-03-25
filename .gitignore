@@ -25,14 +25,17 @@
 
 # -------------------------------
 # SECURITY - NEVER COMMIT THESE
-# -------------------------------
-**/secrets.h            # Your API keys and passwords (anywhere in repo)
-**/config_private.h     # Private configuration (anywhere in repo)
-device_keys/            # Cryptographic keys for OTA
-*.pem                   # Private key files
-*.key                   # Certificate key files
-*.crt                   # Certificate files
-*.p12                   # Certificate bundles
+# Your API keys and passwords
+**/secrets.h
+# Private configuration
+**/config_private.h
+# Cryptographic keys for OTA
+device_keys/
+# Certificate/key files
+*.pem
+*.key
+*.crt
+*.p12
 
 # Customer/Manufacturing Data
 customer_data/          # Any customer information
