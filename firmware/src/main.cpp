@@ -5,6 +5,7 @@
 #include "web_server.h"
 #include "bug_report.h"
 #include "ota_update.h"
+#include "telemetry.h"
 #include "version.h"
 #include <esp_task_wdt.h>
 
@@ -259,6 +260,13 @@ void loop() {
 
     // OTA rate-limiting is handled internally by checkForOTAUpdate()
     checkForOTAUpdate();
+
+    // Telemetry heartbeat every 5 minutes — no-op if dashboardUrl is not set
+    static unsigned long lastTelemetry = 0;
+    if (now - lastTelemetry >= 5UL * 60UL * 1000UL) {
+      sendTelemetry();
+      lastTelemetry = now;
+    }
 
     if (now - lastFetch >= canvasConfig.fetchInterval) {
       Serial.println("\n--- Canvas Check Cycle ---");

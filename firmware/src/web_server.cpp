@@ -254,6 +254,11 @@ Device: <span>%DEVICE_NAME%</span> | WiFi: %WIFI_STATUS% | Assignment: <span>%AS
 <small style="color:#666;">Automatically report critical errors to GitHub for faster support</small>
 <label><input type="checkbox" name="debug" %DEBUG_CHECKED%> Debug Mode</label>
 </div>
+<div class="section"><h3>Fleet Dashboard (optional)</h3>
+<label>Dashboard URL<input type="text" name="dashboardUrl" value="%DASHBOARD_URL%" placeholder="https://your-app.railway.app"></label>
+<small style="color:#666;">Your deployed canvas-led-dashboard server. Leave blank to disable telemetry.</small>
+<label>Dashboard API Key<input type="text" name="dashboardApiKey" value="%DASHBOARD_API_KEY%" placeholder="Optional — matches DASHBOARD_API_KEY env var on server"></label>
+</div>
 <button type="submit" class="btn-save">Save Settings</button>
 <button type="button" class="btn-refresh" onclick="manualRefresh()" style="background:#17a2b8;">Check Canvas Now</button>
 <div id="refreshResult" style="padding:8px;margin:5px 0;border-radius:5px;display:none;"></div>
@@ -432,6 +437,8 @@ void handleSettings() {
   html.replace("%QUIET_END%", String(ledConfig.quietHourEnd));
   html.replace("%FETCH_INT%", String(canvasConfig.fetchInterval / 60000));
   html.replace("%AP_PASSWORD%", systemConfig.apPassword);
+  html.replace("%DASHBOARD_URL%", systemConfig.dashboardUrl);
+  html.replace("%DASHBOARD_API_KEY%", systemConfig.dashboardApiKey);
   html.replace("%INCLUDE_OVERDUE_CHECKED%", canvasConfig.includeOverdue ? "checked" : "");
   html.replace("%BUG_REPORT_CHECKED%", systemConfig.bugReportEnabled ? "checked" : "");
   html.replace("%DEBUG_CHECKED%", systemConfig.debugMode ? "checked" : "");
@@ -668,6 +675,8 @@ void handleSave() {
   if (server.hasArg("deviceName")) server.arg("deviceName").toCharArray(systemConfig.deviceName, sizeof(systemConfig.deviceName));
   if (server.hasArg("fetchInterval")) canvasConfig.fetchInterval = server.arg("fetchInterval").toInt() * 60UL * 1000UL;
   if (server.hasArg("apPassword")) server.arg("apPassword").toCharArray(systemConfig.apPassword, sizeof(systemConfig.apPassword));
+  if (server.hasArg("dashboardUrl")) server.arg("dashboardUrl").toCharArray(systemConfig.dashboardUrl, sizeof(systemConfig.dashboardUrl));
+  if (server.hasArg("dashboardApiKey")) server.arg("dashboardApiKey").toCharArray(systemConfig.dashboardApiKey, sizeof(systemConfig.dashboardApiKey));
 
   canvasConfig.includeOverdue = server.hasArg("includeOverdue");
   systemConfig.bugReportEnabled = server.hasArg("bugReport");

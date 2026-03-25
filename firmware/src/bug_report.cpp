@@ -148,4 +148,44 @@ void createGitHubIssue() {
   }
 
   https.end();
+
+  // ── Also POST to dashboard server if configured ────────────────────────
+  if (strlen(systemConfig.dashboardUrl) > 0) {
+    uint8_t macFull[6];
+    WiFi.macAddress(macFull);
+    char macStr[18];
+    sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X",
+            macFull[0], macFull[1], macFull[2], macFull[3], macFull[4], macFull[5]);
+
+    DynamicJsonDocument dashDoc(2048);
+    dashDoc["device_id"]        = macStr;
+    dashDoc["device_name"]      = systemConfig.deviceName;
+    dashDoc["firmware_version"] = FIRMWARE_VERSION;
+    dashDoc["error_code"]       = currentErrorCode;
+    dashDoc["error_name"]       = String("ERR_") + errorName;
+    dashDoc["title"]            = title;
+    // diagnostics is already a JSON string — embed as raw object
+    DeserializationError diagErr = deserializeJson(dashDoc["diagnostics"].to<JsonVariant>(), diagnostics);
+    if (diagErr) dashDoc["diagnostics"] = diagnostics;  // fallback: send as string
+    String dashPayload;
+    serializeJson(dashDoc, dashPayload);
+
+    String dashUrl = String(systemConfig.dashboardUrl);
+    if (!dashUrl.endsWith("/")) dashUrl += "/";
+    dashUrl += "api/bug";
+
+    WiFiClientSecure dashClient;
+    dashClient.setInsecure();
+    HTTPClient dashHttp;
+    dashHttp.setTimeout(5000);
+    if (dashHttp.begin(dashClient, dashUrl)) {
+      dashHttp.addHeader("Content-Type", "application/json");
+      if (strlen(systemConfig.dashboardApiKey) > 0) {
+        dashHttp.addHeader("X-API-Key", systemConfig.dashboardApiKey);
+      }
+      int dc = dashHttp.POST(dashPayload);
+      Serial.printf("[BUG] Dashboard POST → %d\n", dc);
+      dashHttp.end();
+    }
+  }
 }

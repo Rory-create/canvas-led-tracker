@@ -39,6 +39,8 @@ struct SystemConfig {
   char apPassword[64] = "canvas123";
   bool bugReportEnabled = true;
   unsigned long lastBugReport = 0;
+  char dashboardUrl[128] = "";     // e.g. https://your-app.railway.app
+  char dashboardApiKey[64] = "";   // matches DASHBOARD_API_KEY env var on server
 };
 
 // Error codes for diagnostic LED patterns
@@ -114,6 +116,7 @@ extern int fadeDirection;
 extern int consecutiveErrors;
 extern bool webServerRunning;
 extern bool timeSyncComplete;
+extern char otaVersionSeen[16];  // last version string read from version.json
 
 // ============================================
 // FUNCTION DECLARATIONS

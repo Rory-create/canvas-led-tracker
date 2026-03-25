@@ -30,6 +30,7 @@ unsigned long lastFetch = 0, lastPulseTime = 0, lastSuccessfulFetch = 0;
 int pulseBrightness = 0, fadeDirection = 1, consecutiveErrors = 0;
 bool webServerRunning = false;
 bool timeSyncComplete = false;
+char otaVersionSeen[16] = "";
 
 // ============================================
 // LOG FUNCTION
@@ -78,6 +79,8 @@ void saveConfig() {
   preferences.putString("apPass", systemConfig.apPassword);
   preferences.putBool("bugReport", systemConfig.bugReportEnabled);
   preferences.putULong("lastReport", systemConfig.lastBugReport);
+  preferences.putString("dashUrl", systemConfig.dashboardUrl);
+  preferences.putString("dashKey", systemConfig.dashboardApiKey);
 
   preferences.end();
   Serial.println("Configuration saved!");
@@ -139,6 +142,8 @@ void loadConfig() {
 
     systemConfig.bugReportEnabled = preferences.getBool("bugReport", true);
     systemConfig.lastBugReport = preferences.getULong("lastReport", 0);
+    preferences.getString("dashUrl", systemConfig.dashboardUrl, sizeof(systemConfig.dashboardUrl));
+    preferences.getString("dashKey", systemConfig.dashboardApiKey, sizeof(systemConfig.dashboardApiKey));
 
     Serial.println("Configuration loaded");
   } else {
