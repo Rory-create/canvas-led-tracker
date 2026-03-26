@@ -40,6 +40,7 @@ String collectDiagnostics() {
     "NONE", "WIFI_DISCONNECT", "CANVAS_AUTH", "CANVAS_SERVER",
     "TIME_SYNC", "MEMORY_LOW", "JSON_PARSE", "BUFFER_EXHAUSTED"
   };
+  int safeCode = (currentErrorCode >= 0 && currentErrorCode < 8) ? currentErrorCode : 0;
 
   time_t now;
   time(&now);
@@ -51,7 +52,7 @@ String collectDiagnostics() {
   doc["device_id"] = macStr;
   doc["firmware_version"] = FIRMWARE_VERSION;
   doc["error_code"] = currentErrorCode;
-  doc["error_name"] = String("ERR_") + errorNames[currentErrorCode];
+  doc["error_name"] = String("ERR_") + errorNames[safeCode];
   doc["timestamp"] = timestamp;
   doc["uptime_seconds"] = millis() / 1000;
   doc["free_heap"] = ESP.getFreeHeap();
@@ -77,7 +78,17 @@ void createGitHubIssue() {
     return;
   }
 
-  Serial.println("[BUG] Creating GitHub issue...");
+  // Skip GitHub reporting if no token was compiled in (avoids pointless 401 requests)
+  if (strlen(GITHUB_TOKEN) == 0) {
+    if (systemConfig.debugMode) Serial.println("[BUG] No GITHUB_TOKEN — skipping GitHub issue");
+  } else {
+    Serial.println("[BUG] Creating GitHub issue...");
+  }
+
+  // Always try the dashboard POST (doesn't need a token)
+  if (strlen(systemConfig.dashboardUrl) == 0 && strlen(GITHUB_TOKEN) == 0) {
+    return;  // nowhere to report
+  }
 
   // Collect diagnostics
   String diagnostics = collectDiagnostics();
@@ -96,61 +107,51 @@ void createGitHubIssue() {
   int safeCode = (currentErrorCode >= 0 && currentErrorCode < 8) ? currentErrorCode : 0;
   String errorName = errorNames[safeCode];
 
-  // Build issue title and body
   String title = "[AUTO] " + errorName + " - Device " + String(last4);
-  String body = "### Automatic Bug Report\n\n";
-  body += "**Firmware:** " + String(FIRMWARE_VERSION) + "\n";
-  body += "**Error Code:** " + String(currentErrorCode) + " (" + errorName + ")\n\n";
-  body += "---\n\n### Diagnostics\n\n```json\n";
-  body += diagnostics;
-  body += "\n```\n\n";
-  body += "---\n\n*Note: Device will not report again for 1 hour.*";
+  bool reported = false;
 
-  // Build JSON payload via ArduinoJson so special chars in title/body are safely escaped
-  DynamicJsonDocument issueDoc(2048);
-  issueDoc["title"] = title;
-  issueDoc["body"] = body;
-  JsonArray labels = issueDoc.createNestedArray("labels");
-  labels.add("auto-bug-report");
-  labels.add("critical");
-  labels.add(String("firmware-") + FIRMWARE_VERSION);
-  String payload;
-  serializeJson(issueDoc, payload);
+  // ── GitHub Issues (only if token is compiled in) ───────────────────────
+  if (strlen(GITHUB_TOKEN) > 0) {
+    String body = "### Automatic Bug Report\n\n";
+    body += "**Firmware:** " + String(FIRMWARE_VERSION) + "\n";
+    body += "**Error Code:** " + String(currentErrorCode) + " (" + errorName + ")\n\n";
+    body += "---\n\n### Diagnostics\n\n```json\n";
+    body += diagnostics;
+    body += "\n```\n\n";
+    body += "---\n\n*Note: Device will not report again for 1 hour.*";
+    DynamicJsonDocument issueDoc(2048);
+    issueDoc["title"] = title;
+    issueDoc["body"] = body;
+    JsonArray labels = issueDoc.createNestedArray("labels");
+    labels.add("auto-bug-report");
+    labels.add("critical");
+    labels.add(String("firmware-") + FIRMWARE_VERSION);
+    String payload;
+    serializeJson(issueDoc, payload);
 
-  // Make HTTPS request to GitHub
-  WiFiClientSecure client;
-  client.setInsecure(); // Skip cert validation for simplicity
-
-  HTTPClient https;
-  String url = "https://api.github.com/repos/" + String(GITHUB_REPO) + "/issues";
-  https.begin(client, url);
-  https.addHeader("Content-Type", "application/json");
-  https.addHeader("Accept", "application/vnd.github.v3+json");
-  https.addHeader("Authorization", "Bearer " + String(GITHUB_TOKEN));
-  https.setTimeout(10000);
-
-  int httpCode = https.POST(payload);
-
-  if (httpCode > 0) {
+    WiFiClientSecure client;
+    client.setInsecure();
+    HTTPClient https;
+    String url = "https://api.github.com/repos/" + String(GITHUB_REPO) + "/issues";
+    https.begin(client, url);
+    https.addHeader("Content-Type", "application/json");
+    https.addHeader("Accept", "application/vnd.github.v3+json");
+    https.addHeader("Authorization", "Bearer " + String(GITHUB_TOKEN));
+    https.setTimeout(10000);
+    int httpCode = https.POST(payload);
     if (httpCode == 201) {
       Serial.println("[BUG] GitHub issue created successfully!");
-      systemConfig.lastBugReport = millis();
-      preferences.begin("config", false);
-      preferences.putULong("lastReport", systemConfig.lastBugReport);
-      preferences.end();
-    } else {
+      reported = true;
+    } else if (httpCode > 0) {
       Serial.printf("[BUG] GitHub API returned: %d\n", httpCode);
-      if (systemConfig.debugMode) {
-        Serial.println(https.getString());
-      }
+      if (systemConfig.debugMode) Serial.println(https.getString());
+    } else {
+      Serial.printf("[BUG] GitHub request failed: %s\n", https.errorToString(httpCode).c_str());
     }
-  } else {
-    Serial.printf("[BUG] GitHub request failed: %s\n", https.errorToString(httpCode).c_str());
+    https.end();
   }
 
-  https.end();
-
-  // ── Also POST to dashboard server if configured ────────────────────────
+  // ── Dashboard server (only if configured) ─────────────────────────────
   if (strlen(systemConfig.dashboardUrl) > 0) {
     uint8_t macFull[6];
     WiFi.macAddress(macFull);
@@ -165,9 +166,8 @@ void createGitHubIssue() {
     dashDoc["error_code"]       = currentErrorCode;
     dashDoc["error_name"]       = String("ERR_") + errorName;
     dashDoc["title"]            = title;
-    // diagnostics is a JSON string — parse into a temporary doc, then copy into payload
-    // (can't deserialize directly into a JsonVariant reference)
-    DynamicJsonDocument tempDiag(512);
+    // Parse diagnostics JSON string into a nested object (can't deserialize into JsonVariant directly)
+    DynamicJsonDocument tempDiag(1024);
     if (deserializeJson(tempDiag, diagnostics) == DeserializationError::Ok) {
       dashDoc["diagnostics"] = tempDiag.as<JsonObject>();
     } else {
@@ -192,6 +192,15 @@ void createGitHubIssue() {
       int dc = dashHttp.POST(dashPayload);
       Serial.printf("[BUG] Dashboard POST → %d\n", dc);
       dashHttp.end();
+      if (dc == 200 || dc == 201) reported = true;
     }
+  }
+
+  // Stamp cooldown only if at least one report succeeded
+  if (reported) {
+    systemConfig.lastBugReport = millis();
+    preferences.begin("config", false);
+    preferences.putULong("lastReport", systemConfig.lastBugReport);
+    preferences.end();
   }
 }

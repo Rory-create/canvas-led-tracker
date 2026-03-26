@@ -181,7 +181,7 @@ app.post('/api/telemetry', rateLimitMiddleware, authMiddleware, (req, res) => {
     units.push(record);
   }
 
-  const alertsChanged = checkAndAlert(units);
+  checkAndAlert(units);
   writeJSON(UNITS_FILE, units);
   res.json({ ok: true, unit_count: units.length });
 });

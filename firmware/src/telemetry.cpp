@@ -10,8 +10,8 @@ void sendTelemetry() {
   if (strlen(systemConfig.dashboardUrl) == 0) return;
   if (WiFi.status() != WL_CONNECTED) return;
 
-  // Build JSON payload
-  StaticJsonDocument<512> doc;
+  // Build JSON payload — 13 fields × ~40 bytes avg = ~520 bytes; 768 gives headroom
+  StaticJsonDocument<768> doc;
 
   uint8_t mac[6];
   WiFi.macAddress(mac);

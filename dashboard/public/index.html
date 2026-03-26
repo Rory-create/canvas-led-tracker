@@ -220,6 +220,15 @@ const ERROR_NAMES = ['None','WiFi Disconnect','Canvas Auth','Canvas Server','Tim
 const ASSIGN_LABELS = ['ERROR','All Clear','Due Soon','Due Today'];
 const ASSIGN_CLASS = ['assign-0','assign-1','assign-2','assign-3'];
 
+function escHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 let currentTab = 'units';
 let allUnits = [], allBugs = [], stats = {};
 
@@ -300,36 +309,37 @@ function renderUnits(units) {
     const assignIdx = Math.max(0, Math.min(3, u.assignment_status + 1 > 3 ? 0 : u.assignment_status));
     const assignActual = u.assignment_status >= 0 && u.assignment_status <= 3 ? u.assignment_status : -1;
 
+    // Use data-id attribute instead of inlining device_id into onclick to avoid JS injection
     return `<div class="unit-card ${unitCardClass(u)}">
       <div class="unit-header">
         <div>
-          <div class="unit-name">${u.device_name || u.device_id}</div>
-          <div class="unit-id">${u.device_id}</div>
+          <div class="unit-name">${escHtml(u.device_name || u.device_id)}</div>
+          <div class="unit-id">${escHtml(u.device_id)}</div>
         </div>
         <div class="status-dot ${unitDotClass(u)}"></div>
       </div>
       <div class="unit-metrics">
         <div class="metric">
           <div class="m-label">WiFi Signal</div>
-          <div class="m-value ${rssi.cls}">${rssi.text}</div>
+          <div class="m-value ${rssi.cls}">${escHtml(rssi.text)}</div>
         </div>
         <div class="metric">
           <div class="m-label">Free Heap</div>
-          <div class="m-value ${heap.cls}">${heap.text}</div>
+          <div class="m-value ${heap.cls}">${escHtml(heap.text)}</div>
         </div>
         <div class="metric">
           <div class="m-label">CPU Temp</div>
-          <div class="m-value ${temp.cls}">${temp.text}</div>
+          <div class="m-value ${temp.cls}">${escHtml(temp.text)}</div>
         </div>
         <div class="metric">
           <div class="m-label">Uptime</div>
-          <div class="m-value">${uptime}</div>
+          <div class="m-value">${escHtml(uptime)}</div>
         </div>
         <div class="metric">
           <div class="m-label">Assignment</div>
           <div class="m-value">
             ${assignActual >= 0
-              ? `<span class="assign-label ${ASSIGN_CLASS[assignActual]}">${ASSIGN_LABELS[assignActual]}</span>`
+              ? `<span class="assign-label ${ASSIGN_CLASS[assignActual]}">${escHtml(ASSIGN_LABELS[assignActual])}</span>`
               : '<span style="color:var(--muted)">—</span>'}
           </div>
         </div>
@@ -337,21 +347,21 @@ function renderUnits(units) {
           <div class="m-label">Error State</div>
           <div class="m-value ${u.error_code > 0 ? 'err' : 'ok'}">
             ${u.error_code > 0
-              ? (ERROR_NAMES[u.error_code] || 'Unknown') + (u.consecutive_errors > 0 ? ` (×${u.consecutive_errors})` : '')
+              ? escHtml((ERROR_NAMES[u.error_code] || 'Unknown') + (u.consecutive_errors > 0 ? ` (×${u.consecutive_errors})` : ''))
               : 'None'}
           </div>
         </div>
       </div>
       <div class="unit-footer">
-        <span class="last-seen">Last seen ${timeAgo(u.last_seen)}${isStale(u.last_seen) ? ' ⚠️ STALE' : ''}</span>
+        <span class="last-seen">Last seen ${escHtml(timeAgo(u.last_seen))}${isStale(u.last_seen) ? ' ⚠️ STALE' : ''}</span>
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
           <span class="badge ${u.setup_complete ? 'setup' : 'not-setup'}">${u.setup_complete ? 'Active' : 'Not set up'}</span>
-          <span class="badge fw">v${u.firmware_version}</span>
+          <span class="badge fw">v${escHtml(u.firmware_version)}</span>
           ${u.error_code > 0 ? '<span class="badge error">Error</span>' : ''}
         </div>
       </div>
-      ${u.notes ? `<div style="margin-top:8px;padding:6px 8px;background:var(--bg);border-radius:5px;font-size:12px;color:var(--muted);">📝 ${u.notes}</div>` : ''}
-      <button onclick="editNotes('${u.device_id}')" style="margin-top:8px;width:100%;background:none;border:1px solid var(--border);color:var(--muted);padding:5px;border-radius:5px;cursor:pointer;font-size:11px;">${u.notes ? 'Edit note' : '+ Add note'}</button>
+      ${u.notes ? `<div style="margin-top:8px;padding:6px 8px;background:var(--bg);border-radius:5px;font-size:12px;color:var(--muted);">📝 ${escHtml(u.notes)}</div>` : ''}
+      <button class="edit-notes-btn" data-device-id="${escHtml(u.device_id)}" style="margin-top:8px;width:100%;background:none;border:1px solid var(--border);color:var(--muted);padding:5px;border-radius:5px;cursor:pointer;font-size:11px;">${u.notes ? 'Edit note' : '+ Add note'}</button>
     </div>`;
   }).join('');
 }
@@ -364,19 +374,19 @@ function renderBugs(bugs) {
     return;
   }
   body.innerHTML = bugs.map(b => `
-    <tr id="bug-${b.id}" ${b.resolved ? 'style="opacity:0.4"' : ''}>
-      <td style="white-space:nowrap;color:var(--muted)">${timeAgo(b.timestamp)}</td>
+    <tr id="bug-${Number(b.id)}" ${b.resolved ? 'style="opacity:0.4"' : ''}>
+      <td style="white-space:nowrap;color:var(--muted)">${escHtml(timeAgo(b.timestamp))}</td>
       <td>
-        <div style="font-weight:500">${b.device_name || b.device_id}</div>
-        <div style="color:var(--muted);font-size:11px;font-family:monospace">${b.device_id}</div>
+        <div style="font-weight:500">${escHtml(b.device_name || b.device_id)}</div>
+        <div style="color:var(--muted);font-size:11px;font-family:monospace">${escHtml(b.device_id)}</div>
       </td>
       <td>
-        <div style="color:var(--red)">${b.error_name}</div>
-        <div style="color:var(--muted);font-size:11px">${b.title}</div>
+        <div style="color:var(--red)">${escHtml(b.error_name)}</div>
+        <div style="color:var(--muted);font-size:11px">${escHtml(b.title)}</div>
       </td>
-      <td><span class="badge fw">v${b.firmware_version}</span></td>
-      <td class="bug-detail">${JSON.stringify(b.diagnostics)}</td>
-      <td>${b.resolved ? '<span style="color:var(--green);font-size:11px">Resolved</span>' : `<button class="resolve-btn" onclick="resolveBug(${b.id})">Resolve</button>`}</td>
+      <td><span class="badge fw">v${escHtml(b.firmware_version)}</span></td>
+      <td class="bug-detail">${escHtml(JSON.stringify(b.diagnostics))}</td>
+      <td>${b.resolved ? '<span style="color:var(--green);font-size:11px">Resolved</span>' : `<button class="resolve-btn" data-bug-id="${Number(b.id)}">Resolve</button>`}</td>
     </tr>
   `).join('');
 }
@@ -398,11 +408,11 @@ function renderOTA(units) {
         ? '<span class="ota-match">✓ Up to date</span>'
         : (vSeen !== '—' ? '<span class="ota-behind">⚠ Version mismatch</span>' : '<span class="ota-unknown">Unknown</span>');
     return `<tr>
-      <td><div style="font-weight:500">${u.device_name || u.device_id}</div><div style="color:var(--muted);font-size:11px;font-family:monospace">${u.device_id}</div></td>
-      <td><span class="badge fw">v${vRunning}</span></td>
-      <td>${vSeen !== '—' ? `<span class="badge fw">v${vSeen}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+      <td><div style="font-weight:500">${escHtml(u.device_name || u.device_id)}</div><div style="color:var(--muted);font-size:11px;font-family:monospace">${escHtml(u.device_id)}</div></td>
+      <td><span class="badge fw">v${escHtml(vRunning)}</span></td>
+      <td>${vSeen !== '—' ? `<span class="badge fw">v${escHtml(vSeen)}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
       <td>${statusEl}</td>
-      <td style="color:var(--muted)">${timeAgo(u.last_seen)}${stale ? ' ⚠️' : ''}</td>
+      <td style="color:var(--muted)">${escHtml(timeAgo(u.last_seen))}${stale ? ' ⚠️' : ''}</td>
     </tr>`;
   }).join('');
   document.getElementById('otaNote').textContent = 'Note: "Last Version Seen" is the version from version.json at the time of last OTA check. It will differ from running version if an update was available but not yet applied.';
@@ -428,11 +438,37 @@ function renderStats(s) {
   }
 }
 
-async function resolveBug(id) {
-  await fetch(`/api/bugs/${id}/resolve`, { method: 'PATCH' });
-  const row = document.getElementById('bug-' + id);
-  if (row) row.style.opacity = '0.4';
-  loadStats();
+// API key — stored in sessionStorage so it survives page reloads within the session
+// but isn't persisted to disk. Only needed when server is running with DASHBOARD_API_KEY set.
+function getApiKey() { return sessionStorage.getItem('dashApiKey') || ''; }
+function authHeaders() {
+  const k = getApiKey();
+  return k ? { 'Content-Type': 'application/json', 'X-API-Key': k } : { 'Content-Type': 'application/json' };
+}
+
+// Delegated click handler for resolve buttons and edit-notes buttons
+document.addEventListener('click', async (e) => {
+  const resolveBtn = e.target.closest('.resolve-btn');
+  if (resolveBtn) {
+    const id = resolveBtn.dataset.bugId;
+    const r = await fetch(`/api/bugs/${id}/resolve`, { method: 'PATCH', headers: authHeaders() });
+    if (r.status === 401) { promptApiKey(); return; }
+    const row = document.getElementById('bug-' + id);
+    if (row) row.style.opacity = '0.4';
+    resolveBtn.replaceWith(Object.assign(document.createElement('span'), { style: 'color:var(--green);font-size:11px', textContent: 'Resolved' }));
+    loadStats();
+  }
+
+  const notesBtn = e.target.closest('.edit-notes-btn');
+  if (notesBtn) {
+    const deviceId = notesBtn.dataset.deviceId;
+    editNotes(deviceId);
+  }
+});
+
+function promptApiKey() {
+  const k = prompt('Enter dashboard API key (set via DASHBOARD_API_KEY env var):');
+  if (k !== null) sessionStorage.setItem('dashApiKey', k);
 }
 
 async function loadAll() {
@@ -474,13 +510,15 @@ async function loadStats() {
 async function editNotes(deviceId) {
   const unit = allUnits.find(u => u.device_id === deviceId);
   const current = unit ? (unit.notes || '') : '';
-  const newNotes = prompt('Notes for ' + (unit ? unit.device_name : deviceId) + ':', current);
+  const label = unit ? (unit.device_name || unit.device_id) : deviceId;
+  const newNotes = prompt('Notes for ' + label + ':', current);
   if (newNotes === null) return; // cancelled
-  await fetch(`/api/units/${encodeURIComponent(deviceId)}/notes`, {
+  const r = await fetch(`/api/units/${encodeURIComponent(deviceId)}/notes`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify({ notes: newNotes }),
   });
+  if (r.status === 401) { promptApiKey(); return; }
   loadUnits();
 }
 
