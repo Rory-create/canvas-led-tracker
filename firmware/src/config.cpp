@@ -151,4 +151,16 @@ void loadConfig() {
     Serial.println("⚠️ First time setup required");
   }
   preferences.end();
+
+  // Always apply compile-time dashboard credentials — overrides any NVS value so
+  // a firmware update is sufficient to change the URL across the whole fleet.
+  // If the build has no URL compiled in, whatever is in NVS remains untouched.
+  if (strlen(DASHBOARD_URL) > 0) {
+    strncpy(systemConfig.dashboardUrl, DASHBOARD_URL, sizeof(systemConfig.dashboardUrl) - 1);
+    systemConfig.dashboardUrl[sizeof(systemConfig.dashboardUrl) - 1] = '\0';
+  }
+  if (strlen(DASHBOARD_API_KEY) > 0) {
+    strncpy(systemConfig.dashboardApiKey, DASHBOARD_API_KEY, sizeof(systemConfig.dashboardApiKey) - 1);
+    systemConfig.dashboardApiKey[sizeof(systemConfig.dashboardApiKey) - 1] = '\0';
+  }
 }
