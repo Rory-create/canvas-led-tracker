@@ -18,7 +18,6 @@ enum OTAStatus {
 };
 
 // Function declarations
-void initOTA();
 void checkForOTAUpdate();
 bool isNewerVersion(const char* remoteVersion, const char* currentVersion);
 

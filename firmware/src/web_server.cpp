@@ -267,11 +267,13 @@ Device: <span>%DEVICE_NAME%</span> | WiFi: %WIFI_STATUS% | Assignment: <span>%AS
 <div style="margin-top:12px;padding:10px;background:#1a2a1a;border-radius:6px;border:1px solid #2e5f2e;">
 <b style="color:#7fff7f;">Snooze Alerts</b><br>
 <small style="color:#999;">Temporarily force the LED green (suppress red/yellow) for N hours.</small><br>
+<div id="snoozeStatus" style="margin-top:6px;font-size:0.85em;color:#aaa;"></div>
 <select id="snoozeHours" style="margin-top:6px;padding:4px;background:#222;color:#ccc;border:1px solid #444;border-radius:4px;">
 <option value="1">1 hour</option><option value="2">2 hours</option><option value="4">4 hours</option>
 <option value="8">8 hours</option><option value="12">12 hours</option><option value="24">24 hours</option>
 </select>
 <button type="button" style="margin-left:8px;background:#2e7d32;color:#fff;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;" onclick="activateSnooze()">Snooze</button>
+<button type="button" id="cancelSnoozeBtn" style="margin-left:6px;background:#7f2020;color:#fff;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;display:none;" onclick="cancelSnooze()">Cancel Snooze</button>
 <span id="snoozeResult" style="margin-left:8px;font-size:0.9em;color:#7fff7f;"></span>
 </div>
 </form></div>
@@ -299,8 +301,31 @@ function activateSnooze(){
   let r=document.getElementById('snoozeResult');
   fetch('/snooze?hours='+h,{method:'POST'}).then(x=>x.text()).then(msg=>{
     r.textContent=msg;
+    setTimeout(checkSnoozeStatus,500);
   }).catch(()=>{r.style.color='#ff6b6b';r.textContent='Snooze failed';});
 }
+function cancelSnooze(){
+  fetch('/snooze?cancel=1',{method:'POST'}).then(()=>{
+    document.getElementById('snoozeResult').textContent='';
+    checkSnoozeStatus();
+  });
+}
+function checkSnoozeStatus(){
+  fetch('/snooze/status').then(x=>x.json()).then(d=>{
+    let s=document.getElementById('snoozeStatus');
+    let btn=document.getElementById('cancelSnoozeBtn');
+    if(d.active){
+      s.textContent='Snooze active — '+d.remaining_minutes+' min remaining';
+      s.style.color='#7fff7f';
+      btn.style.display='inline-block';
+    } else {
+      s.textContent='No snooze active';
+      s.style.color='#888';
+      btn.style.display='none';
+    }
+  }).catch(()=>{});
+}
+checkSnoozeStatus();
 </script></body></html>
 )rawliteral";
 
@@ -609,6 +634,14 @@ void handleTestTrigger() {
 }
 
 void handleSnooze() {
+  // POST /snooze?hours=N — activate snooze
+  // POST /snooze?cancel=1 — cancel snooze
+  if (server.hasArg(“cancel”) && server.arg(“cancel”) == “1”) {
+    snoozeUntil = 0;
+    Serial.println(“[SNOOZE] Cancelled”);
+    server.send(200, “text/plain”, “Snooze cancelled”);
+    return;
+  }
   int hours = 1;
   if (server.hasArg(“hours”)) {
     hours = server.arg(“hours”).toInt();
@@ -618,6 +651,18 @@ void handleSnooze() {
   snoozeUntil = millis() + (unsigned long)hours * 3600000UL;
   Serial.printf(“[SNOOZE] Active for %d hour(s)\n”, hours);
   server.send(200, “text/plain”, (“Snooze active for “ + String(hours) + “ hour(s)”).c_str());
+}
+
+void handleSnoozeStatus() {
+  unsigned long now = millis();
+  if (snoozeUntil == 0 || now >= snoozeUntil) {
+    server.send(200, “application/json”, “{\”active\”:false,\”remaining_minutes\”:0}”);
+  } else {
+    unsigned long remainMs = snoozeUntil - now;
+    unsigned long remainMin = remainMs / 60000;
+    server.send(200, “application/json”,
+      (“{\”active\”:true,\”remaining_minutes\”:” + String(remainMin) + “}”).c_str());
+  }
 }
 
 void handleReboot() {
@@ -954,6 +999,7 @@ void startWebServer() {
   server.on("/test-canvas", HTTP_POST, handleTestCanvas);
   server.on("/refresh", HTTP_POST, handleRefresh);
   server.on("/snooze", HTTP_POST, handleSnooze);
+  server.on("/snooze/status", HTTP_GET, handleSnoozeStatus);
   server.on("/reboot", HTTP_POST, handleReboot);
   server.on("/factory-reset", HTTP_POST, handleFactoryReset);
   server.on("/save", HTTP_POST, handleSave);

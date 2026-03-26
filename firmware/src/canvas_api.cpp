@@ -71,7 +71,7 @@ int fetchCanvasAssignments() {
         Serial.printf("   JSON buffer:   %d bytes\n", bufferSize);
         Serial.printf("   Buffer usage:  %.1f%%\n", (response.length() / (float)bufferSize) * 100);
         Serial.printf("   Free heap:     %d bytes\n", freeHeap);
-        Serial.printf("   Max buffer:    %d bytes (90%% of heap)\n", maxBuffer);
+        Serial.printf("   Max buffer:    %d bytes (75%% of heap)\n", maxBuffer);
 
         // ArduinoJson Filter: Skip description field to avoid HTML/image bloat
         // This reduces memory usage from ~49KB to ~2KB per response

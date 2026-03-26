@@ -54,6 +54,18 @@ function authMiddleware(req, res, next) {
   next();
 }
 
+// Same as authMiddleware but also allows browser sessions via a dashboard session token.
+// Used on read endpoints so the dashboard UI can still load when API_KEY is set.
+// Devices posting telemetry use authMiddleware (stricter); browser reads use this.
+const DASHBOARD_TOKEN = process.env.DASHBOARD_READ_TOKEN || null;
+function readAuthMiddleware(req, res, next) {
+  if (!API_KEY && !DASHBOARD_TOKEN) return next();
+  const key = req.headers['x-api-key'];
+  if (API_KEY && key === API_KEY) return next();
+  if (DASHBOARD_TOKEN && key === DASHBOARD_TOKEN) return next();
+  return res.status(401).json({ error: 'Unauthorized' });
+}
+
 // Simple per-IP rate limiting — max 60 requests per minute per IP
 const _rateCounts = new Map();
 function rateLimitMiddleware(req, res, next) {
@@ -221,13 +233,22 @@ app.post('/api/bug', rateLimitMiddleware, authMiddleware, (req, res) => {
 
 // ── Dashboard API ──────────────────────────────────────────────────────────
 
-app.get('/api/units', (req, res) => {
+app.get('/api/units', readAuthMiddleware, (req, res) => {
   // Strip internal alert-state fields from public response
   const units = readJSON(UNITS_FILE, []).map(({ _alerted_stale, _alerted_error_code, ...u }) => u);
   res.json(units);
 });
 
-app.get('/api/bugs', (req, res) => {
+app.delete('/api/units/:device_id', authMiddleware, (req, res) => {
+  const units = readJSON(UNITS_FILE, []);
+  const idx = units.findIndex(u => u.device_id === req.params.device_id);
+  if (idx < 0) return res.status(404).json({ error: 'Unit not found' });
+  units.splice(idx, 1);
+  writeJSON(UNITS_FILE, units);
+  res.json({ ok: true });
+});
+
+app.get('/api/bugs', readAuthMiddleware, (req, res) => {
   const bugs = readJSON(BUGS_FILE, []);
   const limit = Math.min(parseInt(req.query.limit) || 50, 500);
   const unresolved = req.query.unresolved === 'true';
@@ -256,7 +277,7 @@ app.patch('/api/units/:device_id/notes', authMiddleware, (req, res) => {
   res.json({ ok: true, notes });
 });
 
-app.get('/api/ota', (req, res) => {
+app.get('/api/ota', readAuthMiddleware, (req, res) => {
   const units = readJSON(UNITS_FILE, []);
   const now = Date.now();
   const summary = units.map(u => ({
@@ -270,7 +291,7 @@ app.get('/api/ota', (req, res) => {
   res.json({ units: summary, total: units.length });
 });
 
-app.get('/api/stats', (req, res) => {
+app.get('/api/stats', readAuthMiddleware, (req, res) => {
   const units = readJSON(UNITS_FILE, []);
   const bugs = readJSON(BUGS_FILE, []);
   const now = Date.now();
@@ -290,5 +311,6 @@ app.get('/api/stats', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Canvas LED Dashboard running on port ${PORT}`);
   if (!API_KEY) console.log('Note: DASHBOARD_API_KEY not set — device endpoints unprotected');
+  if (!DASHBOARD_TOKEN && API_KEY) console.log('Note: DASHBOARD_READ_TOKEN not set — set it to protect dashboard read endpoints from the browser');
   if (DISCORD_WEBHOOK) console.log('Discord alerting enabled');
 });

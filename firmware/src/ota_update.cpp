@@ -12,13 +12,6 @@ static bool otaInProgress = false;
 // OTA_CHECK_INTERVAL_MS = 24h (normal); retry failed checks after 1h
 static const unsigned long OTA_RETRY_INTERVAL_MS = 60UL * 60UL * 1000UL;
 
-void initOTA() {
-  Serial.println("\n🔧 OTA Update System Initialized");
-  Serial.printf("📌 Current Version: %s\n", FIRMWARE_VERSION);
-  Serial.printf("📌 Build: %s\n", BUILD_TIMESTAMP);
-  Serial.printf("⏰ Check Interval: %lu hours\n", OTA_CHECK_INTERVAL_MS / 3600000);
-}
-
 bool isNewerVersion(const char* remoteVersion, const char* currentVersion) {
   int remoteMajor, remoteMinor, remotePatch;
   int currentMajor, currentMinor, currentPatch;
@@ -175,6 +168,7 @@ void checkForOTAUpdate() {
 
   if (!Update.end()) {
     Serial.printf("❌ Update.end() failed: %s\n", Update.errorString());
+    Update.abort();
     otaInProgress = false;
     lastOTAFailure = now;
     return;
@@ -182,6 +176,7 @@ void checkForOTAUpdate() {
 
   if (!Update.isFinished()) {
     Serial.println("❌ Update not finished — firmware may be corrupt");
+    Update.abort();
     otaInProgress = false;
     lastOTAFailure = now;
     return;

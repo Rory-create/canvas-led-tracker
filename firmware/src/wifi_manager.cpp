@@ -60,17 +60,13 @@ void initTime() {
 }
 
 void connectWiFi() {
-  // Don't interrupt if already connected or connecting
-  if (WiFi.status() == WL_CONNECTED) return;
-
-  // Check if connection is in progress
   wl_status_t status = WiFi.status();
-  if (status == WL_IDLE_STATUS || status == WL_DISCONNECTED) {
-    // Safe to attempt connection
-  } else {
-    // Connection in progress, wait
-    return;
-  }
+  if (status == WL_CONNECTED) return;
+  // WL_IDLE_STATUS and WL_DISCONNECTED are safe to attempt a new connection.
+  // Any other status (WL_NO_SSID_AVAIL, WL_CONNECT_FAILED, WL_CONNECTION_LOST)
+  // also needs a fresh connect attempt, so only bail on states that mean
+  // a connection is actively being established.
+  if (status == WL_NO_SHIELD) return;  // no hardware
 
   Serial.println("📡 Connecting to WiFi...");
 
