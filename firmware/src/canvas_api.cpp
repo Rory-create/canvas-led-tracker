@@ -211,6 +211,10 @@ int fetchCanvasAssignments() {
           lastSuccessfulFetch = millis();
           adaptiveBufferSize = 8192;
           Serial.println("Canvas fetch successful");
+          // Reset boot-failure counter now that we know the firmware is working
+          preferences.begin("boot", false);
+          preferences.putInt("bootAttempts", 0);
+          preferences.end();
           return newStatus;
         } else {
           // ============ DYNAMIC BUFFER INCREASE ============

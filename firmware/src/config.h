@@ -117,6 +117,7 @@ extern int consecutiveErrors;
 extern bool webServerRunning;
 extern bool timeSyncComplete;
 extern char otaVersionSeen[16];  // last version string read from version.json
+extern unsigned long snoozeUntil; // millis() timestamp until which LEDs stay green
 
 // ============================================
 // FUNCTION DECLARATIONS

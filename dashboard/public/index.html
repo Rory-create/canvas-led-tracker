@@ -350,6 +350,8 @@ function renderUnits(units) {
           ${u.error_code > 0 ? '<span class="badge error">Error</span>' : ''}
         </div>
       </div>
+      ${u.notes ? `<div style="margin-top:8px;padding:6px 8px;background:var(--bg);border-radius:5px;font-size:12px;color:var(--muted);">📝 ${u.notes}</div>` : ''}
+      <button onclick="editNotes('${u.device_id}')" style="margin-top:8px;width:100%;background:none;border:1px solid var(--border);color:var(--muted);padding:5px;border-radius:5px;cursor:pointer;font-size:11px;">${u.notes ? 'Edit note' : '+ Add note'}</button>
     </div>`;
   }).join('');
 }
@@ -467,6 +469,19 @@ async function loadStats() {
     stats = await r.json();
     renderStats(stats);
   } catch { }
+}
+
+async function editNotes(deviceId) {
+  const unit = allUnits.find(u => u.device_id === deviceId);
+  const current = unit ? (unit.notes || '') : '';
+  const newNotes = prompt('Notes for ' + (unit ? unit.device_name : deviceId) + ':', current);
+  if (newNotes === null) return; // cancelled
+  await fetch(`/api/units/${encodeURIComponent(deviceId)}/notes`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notes: newNotes }),
+  });
+  loadUnits();
 }
 
 // Auto-refresh every 60 seconds

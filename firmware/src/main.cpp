@@ -181,6 +181,18 @@ void setup() {
   #endif
 
   loadConfig();
+
+  // Boot-failure auto-recovery: track consecutive boots without a successful Canvas fetch.
+  // On 5+ consecutive failures, force an immediate OTA check after WiFi connects.
+  int bootAttempts = 0;
+  {
+    preferences.begin("boot", false);
+    bootAttempts = preferences.getInt("bootAttempts", 0) + 1;
+    preferences.putInt("bootAttempts", bootAttempts);
+    preferences.end();
+    Serial.printf("[BOOT] Attempt #%d\n", bootAttempts);
+  }
+
   startSettingsAP();
 
   if (!systemConfig.setupComplete) {
@@ -210,7 +222,12 @@ void setup() {
   connectWiFi();
   initTime();
 
-  Serial.println("ðŸ“‹ Configuration:");
+  if (bootAttempts >= 5 && WiFi.status() == WL_CONNECTED) {
+    Serial.println(“[BOOT] WARNING: 5+ consecutive boots without successful fetch — forcing OTA check”);
+    checkForOTAUpdate();
+  }
+
+  Serial.println(“ðŸ”‹ Configuration:”);
   Serial.printf(" â€¢ LED Mode: %s\n", ledConfig.useFlashing ? "Flashing" : "Solid");
   Serial.printf(" â€¢ Red LED: %d days, Yellow LED: %d days\n", ledConfig.redLEDDaysAhead, ledConfig.yellowLEDDaysAhead);
   Serial.printf(" â€¢ Check Interval: %lu min\n", canvasConfig.fetchInterval / 60000);

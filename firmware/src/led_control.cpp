@@ -101,6 +101,14 @@ void updateLEDs() {
     return;
   }
 
+  // Snooze: hold green LED for the snooze duration
+  if (snoozeUntil > 0 && millis() < snoozeUntil) {
+    setLED(greenLED, ledConfig.solidBrightness);
+    return;
+  } else if (snoozeUntil > 0 && millis() >= snoozeUntil) {
+    snoozeUntil = 0;  // clear when expired
+  }
+
   // ERROR state (0) = all LEDs flash rapidly
   // ERROR state (0) = display diagnostic pattern based on error code
   if (assignmentStatus == 0) {

@@ -31,6 +31,7 @@ int pulseBrightness = 0, fadeDirection = 1, consecutiveErrors = 0;
 bool webServerRunning = false;
 bool timeSyncComplete = false;
 char otaVersionSeen[16] = "";
+unsigned long snoozeUntil = 0;
 
 // ============================================
 // LOG FUNCTION

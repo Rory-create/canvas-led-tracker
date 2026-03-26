@@ -264,6 +264,16 @@ Device: <span>%DEVICE_NAME%</span> | WiFi: %WIFI_STATUS% | Assignment: <span>%AS
 <div id="refreshResult" style="padding:8px;margin:5px 0;border-radius:5px;display:none;"></div>
 <button type="button" class="btn-reboot" onclick="if(confirm('Reboot device?'))fetch('/reboot',{method:'POST'});">Reboot</button>
 <button type="button" class="btn-reset" onclick="if(confirm('FACTORY RESET? All settings erased!'))fetch('/factory-reset',{method:'POST'});">Factory Reset</button>
+<div style="margin-top:12px;padding:10px;background:#1a2a1a;border-radius:6px;border:1px solid #2e5f2e;">
+<b style="color:#7fff7f;">Snooze Alerts</b><br>
+<small style="color:#999;">Temporarily force the LED green (suppress red/yellow) for N hours.</small><br>
+<select id="snoozeHours" style="margin-top:6px;padding:4px;background:#222;color:#ccc;border:1px solid #444;border-radius:4px;">
+<option value="1">1 hour</option><option value="2">2 hours</option><option value="4">4 hours</option>
+<option value="8">8 hours</option><option value="12">12 hours</option><option value="24">24 hours</option>
+</select>
+<button type="button" style="margin-left:8px;background:#2e7d32;color:#fff;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;" onclick="activateSnooze()">Snooze</button>
+<span id="snoozeResult" style="margin-left:8px;font-size:0.9em;color:#7fff7f;"></span>
+</div>
 </form></div>
 <script>
 if(/Mobi|Android/i.test(navigator.userAgent)){document.querySelectorAll('.show-pass').forEach(e=>e.style.display='block');}
@@ -283,6 +293,13 @@ function manualRefresh(){
     r.textContent=d.statusName+(d.changed?' (changed!)':'');
     setTimeout(()=>location.reload(),2000);
   }).catch(()=>{r.style.background='#f8d7da';r.textContent='Refresh failed';});
+}
+function activateSnooze(){
+  let h=document.getElementById('snoozeHours').value;
+  let r=document.getElementById('snoozeResult');
+  fetch('/snooze?hours='+h,{method:'POST'}).then(x=>x.text()).then(msg=>{
+    r.textContent=msg;
+  }).catch(()=>{r.style.color='#ff6b6b';r.textContent='Snooze failed';});
 }
 </script></body></html>
 )rawliteral";
@@ -591,10 +608,22 @@ void handleTestTrigger() {
   }
 }
 
+void handleSnooze() {
+  int hours = 1;
+  if (server.hasArg(“hours”)) {
+    hours = server.arg(“hours”).toInt();
+    if (hours < 1) hours = 1;
+    if (hours > 24) hours = 24;
+  }
+  snoozeUntil = millis() + (unsigned long)hours * 3600000UL;
+  Serial.printf(“[SNOOZE] Active for %d hour(s)\n”, hours);
+  server.send(200, “text/plain”, (“Snooze active for “ + String(hours) + “ hour(s)”).c_str());
+}
+
 void handleReboot() {
-  Serial.println("\nðŸ”„ Reboot requested");
-  server.sendHeader("Connection", "close");
-  server.send(200, "text/plain", "Rebooting...");
+  Serial.println(“\nðŸ”„ Reboot requested”);
+  server.sendHeader(“Connection”, “close”);
+  server.send(200, “text/plain”, “Rebooting...”);
   delay(500);
   ESP.restart();
 }
@@ -924,6 +953,7 @@ void startWebServer() {
   server.on("/test-wifi", HTTP_POST, handleTestWifi);
   server.on("/test-canvas", HTTP_POST, handleTestCanvas);
   server.on("/refresh", HTTP_POST, handleRefresh);
+  server.on("/snooze", HTTP_POST, handleSnooze);
   server.on("/reboot", HTTP_POST, handleReboot);
   server.on("/factory-reset", HTTP_POST, handleFactoryReset);
   server.on("/save", HTTP_POST, handleSave);

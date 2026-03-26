@@ -10,6 +10,9 @@ const PORT = process.env.PORT || 3000;
 // If not set, the server accepts all requests (fine for private deploys).
 const API_KEY = process.env.DASHBOARD_API_KEY || null;
 
+// Discord webhook for alerting — set DISCORD_WEBHOOK_URL env var to enable
+const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL || null;
+
 const DATA_DIR = path.join(__dirname, 'data');
 const UNITS_FILE = path.join(DATA_DIR, 'units.json');
 const BUGS_FILE = path.join(DATA_DIR, 'bugs.json');
@@ -21,9 +24,27 @@ function readJSON(file, fallback) {
   catch { return fallback; }
 }
 
+// Serialised write queue — prevents race-condition data loss when multiple
+// devices POST telemetry simultaneously.
+let _writing = false;
+const _writeQueue = [];
 function writeJSON(file, data) {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+  _writeQueue.push({ file, data });
+  if (!_writing) _flushQueue();
+}
+function _flushQueue() {
+  if (!_writeQueue.length) { _writing = false; return; }
+  _writing = true;
+  const { file, data } = _writeQueue.shift();
+  try { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
+  catch (e) { console.error('writeJSON error:', e.message); }
+  setImmediate(_flushQueue);
+}
+
+// Bug ID: timestamp + random suffix to prevent millisecond collisions
+function newBugId() {
+  return Date.now() * 1000 + Math.floor(Math.random() * 1000);
 }
 
 function authMiddleware(req, res, next) {
@@ -31,6 +52,83 @@ function authMiddleware(req, res, next) {
   const key = req.headers['x-api-key'];
   if (key !== API_KEY) return res.status(401).json({ error: 'Unauthorized' });
   next();
+}
+
+// Simple per-IP rate limiting — max 60 requests per minute per IP
+const _rateCounts = new Map();
+function rateLimitMiddleware(req, res, next) {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const now = Date.now();
+  const entry = _rateCounts.get(ip) || { count: 0, reset: now + 60000 };
+  if (now > entry.reset) { entry.count = 0; entry.reset = now + 60000; }
+  entry.count++;
+  _rateCounts.set(ip, entry);
+  if (entry.count > 60) return res.status(429).json({ error: 'Too many requests' });
+  next();
+}
+// Clean up stale rate-limit entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of _rateCounts) {
+    if (now > entry.reset) _rateCounts.delete(ip);
+  }
+}, 5 * 60 * 1000);
+
+const STALE_MS = 30 * 60 * 1000; // 30 minutes offline = stale
+
+// ── Discord alerting ───────────────────────────────────────────────────────
+
+async function sendDiscordAlert(message) {
+  if (!DISCORD_WEBHOOK) return;
+  try {
+    const response = await fetch(DISCORD_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: message }),
+    });
+    if (!response.ok) console.error('Discord webhook failed:', response.status);
+  } catch (e) {
+    console.error('Discord webhook error:', e.message);
+  }
+}
+
+// Check all units for stale/error conditions and fire alerts (throttled to 1/unit/incident)
+function checkAndAlert(units) {
+  if (!DISCORD_WEBHOOK) return;
+  const now = Date.now();
+  let changed = false;
+
+  for (const unit of units) {
+    const name = unit.device_name || unit.device_id;
+    const isStale = (now - new Date(unit.last_seen).getTime()) > STALE_MS;
+    const hasError = unit.error_code > 0 || unit.consecutive_errors > 2;
+
+    // Stale alert — fire once per offline incident (reset when it comes back)
+    if (isStale && !unit._alerted_stale) {
+      unit._alerted_stale = true;
+      changed = true;
+      sendDiscordAlert(`⚠️ **${name}** has gone offline (no check-in for >30 min) — last seen ${unit.last_seen}`);
+    } else if (!isStale && unit._alerted_stale) {
+      unit._alerted_stale = false;
+      changed = true;
+      sendDiscordAlert(`✅ **${name}** is back online`);
+    }
+
+    // Error alert — fire once per new error code
+    if (hasError && unit._alerted_error_code !== unit.error_code) {
+      unit._alerted_error_code = unit.error_code;
+      changed = true;
+      const ERROR_NAMES = ['None','WiFi Disconnect','Canvas Auth','Canvas Server','Time Sync','Memory Low','JSON Parse','Buffer Exhausted'];
+      const errName = ERROR_NAMES[unit.error_code] || `Code ${unit.error_code}`;
+      sendDiscordAlert(`🔴 **${name}** reporting error: **${errName}** (×${unit.consecutive_errors}) — firmware v${unit.firmware_version}`);
+    } else if (!hasError && unit._alerted_error_code > 0) {
+      unit._alerted_error_code = 0;
+      changed = true;
+      sendDiscordAlert(`✅ **${name}** error cleared`);
+    }
+  }
+
+  return changed;
 }
 
 // ── Middleware ─────────────────────────────────────────────────────────────
@@ -41,10 +139,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ── Device API ─────────────────────────────────────────────────────────────
 
 // POST /api/telemetry  — heartbeat from a device
-// Body: { device_id, firmware_version, uptime_seconds, free_heap, wifi_rssi,
-//         assignment_status, error_code, consecutive_errors, time_synced,
-//         setup_complete, cpu_temp, device_name, ota_version_seen }
-app.post('/api/telemetry', authMiddleware, (req, res) => {
+app.post('/api/telemetry', rateLimitMiddleware, authMiddleware, (req, res) => {
   const body = req.body;
   if (!body || !body.device_id) {
     return res.status(400).json({ error: 'device_id required' });
@@ -54,22 +149,29 @@ app.post('/api/telemetry', authMiddleware, (req, res) => {
   const now = new Date().toISOString();
 
   const existing = units.findIndex(u => u.device_id === body.device_id);
+  const prev = existing >= 0 ? units[existing] : {};
+
   const record = {
+    // Preserve operator-set fields from previous record
+    notes: prev.notes || '',
+    _alerted_stale: prev._alerted_stale || false,
+    _alerted_error_code: prev._alerted_error_code || 0,
+    // Device-reported fields
     device_id: body.device_id,
     device_name: body.device_name || body.device_id,
     firmware_version: body.firmware_version || 'unknown',
     setup_complete: !!body.setup_complete,
     last_seen: now,
-    first_seen: existing >= 0 ? units[existing].first_seen : now,
-    uptime_seconds: body.uptime_seconds || 0,
-    free_heap: body.free_heap || 0,
-    wifi_rssi: body.wifi_rssi || 0,
-    cpu_temp: body.cpu_temp || 0,
-    assignment_status: body.assignment_status ?? -1,
-    error_code: body.error_code ?? 0,
-    consecutive_errors: body.consecutive_errors || 0,
+    first_seen: prev.first_seen || now,
+    uptime_seconds: Number(body.uptime_seconds) || 0,
+    free_heap: Number(body.free_heap) || 0,
+    wifi_rssi: Number(body.wifi_rssi) || 0,
+    cpu_temp: Number(body.cpu_temp) || 0,
+    assignment_status: Number.isInteger(body.assignment_status) ? body.assignment_status : -1,
+    error_code: Number.isInteger(body.error_code) ? Math.max(0, Math.min(body.error_code, 7)) : 0,
+    consecutive_errors: Math.max(0, Number(body.consecutive_errors) || 0),
     time_synced: !!body.time_synced,
-    ota_version_seen: body.ota_version_seen || null,
+    ota_version_seen: typeof body.ota_version_seen === 'string' ? body.ota_version_seen : null,
     ip_address: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
   };
 
@@ -79,28 +181,29 @@ app.post('/api/telemetry', authMiddleware, (req, res) => {
     units.push(record);
   }
 
+  const alertsChanged = checkAndAlert(units);
   writeJSON(UNITS_FILE, units);
   res.json({ ok: true, unit_count: units.length });
 });
 
 // POST /api/bug  — bug report from a device
-// Body: { device_id, firmware_version, error_code, error_name, title, body, diagnostics }
-app.post('/api/bug', authMiddleware, (req, res) => {
+app.post('/api/bug', rateLimitMiddleware, authMiddleware, (req, res) => {
   const body = req.body;
   if (!body || !body.device_id) {
     return res.status(400).json({ error: 'device_id required' });
   }
 
   const bugs = readJSON(BUGS_FILE, []);
+  const bugId = newBugId();
   bugs.unshift({
-    id: Date.now(),
+    id: bugId,
     device_id: body.device_id,
     device_name: body.device_name || body.device_id,
     firmware_version: body.firmware_version || 'unknown',
-    error_code: body.error_code ?? 0,
-    error_name: body.error_name || 'UNKNOWN',
-    title: body.title || 'Bug Report',
-    diagnostics: body.diagnostics || {},
+    error_code: Number.isInteger(body.error_code) ? body.error_code : 0,
+    error_name: typeof body.error_name === 'string' ? body.error_name : 'UNKNOWN',
+    title: typeof body.title === 'string' ? body.title.slice(0, 200) : 'Bug Report',
+    diagnostics: body.diagnostics && typeof body.diagnostics === 'object' ? body.diagnostics : {},
     timestamp: new Date().toISOString(),
     resolved: false,
   });
@@ -108,13 +211,20 @@ app.post('/api/bug', authMiddleware, (req, res) => {
   // Keep last 500 bug reports
   if (bugs.length > 500) bugs.splice(500);
   writeJSON(BUGS_FILE, bugs);
-  res.json({ ok: true, bug_id: bugs[0].id });
+
+  // Discord alert for new bug report
+  const name = body.device_name || body.device_id;
+  sendDiscordAlert(`🐛 **Bug report from ${name}**: ${body.title || body.error_name || 'Unknown error'} (firmware v${body.firmware_version || '?'})`);
+
+  res.json({ ok: true, bug_id: bugId });
 });
 
 // ── Dashboard API ──────────────────────────────────────────────────────────
 
 app.get('/api/units', (req, res) => {
-  res.json(readJSON(UNITS_FILE, []));
+  // Strip internal alert-state fields from public response
+  const units = readJSON(UNITS_FILE, []).map(({ _alerted_stale, _alerted_error_code, ...u }) => u);
+  res.json(units);
 });
 
 app.get('/api/bugs', (req, res) => {
@@ -125,7 +235,8 @@ app.get('/api/bugs', (req, res) => {
   res.json(filtered.slice(0, limit));
 });
 
-app.patch('/api/bugs/:id/resolve', (req, res) => {
+// Resolve a bug — requires auth if API key is set
+app.patch('/api/bugs/:id/resolve', authMiddleware, (req, res) => {
   const bugs = readJSON(BUGS_FILE, []);
   const bug = bugs.find(b => b.id === parseInt(req.params.id));
   if (!bug) return res.status(404).json({ error: 'Not found' });
@@ -134,8 +245,18 @@ app.patch('/api/bugs/:id/resolve', (req, res) => {
   res.json({ ok: true });
 });
 
+// Update per-device notes
+app.patch('/api/units/:device_id/notes', authMiddleware, (req, res) => {
+  const units = readJSON(UNITS_FILE, []);
+  const unit = units.find(u => u.device_id === req.params.device_id);
+  if (!unit) return res.status(404).json({ error: 'Unit not found' });
+  const notes = typeof req.body.notes === 'string' ? req.body.notes.slice(0, 500) : '';
+  unit.notes = notes;
+  writeJSON(UNITS_FILE, units);
+  res.json({ ok: true, notes });
+});
+
 app.get('/api/ota', (req, res) => {
-  // Return OTA system status based on last known unit states
   const units = readJSON(UNITS_FILE, []);
   const now = Date.now();
   const summary = units.map(u => ({
@@ -144,7 +265,7 @@ app.get('/api/ota', (req, res) => {
     firmware_version: u.firmware_version,
     ota_version_seen: u.ota_version_seen,
     last_seen: u.last_seen,
-    stale: (now - new Date(u.last_seen).getTime()) > 30 * 60 * 1000,
+    stale: (now - new Date(u.last_seen).getTime()) > STALE_MS,
   }));
   res.json({ units: summary, total: units.length });
 });
@@ -153,7 +274,6 @@ app.get('/api/stats', (req, res) => {
   const units = readJSON(UNITS_FILE, []);
   const bugs = readJSON(BUGS_FILE, []);
   const now = Date.now();
-  const STALE_MS = 30 * 60 * 1000; // 30 minutes
 
   res.json({
     total_units: units.length,
@@ -169,9 +289,6 @@ app.get('/api/stats', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Canvas LED Dashboard running on port ${PORT}`);
-  if (API_KEY) {
-    console.log('API key authentication enabled');
-  } else {
-    console.log('WARNING: No DASHBOARD_API_KEY set — all telemetry requests accepted');
-  }
+  if (!API_KEY) console.log('Note: DASHBOARD_API_KEY not set — device endpoints unprotected');
+  if (DISCORD_WEBHOOK) console.log('Discord alerting enabled');
 });

@@ -88,12 +88,13 @@ void createGitHubIssue() {
   char last4[5];
   sprintf(last4, "%02X%02X", mac[4], mac[5]);
 
-  // Error name for title
+  // Error name for title — bounds-checked to prevent OOB access on corrupted error code
   const char* errorNames[] = {
     "None", "WiFi Disconnect", "Canvas Auth", "Canvas Server",
     "Time Sync", "Memory Low", "JSON Parse", "Buffer Exhausted"
   };
-  String errorName = errorNames[currentErrorCode];
+  int safeCode = (currentErrorCode >= 0 && currentErrorCode < 8) ? currentErrorCode : 0;
+  String errorName = errorNames[safeCode];
 
   // Build issue title and body
   String title = "[AUTO] " + errorName + " - Device " + String(last4);
@@ -164,9 +165,14 @@ void createGitHubIssue() {
     dashDoc["error_code"]       = currentErrorCode;
     dashDoc["error_name"]       = String("ERR_") + errorName;
     dashDoc["title"]            = title;
-    // diagnostics is already a JSON string — embed as raw object
-    DeserializationError diagErr = deserializeJson(dashDoc["diagnostics"].to<JsonVariant>(), diagnostics);
-    if (diagErr) dashDoc["diagnostics"] = diagnostics;  // fallback: send as string
+    // diagnostics is a JSON string — parse into a temporary doc, then copy into payload
+    // (can't deserialize directly into a JsonVariant reference)
+    DynamicJsonDocument tempDiag(512);
+    if (deserializeJson(tempDiag, diagnostics) == DeserializationError::Ok) {
+      dashDoc["diagnostics"] = tempDiag.as<JsonObject>();
+    } else {
+      dashDoc["diagnostics"] = diagnostics;  // fallback: embed as raw string
+    }
     String dashPayload;
     serializeJson(dashDoc, dashPayload);
 

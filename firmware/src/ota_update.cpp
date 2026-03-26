@@ -1,6 +1,7 @@
 #include "ota_update.h"
 #include "config.h"
 #include <WiFi.h>
+#include <Update.h>
 #include <esp_task_wdt.h>
 
 // Global variables for OTA
