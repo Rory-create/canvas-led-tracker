@@ -10,6 +10,34 @@ const PORT = process.env.PORT || 3000;
 // If not set, the server accepts all requests (fine for private deploys).
 const API_KEY = process.env.DASHBOARD_API_KEY || null;
 
+// Human-friendly dashboard password — set DASHBOARD_PASSWORD env var.
+// On correct password, server issues a random session token stored server-side.
+// Tokens expire after 30 days. Rotating the password invalidates all sessions.
+const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || null;
+const crypto = require('crypto');
+const _sessions = new Map(); // token → expiry timestamp
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function createSession() {
+  const token = crypto.randomBytes(32).toString('base64url');
+  _sessions.set(token, Date.now() + SESSION_TTL_MS);
+  return token;
+}
+function isValidSession(token) {
+  if (!token) return false;
+  const expiry = _sessions.get(token);
+  if (!expiry) return false;
+  if (Date.now() > expiry) { _sessions.delete(token); return false; }
+  return true;
+}
+// Clean up expired sessions hourly
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, expiry] of _sessions) {
+    if (now > expiry) _sessions.delete(token);
+  }
+}, 60 * 60 * 1000);
+
 // Discord webhook for alerting — set DISCORD_WEBHOOK_URL env var to enable
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL || null;
 
@@ -58,11 +86,20 @@ function authMiddleware(req, res, next) {
 // Used on read endpoints so the dashboard UI can still load when API_KEY is set.
 // Devices posting telemetry use authMiddleware (stricter); browser reads use this.
 const DASHBOARD_TOKEN = process.env.DASHBOARD_READ_TOKEN || null;
+
+function isLocalhost(req) {
+  const ip = req.socket.remoteAddress;
+  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+}
+
 function readAuthMiddleware(req, res, next) {
-  if (!API_KEY && !DASHBOARD_TOKEN) return next();
+  // Requests from localhost (the host PC) are always allowed
+  if (isLocalhost(req)) return next();
+  if (!API_KEY && !DASHBOARD_TOKEN && !DASHBOARD_PASSWORD) return next();
   const key = req.headers['x-api-key'];
   if (API_KEY && key === API_KEY) return next();
   if (DASHBOARD_TOKEN && key === DASHBOARD_TOKEN) return next();
+  if (isValidSession(key)) return next();
   return res.status(401).json({ error: 'Unauthorized' });
 }
 
@@ -147,6 +184,22 @@ function checkAndAlert(units) {
 
 app.use(express.json({ limit: '64kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// POST /api/login — exchange password for a session token
+app.post('/api/login', rateLimitMiddleware, (req, res) => {
+  const { password } = req.body || {};
+  if (!DASHBOARD_PASSWORD) return res.status(503).json({ error: 'Password auth not configured' });
+  if (!password || password !== DASHBOARD_PASSWORD) {
+    return res.status(401).json({ error: 'Incorrect password' });
+  }
+  const token = createSession();
+  res.json({ token });
+});
+
+// GET /api/whoami — lets the browser check if it's on localhost (auto-auth)
+app.get('/api/whoami', (req, res) => {
+  res.json({ localhost: isLocalhost(req) });
+});
 
 // ── Device API ─────────────────────────────────────────────────────────────
 
@@ -311,6 +364,7 @@ app.get('/api/stats', readAuthMiddleware, (req, res) => {
 app.listen(PORT, () => {
   console.log(`Canvas LED Dashboard running on port ${PORT}`);
   if (!API_KEY) console.log('Note: DASHBOARD_API_KEY not set — device endpoints unprotected');
-  if (!DASHBOARD_TOKEN && API_KEY) console.log('Note: DASHBOARD_READ_TOKEN not set — set it to protect dashboard read endpoints from the browser');
+  if (DASHBOARD_PASSWORD) console.log('Password login enabled');
+  else console.log('Note: DASHBOARD_PASSWORD not set — password login disabled');
   if (DISCORD_WEBHOOK) console.log('Discord alerting enabled');
 });

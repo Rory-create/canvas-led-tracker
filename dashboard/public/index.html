@@ -145,8 +145,8 @@ a { color: var(--blue); text-decoration: none; }
 <div class="login-overlay" id="loginOverlay">
   <div class="login-box">
     <h2>Canvas LED Dashboard</h2>
-    <p>Enter your dashboard access token to continue.</p>
-    <input type="password" id="loginInput" placeholder="Access token" onkeydown="if(event.key==='Enter')doLogin()">
+    <p>Enter your dashboard password to continue.</p>
+    <input type="password" id="loginInput" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
     <button onclick="doLogin()">Sign in</button>
     <div class="login-error" id="loginError">Incorrect token — try again.</div>
   </div>
@@ -467,40 +467,55 @@ function authHeaders() {
   return k ? { 'Content-Type': 'application/json', 'X-API-Key': k } : { 'Content-Type': 'application/json' };
 }
 
+function showDashboard() {
+  document.getElementById('loginOverlay').style.display = 'none';
+  loadAll();
+}
+
+function showLogin() {
+  document.getElementById('loginOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('loginInput').focus(), 50);
+}
+
 async function doLogin() {
   const input = document.getElementById('loginInput');
   const error = document.getElementById('loginError');
-  const token = input.value.trim();
-  if (!token) return;
-  // Validate by hitting a protected endpoint — 200 means correct, 401 means wrong
-  const r = await fetch('/api/stats', { headers: { 'X-API-Key': token } });
+  const password = input.value.trim();
+  if (!password) return;
+
+  const r = await fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+
   if (r.ok) {
+    const { token } = await r.json();
     sessionStorage.setItem('dashApiKey', token);
-    document.getElementById('loginOverlay').style.display = 'none';
     error.style.display = 'none';
     input.value = '';
-    loadAll();
+    showDashboard();
   } else {
     error.style.display = 'block';
-    input.focus();
+    input.select();
   }
 }
 
 function doLogout() {
   sessionStorage.removeItem('dashApiKey');
-  document.getElementById('loginOverlay').style.display = 'flex';
-  document.getElementById('loginInput').focus();
+  showLogin();
 }
 
-// On page load — if token already in sessionStorage, skip login screen
-if (getApiKey()) {
-  document.getElementById('loginOverlay').style.display = 'none';
-} else {
-  // Defer loadAll until after login
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('loginInput').focus();
-  });
-}
+// On page load: check if localhost (auto-auth), or already have a session token,
+// otherwise show login screen. All paths lead through showDashboard() or showLogin().
+(async () => {
+  try {
+    const who = await fetch('/api/whoami').then(r => r.json());
+    if (who.localhost) { showDashboard(); return; }
+  } catch {}
+  if (getApiKey()) { showDashboard(); return; }
+  showLogin();
+})();
 
 // Delegated click handler for resolve buttons and edit-notes buttons
 document.addEventListener('click', async (e) => {
