@@ -30,7 +30,7 @@ button:hover{opacity:0.9;}
 <h1>Canvas LED Tracker</h1>
 <p style="text-align:center;color:#666;">Initial Setup</p>
 <p style="text-align:center;font-size:12px;color:#999;">Firmware v%FW_VERSION% | <a href="/health" target="_blank" style="color:#667eea;">Health</a> | <a href="/logs" target="_blank" style="color:#667eea;">Logs</a></p>
-<p><b>Get Canvas Token:</b> Open Canvas in browser â†’ Account â†’ Settings â†’ Approved Integrations â†’ + New Access Token</p>
+<p><b>Get Canvas Token:</b> Open Canvas in browser ' Account ' Settings ' Approved Integrations ' + New Access Token</p>
 <form method="POST" action="/save" onsubmit="return validateSetup()">
 <div class="section">
 <h3>WiFi Settings</h3>
@@ -248,7 +248,7 @@ Device: <span>%DEVICE_NAME%</span> | WiFi: %WIFI_STATUS% | Assignment: <span>%AS
 <label>Device Name<input type="text" name="deviceName" value="%DEVICE_NAME%"></label>
 <label>Check Interval (minutes)<input type="number" name="fetchInterval" value="%FETCH_INT%" min="1"></label>
 <label><input type="checkbox" name="includeOverdue" %INCLUDE_OVERDUE_CHECKED%> Include Overdue Assignments</label>
-<small style="color:#666;">⚠️ Note: If you use browser extensions like BetterCanvas to mark assignments complete, they may not sync with Canvas API. Leave this OFF to avoid seeing old completed assignments.</small>
+<small style="color:#666;"> Note: If you use browser extensions like BetterCanvas to mark assignments complete, they may not sync with Canvas API. Leave this OFF to avoid seeing old completed assignments.</small>
 <label>AP Password<input type="text" name="apPassword" value="%AP_PASSWORD%"></label>
 <label><input type="checkbox" name="bugReport" %BUG_REPORT_CHECKED%> Enable Auto Bug Reports</label>
 <small style="color:#666;">Automatically report critical errors to GitHub for faster support</small>
@@ -310,7 +310,7 @@ function checkSnoozeStatus(){
     let s=document.getElementById('snoozeStatus');
     let btn=document.getElementById('cancelSnoozeBtn');
     if(d.active){
-      s.textContent='Snooze active — '+d.remaining_minutes+' min remaining';
+      s.textContent='Snooze active  '+d.remaining_minutes+' min remaining';
       s.style.color='#7fff7f';
       btn.style.display='inline-block';
     } else {
@@ -365,7 +365,7 @@ void handleRoot() {
 void handleSettings() {
   String html = FPSTR(SETTINGS_HTML);
   html.replace("%DEVICE_NAME%", systemConfig.deviceName);
-  html.replace("%WIFI_STATUS%", WiFi.status() == WL_CONNECTED ? "â—" : "â—‹");
+  html.replace("%WIFI_STATUS%", WiFi.status() == WL_CONNECTED ? "" : "");
 
   String statusText = "None";
   if (assignmentStatus == 0) {
@@ -411,11 +411,11 @@ void handleSettings() {
   // Add error alert if needed
   String errorAlert = "";
   if (consecutiveErrors >= 3) {
-    errorAlert = "<div class='alert alert-warning'>âš ï¸ Canvas API experiencing issues (" +
+    errorAlert = "<div class='alert alert-warning'> Canvas API experiencing issues (" +
                  String(consecutiveErrors) + " errors). Using last known status.</div>";
   }
   if (!timeSyncComplete) {
-    errorAlert += "<div class='alert alert-error'>âŒ Time sync failed. Assignment checks disabled until time is synced.</div>";
+    errorAlert += "<div class='alert alert-error'> Time sync failed. Assignment checks disabled until time is synced.</div>";
   }
   html.replace("%ERROR_ALERT%", errorAlert);
 
@@ -628,49 +628,49 @@ void handleTestTrigger() {
 }
 
 void handleSnooze() {
-  // POST /snooze?hours=N — activate snooze
-  // POST /snooze?cancel=1 — cancel snooze
-  if (server.hasArg(“cancel”) && server.arg(“cancel”) == “1”) {
+  // POST /snooze?hours=N  activate snooze
+  // POST /snooze?cancel=1  cancel snooze
+  if (server.hasArg("cancel") && server.arg("cancel") == "1") {
     snoozeUntil = 0;
-    Serial.println(“[SNOOZE] Cancelled”);
-    server.send(200, “text/plain”, “Snooze cancelled”);
+    Serial.println("[SNOOZE] Cancelled");
+    server.send(200, "text/plain", "Snooze cancelled");
     return;
   }
   int hours = 1;
-  if (server.hasArg(“hours”)) {
-    hours = server.arg(“hours”).toInt();
+  if (server.hasArg("hours")) {
+    hours = server.arg("hours").toInt();
     if (hours < 1) hours = 1;
     if (hours > 24) hours = 24;
   }
   snoozeUntil = millis() + (unsigned long)hours * 3600000UL;
-  Serial.printf(“[SNOOZE] Active for %d hour(s)\n”, hours);
-  server.send(200, “text/plain”, (“Snooze active for “ + String(hours) + “ hour(s)”).c_str());
+  Serial.printf("[SNOOZE] Active for %d hour(s)\n", hours);
+  server.send(200, "text/plain", ("Snooze active for " + String(hours) + " hour(s)").c_str());
 }
 
 void handleSnoozeStatus() {
   unsigned long now = millis();
   if (snoozeUntil == 0 || now >= snoozeUntil) {
-    server.send(200, “application/json”, “{\”active\”:false,\”remaining_minutes\”:0}”);
+    server.send(200, "application/json", "{\"active\":false,\"remaining_minutes\":0}");
   } else {
     unsigned long remainMs = snoozeUntil - now;
     unsigned long remainMin = remainMs / 60000;
-    server.send(200, “application/json”,
-      (“{\”active\”:true,\”remaining_minutes\”:” + String(remainMin) + “}”).c_str());
+    server.send(200, "application/json",
+      ("{\"active\":true,\"remaining_minutes\":" + String(remainMin) + "}").c_str());
   }
 }
 
 void handleReboot() {
-  Serial.println(“\nðŸ”„ Reboot requested”);
-  server.sendHeader(“Connection”, “close”);
-  server.send(200, “text/plain”, “Rebooting...”);
+  Serial.println("\nReboot requested");
+  server.sendHeader("Connection", "close");
+  server.send(200, "text/plain", "Rebooting...");
   delay(500);
   ESP.restart();
 }
 
 void handleFactoryReset() {
-  Serial.println("\nâ•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—");
-  Serial.println("â•‘ ðŸ­ FACTORY RESET INITIATED â•‘");
-  Serial.println("â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•");
+  Serial.println("\n========================================");
+  Serial.println("  FACTORY RESET INITIATED");
+  Serial.println("========================================");
 
   server.sendHeader("Connection", "close");
   server.send(200, "text/plain", "Factory reset in progress...");
@@ -743,7 +743,7 @@ void handleSave() {
   if (server.hasArg("deviceName")) server.arg("deviceName").toCharArray(systemConfig.deviceName, sizeof(systemConfig.deviceName));
   if (server.hasArg("fetchInterval")) canvasConfig.fetchInterval = server.arg("fetchInterval").toInt() * 60UL * 1000UL;
   if (server.hasArg("apPassword")) server.arg("apPassword").toCharArray(systemConfig.apPassword, sizeof(systemConfig.apPassword));
-  // dashboardUrl and dashboardApiKey are baked in at build time — not user-configurable
+  // dashboardUrl and dashboardApiKey are baked in at build time  not user-configurable
 
   canvasConfig.includeOverdue = server.hasArg("includeOverdue");
   systemConfig.bugReportEnabled = server.hasArg("bugReport");
@@ -762,7 +762,7 @@ void handleSave() {
     confirmHtml += "<style>body{font-family:Arial;max-width:600px;margin:50px auto;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;text-align:center;}";
     confirmHtml += ".container{background:white;padding:40px;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,0.2);}";
     confirmHtml += "h1{color:#4CAF50;font-size:48px;margin:0;}p{font-size:18px;color:#666;}</style></head><body><div class='container'>";
-    confirmHtml += "<h1>âœ“</h1><h2>Settings Saved!</h2><p>Device is rebooting...<br>You can close this window.</p>";
+    confirmHtml += "<h1>&#10003;</h1><h2>Settings Saved!</h2><p>Device is rebooting...<br>You can close this window.</p>";
     confirmHtml += "<p>Access settings at:<br><b>http://" + WiFi.localIP().toString() + "</b></p>";
     confirmHtml += "</div><script>setTimeout(function(){window.close();},3000);</script></body></html>";
 
@@ -796,7 +796,7 @@ void handleSave() {
 // NEW API HANDLERS: WiFi Scan, Test, Refresh
 // ============================================
 void handleScan() {
-  Serial.println("📡 Scanning WiFi networks...");
+  Serial.println(" Scanning WiFi networks...");
 
   // Clear any previous scan results
   WiFi.scanDelete();
@@ -822,13 +822,13 @@ void handleScan() {
     root["errorDetail"] = (n == -1)
       ? "WiFi scan returned no results after 3 attempts. Try re-scanning or type your network name manually."
       : "A scan is already in progress. Please wait a moment and try again.";
-    Serial.printf("  ❌ Scan failed with code: %d after retries\n", n);
+    Serial.printf("   Scan failed with code: %d after retries\n", n);
   } else if (n == 0) {
     root["error"] = "no_networks";
     root["errorDetail"] = "No networks found. Your network may be hidden or out of range.";
-    Serial.println("  ⚠️ No networks found");
+    Serial.println("   No networks found");
   } else {
-    Serial.printf("  ✅ Found %d raw networks, deduplicating...\n", n);
+    Serial.printf("   Found %d raw networks, deduplicating...\n", n);
     for (int i = 0; i < n && i < 20; i++) {
       String ssid = WiFi.SSID(i);
       if (ssid.length() == 0) continue;  // Skip hidden networks
@@ -852,7 +852,7 @@ void handleScan() {
         net["secure"] = WiFi.encryptionType(i) != WIFI_AUTH_OPEN;
       }
     }
-    Serial.printf("  📋 Returning %d unique networks\n", networks.size());
+    Serial.printf("   Returning %d unique networks\n", networks.size());
   }
 
   root["count"] = networks.size();
@@ -873,7 +873,7 @@ void handleTestWifi() {
   String testSsid = server.arg("ssid");
   String testPass = server.arg("password");
   
-  Serial.printf("🔌 Testing WiFi: %s\n", testSsid.c_str());
+  Serial.printf(" Testing WiFi: %s\n", testSsid.c_str());
   
   // Disconnect current connection temporarily
   WiFi.disconnect();
@@ -909,7 +909,7 @@ void handleTestCanvas() {
   }
   
   String testToken = server.arg("token");
-  Serial.println("🎓 Testing Canvas token...");
+  Serial.println(" Testing Canvas token...");
   
   // Need WiFi to test Canvas - check if we have a stored connection
   if (WiFi.status() != WL_CONNECTED) {
@@ -1000,11 +1000,11 @@ void startWebServer() {
 
   server.begin();
   webServerRunning = true;
-  Serial.println("âœ… Web server started");
+  Serial.println(" Web server started");
 }
 
 void startSettingsAP() {
-  Serial.println("ðŸ”§ Starting Settings AP");
+  Serial.println("Starting Settings AP");
   WiFi.mode(WIFI_AP_STA);
 
   bool apStarted = systemConfig.setupComplete
@@ -1012,16 +1012,16 @@ void startSettingsAP() {
     : WiFi.softAP(systemConfig.deviceName);
 
   if (!apStarted) {
-    Serial.println("âŒ Failed to start AP!");
+    Serial.println(" Failed to start AP!");
     return;
   }
 
-  Serial.println("ðŸ“¡ AP: " + String(systemConfig.deviceName));
-  Serial.println("ðŸŒ AP URL: http://" + WiFi.softAPIP().toString());
+  Serial.println("AP: " + String(systemConfig.deviceName));
+  Serial.println(" AP URL: http://" + WiFi.softAPIP().toString());
 
   dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
   if (!webServerRunning) startWebServer();
-  Serial.println("âœ“ Settings AP ready");
+  Serial.println("Settings AP ready");
 }
 
 void monitorSystem() {
@@ -1031,7 +1031,7 @@ void monitorSystem() {
   // Temperature check every 5 minutes
   if (now - lastTempCheck >= 300000) {
     float temp = temperatureRead();
-    Serial.printf("ðŸŒ¡ï¸ Temp: %.1fÂ°C%s\n", temp, temp > 80 ? " âš ï¸ HIGH" : (temp > 70 ? " (warm)" : ""));
+    Serial.printf(" Temp: %.1fC%s\n", temp, temp > 80 ? "  HIGH" : (temp > 70 ? " (warm)" : ""));
     lastTempCheck = now;
   }
 

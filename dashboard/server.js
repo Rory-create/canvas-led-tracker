@@ -95,10 +95,10 @@ function isLocalhost(req) {
 function readAuthMiddleware(req, res, next) {
   // Requests from localhost (the host PC) are always allowed
   if (isLocalhost(req)) return next();
-  if (!API_KEY && !DASHBOARD_TOKEN && !DASHBOARD_PASSWORD) return next();
+  // If no password is configured, allow all reads (open/private deploy)
+  if (!DASHBOARD_PASSWORD) return next();
+  // Browser access requires a valid session token (obtained via POST /api/login)
   const key = req.headers['x-api-key'];
-  if (API_KEY && key === API_KEY) return next();
-  if (DASHBOARD_TOKEN && key === DASHBOARD_TOKEN) return next();
   if (isValidSession(key)) return next();
   return res.status(401).json({ error: 'Unauthorized' });
 }

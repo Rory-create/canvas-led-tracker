@@ -55,13 +55,13 @@ void handleSerialCommands() {
   }
 
   if (cmd == "ota:check") {
-    Serial.println("[OTA] 🔄 Forcing OTA update check...");
+    Serial.println("[OTA]  Forcing OTA update check...");
     if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("[OTA] ❌ Not connected to WiFi. Connect first.");
+      Serial.println("[OTA]  Not connected to WiFi. Connect first.");
       return;
     }
     checkForOTAUpdate();
-    Serial.println("[OTA] ✅ Check complete. See output above.");
+    Serial.println("[OTA]  Check complete. See output above.");
     return;
   }
   
@@ -121,12 +121,12 @@ void handleSerialCommands() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("\nâ•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—");
-  Serial.println("â•‘ Canvas LED Tracker - Optimized â•‘");
-  Serial.println("â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n");
+  Serial.println("\n========================================");
+  Serial.println("  Canvas LED Tracker - Optimized");
+  Serial.println("========================================\n");
 
   // Initialize watchdog timer (30 second timeout)
-  Serial.printf("📦 Firmware: v%s (%s)\n\n", FIRMWARE_VERSION, BUILD_TIMESTAMP);
+  Serial.printf(" Firmware: v%s (%s)\n\n", FIRMWARE_VERSION, BUILD_TIMESTAMP);
   // Support both old (IDF v4.x) and new (IDF v5.x) APIs
   #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     // New API for ESP-IDF v5.x and later (Arduino core 3.x)
@@ -146,11 +146,11 @@ void setup() {
   for (int p : pins) pinMode(p, OUTPUT);
   setAllLEDsOff();
 
-  Serial.printf("ðŸŒ¡ï¸ CPU Temp: %.1fÂ°C\n\n", temperatureRead());
+  Serial.printf(" CPU Temp: %.1fC\n\n", temperatureRead());
 
   // DEV_MODE: Reset non-credential preferences on boot for easier iteration
   #if DEV_MODE
-    Serial.println("⚠️  DEV_MODE: Resetting config (keeping credentials)...");
+    Serial.println("  DEV_MODE: Resetting config (keeping credentials)...");
     preferences.begin("config", false);
     
     // Save credentials before clearing
@@ -177,7 +177,7 @@ void setup() {
     preferences.putBool("setupDone", wasSetupComplete);
     
     preferences.end();
-    Serial.println("✅ Config reset complete\n");
+    Serial.println(" Config reset complete\n");
   #endif
 
   loadConfig();
@@ -196,7 +196,7 @@ void setup() {
   startSettingsAP();
 
   if (!systemConfig.setupComplete) {
-    Serial.println("âš ï¸ FIRST TIME SETUP REQUIRED\n");
+    Serial.println(" FIRST TIME SETUP REQUIRED\n");
     while (!systemConfig.setupComplete) {
       static unsigned long lastBlink = 0;
       static int brightness = 0, direction = 5;
@@ -223,28 +223,28 @@ void setup() {
   initTime();
 
   if (bootAttempts >= 5 && WiFi.status() == WL_CONNECTED) {
-    Serial.println(“[BOOT] WARNING: 5+ consecutive boots without successful fetch — forcing OTA check”);
+    Serial.println("[BOOT] WARNING: 5+ consecutive boots without successful fetch  forcing OTA check");
     checkForOTAUpdate();
   }
 
-  Serial.println(“ðŸ”‹ Configuration:”);
-  Serial.printf(" â€¢ LED Mode: %s\n", ledConfig.useFlashing ? "Flashing" : "Solid");
-  Serial.printf(" â€¢ Red LED: %d days, Yellow LED: %d days\n", ledConfig.redLEDDaysAhead, ledConfig.yellowLEDDaysAhead);
-  Serial.printf(" â€¢ Check Interval: %lu min\n", canvasConfig.fetchInterval / 60000);
-  Serial.printf(" â€¢ Timezone: %s\n\n", timezoneConfig.displayName);
+  Serial.println("Configuration:");
+  Serial.printf("  LED Mode: %s\n", ledConfig.useFlashing ? "Flashing" : "Solid");
+  Serial.printf("  Red LED: %d days, Yellow LED: %d days\n", ledConfig.redLEDDaysAhead, ledConfig.yellowLEDDaysAhead);
+  Serial.printf("  Check Interval: %lu min\n", canvasConfig.fetchInterval / 60000);
+  Serial.printf("  Timezone: %s\n\n", timezoneConfig.displayName);
 
   if (timeSyncComplete) {
-    Serial.println("ðŸ“¡ Fetching initial status...");
+    Serial.println("Fetching initial status...");
     assignmentStatus = fetchCanvasAssignments();
     lastFetch = millis();
     if (consecutiveErrors == 0) {
       lastSuccessfulFetch = lastFetch;
     }
   } else {
-    Serial.println("âš ï¸ Skipping initial fetch until time is synced\n");
+    Serial.println(" Skipping initial fetch until time is synced\n");
   }
 
-  Serial.println("\nâœ… Running!\n");
+  Serial.println("\n Running!\n");
 }
 
 void loop() {
@@ -278,7 +278,7 @@ void loop() {
     // OTA rate-limiting is handled internally by checkForOTAUpdate()
     checkForOTAUpdate();
 
-    // Telemetry heartbeat every 5 minutes — no-op if dashboardUrl is not set
+    // Telemetry heartbeat every 5 minutes  no-op if dashboardUrl is not set
     static unsigned long lastTelemetry = 0;
     if (now - lastTelemetry >= 5UL * 60UL * 1000UL) {
       sendTelemetry();
@@ -294,9 +294,9 @@ void loop() {
 
       // Show status summary
       if (consecutiveErrors == 0) {
-        Serial.println("âœ… Status updated successfully");
+        Serial.println(" Status updated successfully");
       } else {
-        Serial.printf("âš ï¸ Using cached status (last success: %lu min ago)\n",
+        Serial.printf(" Using cached status (last success: %lu min ago)\n",
                      (now - lastSuccessfulFetch) / 60000);
       }
       Serial.println("--- End Check ---\n");
