@@ -1,4 +1,5 @@
 #include "config.h"
+#include "secrets.h"
 
 // ============================================
 // GLOBAL VARIABLE DEFINITIONS
