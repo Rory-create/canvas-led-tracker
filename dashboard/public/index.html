@@ -523,7 +523,7 @@ document.addEventListener('click', async (e) => {
   if (resolveBtn) {
     const id = resolveBtn.dataset.bugId;
     const r = await fetch(`/api/bugs/${id}/resolve`, { method: 'PATCH', headers: authHeaders() });
-    if (r.status === 401) { promptApiKey(); return; }
+    if (r.status === 401) { showLogin(); return; }
     const row = document.getElementById('bug-' + id);
     if (row) row.style.opacity = '0.4';
     resolveBtn.replaceWith(Object.assign(document.createElement('span'), { style: 'color:var(--green);font-size:11px', textContent: 'Resolved' }));
@@ -537,10 +537,6 @@ document.addEventListener('click', async (e) => {
   }
 });
 
-function promptApiKey() {
-  const k = prompt('Enter dashboard API key (set via DASHBOARD_API_KEY env var):');
-  if (k !== null) sessionStorage.setItem('dashApiKey', k);
-}
 
 async function loadAll() {
   await Promise.all([loadUnits(), loadBugs(), loadOTA(), loadStats()]);
@@ -548,7 +544,8 @@ async function loadAll() {
 
 async function loadUnits() {
   try {
-    const r = await fetch('/api/units');
+    const r = await fetch('/api/units', { headers: authHeaders() });
+    if (r.status === 401) { showLogin(); return; }
     allUnits = await r.json();
     renderUnits(allUnits);
   } catch { document.getElementById('unitsGrid').innerHTML = '<div class="empty">Failed to load units.</div>'; }
@@ -556,7 +553,8 @@ async function loadUnits() {
 
 async function loadBugs() {
   try {
-    const r = await fetch('/api/bugs?limit=100');
+    const r = await fetch('/api/bugs?limit=100', { headers: authHeaders() });
+    if (r.status === 401) { showLogin(); return; }
     allBugs = await r.json();
     renderBugs(allBugs);
   } catch { }
@@ -564,7 +562,8 @@ async function loadBugs() {
 
 async function loadOTA() {
   try {
-    const r = await fetch('/api/ota');
+    const r = await fetch('/api/ota', { headers: authHeaders() });
+    if (r.status === 401) { showLogin(); return; }
     const data = await r.json();
     renderOTA(data.units || []);
   } catch { }
@@ -572,7 +571,8 @@ async function loadOTA() {
 
 async function loadStats() {
   try {
-    const r = await fetch('/api/stats');
+    const r = await fetch('/api/stats', { headers: authHeaders() });
+    if (r.status === 401) { showLogin(); return; }
     stats = await r.json();
     renderStats(stats);
   } catch { }
@@ -593,8 +593,7 @@ async function editNotes(deviceId) {
   loadUnits();
 }
 
-// Auto-refresh every 60 seconds — only runs if already authenticated
-if (getApiKey()) loadAll();
+// Auto-refresh every 60 seconds — only if authenticated
 setInterval(() => { if (getApiKey()) loadAll(); }, 60000);
 </script>
 </body>

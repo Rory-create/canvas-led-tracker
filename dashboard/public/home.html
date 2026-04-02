@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Due Light — Know your deadlines. No screen required.</title>
+<meta name="description" content="A physical LED indicator for Canvas LMS. Plugs in, syncs automatically, and shows your assignment status at a glance.">
+<style>
+:root {
+  --bg: #080808;
+  --surface: #111;
+  --border: #222;
+  --text: #e8e8e8;
+  --muted: #666;
+  --subtle: #333;
+  --green: #22c55e;
+  --yellow: #eab308;
+  --red: #ef4444;
+  --glow-green: rgba(34,197,94,0.35);
+  --glow-yellow: rgba(234,179,8,0.35);
+  --glow-red: rgba(239,68,68,0.35);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+
+/* ── Nav ── */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 40px;
+  background: rgba(8,8,8,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+.nav-logo .led-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--glow-green), 0 0 16px var(--glow-green);
+  animation: pulse 3s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.nav-links { display: flex; align-items: center; gap: 28px; }
+.nav-links a { color: var(--muted); font-size: 14px; transition: color 0.2s; }
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  background: var(--green);
+  color: #000 !important;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 18px;
+  border-radius: 6px;
+  transition: opacity 0.2s !important;
+}
+.nav-cta:hover { opacity: 0.85; color: #000 !important; }
+
+/* ── Hero ── */
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 60px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 100px 40px 80px;
+}
+.hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.2);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 20px;
+  margin-bottom: 24px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.hero h1 {
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin-bottom: 20px;
+}
+.hero h1 em {
+  font-style: normal;
+  color: var(--green);
+}
+.hero p {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.65;
+  margin-bottom: 36px;
+  max-width: 480px;
+}
+.hero-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.btn-primary {
+  background: var(--green);
+  color: #000;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 13px 28px;
+  border-radius: 8px;
+  transition: opacity 0.2s;
+  display: inline-block;
+}
+.btn-primary:hover { opacity: 0.85; }
+.btn-secondary {
+  color: var(--muted);
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.btn-secondary:hover { color: var(--text); border-color: var(--muted); }
+
+/* ── Device visual ── */
+.device-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.device {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 20px;
+  box-shadow:
+    0 0 0 1px #1a1a1a,
+    0 30px 80px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+.device::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  background: #1e1e1e;
+  border-radius: 2px;
+}
+.led-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.led {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  position: relative;
+}
+.led.green {
+  background: var(--green);
+  box-shadow: 0 0 12px var(--glow-green), 0 0 30px var(--glow-green), 0 0 60px rgba(34,197,94,0.15);
+}
+.led.yellow {
+  background: var(--yellow);
+  box-shadow: 0 0 12px var(--glow-yellow), 0 0 30px var(--glow-yellow);
+  opacity: 0.2;
+}
+.led.red {
+  background: var(--red);
+  box-shadow: 0 0 12px var(--glow-red), 0 0 30px var(--glow-red);
+  opacity: 0.2;
+}
+.device-label {
+  font-size: 10px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: #333;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.device-usb {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 10px;
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  border-radius: 0 0 4px 4px;
+}
+.device-glow {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(34,197,94,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ── How it works ── */
+.section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 80px 40px;
+}
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 12px;
+}
+.section h2 {
+  font-size: clamp(28px, 3.5vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin-bottom: 48px;
+}
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.step {
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  position: relative;
+}
+.step-num {
+  font-size: 11px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--green);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+}
+.step h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+.step p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+/* ── Colors / meaning ── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+.colors-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.color-card {
+  padding: 28px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.color-indicator {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+.color-indicator.green {
+  background: var(--green);
+  box-shadow: 0 0 14px var(--glow-green), 0 0 30px var(--glow-green);
+}
+.color-indicator.yellow {
+  background: var(--yellow);
+  box-shadow: 0 0 14px var(--glow-yellow), 0 0 30px var(--glow-yellow);
+}
+.color-indicator.red {
+  background: var(--red);
+  box-shadow: 0 0 14px var(--glow-red), 0 0 30px var(--glow-red);
+}
+.color-card h3 { font-size: 16px; font-weight: 600; }
+.color-card p { color: var(--muted); font-size: 14px; line-height: 1.55; }
+
+/* ── Specs ── */
+.specs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.spec-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--surface);
+  gap: 20px;
+}
+.spec-row .spec-key { color: var(--muted); font-size: 13px; }
+.spec-row .spec-val { font-size: 13px; font-weight: 500; text-align: right; }
+
+/* ── Pricing ── */
+.pricing-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 80px 40px;
+}
+.pricing-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+.pricing-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+}
+.pricing-card .price-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 16px;
+}
+.pricing-card .price {
+  font-size: 52px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  margin-bottom: 4px;
+}
+.pricing-card .price sup {
+  font-size: 24px;
+  font-weight: 500;
+  vertical-align: top;
+  margin-top: 10px;
+  display: inline-block;
+}
+.pricing-card .price-note { color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+.feature-list { list-style: none; margin-bottom: 32px; }
+.feature-list li {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.feature-list li:last-child { border-bottom: none; }
+.feature-list li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+}
+/* TODO: Replace this placeholder button with Stripe Payment Link or Stripe Checkout embed.
+   Stripe docs: https://stripe.com/docs/payments/payment-links
+   For one-time hardware purchase, a Payment Link is simplest.
+   Add STRIPE_PAYMENT_LINK env var and inject it here server-side, or hardcode after creating the link. */
+.buy-btn {
+  display: block;
+  width: 100%;
+  background: var(--green);
+  color: #000;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  border: none;
+  cursor: not-allowed;
+  opacity: 0.5;
+  font-family: inherit;
+}
+.buy-btn.active {
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.2s;
+}
+.buy-btn.active:hover { opacity: 0.85; }
+.coming-soon-note {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+/* ── Footer ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 32px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1100px;
+  margin: 0 auto;
+  color: var(--muted);
+  font-size: 13px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+footer a { color: var(--muted); transition: color 0.2s; }
+footer a:hover { color: var(--text); }
+.footer-links { display: flex; gap: 24px; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  nav { padding: 16px 20px; }
+  .nav-links { display: none; }
+  .hero { grid-template-columns: 1fr; padding: 60px 20px 40px; gap: 40px; text-align: center; }
+  .hero-actions { justify-content: center; }
+  .device-wrap { order: -1; }
+  .section { padding: 60px 20px; }
+  .steps { grid-template-columns: 1fr; }
+  .colors-grid { grid-template-columns: 1fr; }
+  .specs-grid { grid-template-columns: 1fr; }
+  .pricing-wrap { padding: 40px 20px; }
+  footer { padding: 24px 20px; flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <div class="led-dot"></div>
+    Due Light
+  </div>
+  <div class="nav-links">
+    <a href="#how-it-works">How it works</a>
+    <a href="#colors">Colors</a>
+    <a href="#specs">Specs</a>
+    <a href="#pricing" class="nav-cta">Buy now</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-text">
+    <div class="hero-tag">
+      <span>Canvas LMS</span>
+    </div>
+    <h1>Know your deadlines.<br><em>No screen required.</em></h1>
+    <p>Due Light sits on your desk and shows your Canvas assignment status through a single LED. Green means clear. Yellow means soon. Red means now.</p>
+    <div class="hero-actions">
+      <a href="#pricing" class="btn-primary">Get Due Light</a>
+      <a href="#how-it-works" class="btn-secondary">See how it works</a>
+    </div>
+  </div>
+  <div class="device-wrap">
+    <div class="device">
+      <div class="device-glow"></div>
+      <div class="device-label">Due Light</div>
+      <div class="led-row">
+        <div class="led green"></div>
+        <div class="led yellow"></div>
+        <div class="led red"></div>
+      </div>
+      <div class="device-label">v1</div>
+      <div class="device-usb"></div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- How it works -->
+<section class="section" id="how-it-works">
+  <div class="section-label">Setup</div>
+  <h2>Up and running in minutes.</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <h3>Plug it in</h3>
+      <p>USB-C power. No drivers, no software to install on your computer. The device runs its own setup hotspot the first time you turn it on.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <h3>Connect from your phone</h3>
+      <p>Join the setup WiFi from your phone, enter your home network and Canvas API token. That's the whole configuration — takes under two minutes.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <h3>Leave it alone</h3>
+      <p>Due Light checks Canvas automatically and updates the LED. OTA firmware updates happen in the background. You never need to touch it again.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- Colors -->
+<section class="section" id="colors">
+  <div class="section-label">Signal</div>
+  <h2>One color. Total clarity.</h2>
+  <div class="colors-grid">
+    <div class="color-card">
+      <div class="color-indicator green"></div>
+      <h3>Green — All clear</h3>
+      <p>No assignments due within your configured window. Nothing to worry about right now.</p>
+    </div>
+    <div class="color-card">
+      <div class="color-indicator yellow"></div>
+      <h3>Yellow — Due soon</h3>
+      <p>Something is due within the next few days. A heads-up to check your calendar, not a panic alarm.</p>
+    </div>
+    <div class="color-card">
+      <div class="color-indicator red"></div>
+      <h3>Red — Due today</h3>
+      <p>An assignment is due today. Hard to miss, even from across the room — which is the point.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- Specs -->
+<section class="section" id="specs">
+  <div class="section-label">Hardware</div>
+  <h2>Built to sit on a desk forever.</h2>
+  <div class="specs-grid">
+    <div class="spec-row">
+      <span class="spec-key">Processor</span>
+      <span class="spec-val">ESP32 dual-core 240 MHz</span>
+    </div>
+    <div class="spec-row">
+      <span class="spec-key">Connectivity</span>
+      <span class="spec-val">WiFi 802.11 b/g/n (2.4 GHz)</span>
+    </div>
+    <div class="spec-row">
+      <span class="spec-key">Power</span>
+      <span class="spec-val">USB-C, 5V / ~100mA</span>
+    </div>
+    <div class="spec-row">
+      <span class="spec-key">LEDs</span>
+      <span class="spec-val">3× high-brightness (green, yellow, red)</span>
+    </div>
+    <div class="spec-row">
+      <span class="spec-key">Update method</span>
+      <span class="spec-val">OTA over WiFi, automatic</span>
+    </div>
+    <div class="spec-row">
+      <span class="spec-key">Configuration</span>
+      <span class="spec-val">Mobile web UI, no app install</span>
+    </div>
+    <div class="spec-row">
+      <span class="spec-key">Compatible with</span>
+      <span class="spec-val">Canvas LMS (Instructure)</span>
+    </div>
+    <div class="spec-row">
+      <span class="spec-key">Works at</span>
+      <span class="spec-val">Any school using Canvas</span>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- Pricing -->
+<section id="pricing">
+  <div class="pricing-wrap">
+    <div class="pricing-card">
+      <div class="price-label">Due Light — Device</div>
+      <div class="price"><sup>$</sup>??</div>
+      <div class="price-note">One-time purchase. No subscription.</div>
+      <ul class="feature-list">
+        <li>Due Light hardware unit</li>
+        <li>USB-C cable included</li>
+        <li>Free OTA firmware updates</li>
+        <li>Works with any Canvas institution</li>
+        <li>Setup takes under 2 minutes</li>
+        <li>1-year warranty</li>
+      </ul>
+      <!-- TODO: Create a Stripe Payment Link at stripe.com/payment-links and replace
+           the button href below. For embedded checkout, use Stripe.js instead.
+           Recommended: use a Stripe Payment Link for simplicity on first launch.
+           Set the product as a one-time physical purchase and enable shipping collection. -->
+      <button class="buy-btn" disabled>Coming soon</button>
+      <div class="coming-soon-note">Join the waitlist — email <a href="mailto:hello@due-light.com" style="color:var(--green)">hello@due-light.com</a></div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<footer>
+  <div class="nav-logo" style="font-size:14px;">
+    <div class="led-dot" style="width:7px;height:7px;"></div>
+    Due Light
+  </div>
+  <div class="footer-links">
+    <a href="mailto:hello@due-light.com">Contact</a>
+    <a href="https://dashboard.due-light.com">Dashboard</a>
+  </div>
+  <span>&copy; 2025 Due Light. All rights reserved.</span>
+</footer>
+
+</body>
+</html>

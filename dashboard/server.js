@@ -183,6 +183,16 @@ function checkAndAlert(units) {
 // ── Middleware ─────────────────────────────────────────────────────────────
 
 app.use(express.json({ limit: '64kb' }));
+
+// Host-based routing: due-light.com (and www.) → marketing page; everything else → dashboard
+app.get('/', (req, res, next) => {
+  const host = (req.headers.host || '').split(':')[0].toLowerCase();
+  if (host === 'due-light.com' || host === 'www.due-light.com') {
+    return res.sendFile(path.join(__dirname, 'public', 'home.html'));
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // POST /api/login — exchange password for a session token
