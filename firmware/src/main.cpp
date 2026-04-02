@@ -233,17 +233,8 @@ void setup() {
   Serial.printf("  Check Interval: %lu min\n", canvasConfig.fetchInterval / 60000);
   Serial.printf("  Timezone: %s\n\n", timezoneConfig.displayName);
 
-  if (timeSyncComplete) {
-    Serial.println("Fetching initial status...");
-    assignmentStatus = fetchCanvasAssignments();
-    lastFetch = millis();
-    if (consecutiveErrors == 0) {
-      lastSuccessfulFetch = lastFetch;
-    }
-  } else {
-    Serial.println(" Skipping initial fetch until time is synced\n");
-  }
-
+  // Initial fetch happens in loop() so the web server is reachable immediately.
+  // lastFetch == 0 triggers fetch on the first loop iteration.
   Serial.println("\n Running!\n");
 }
 
@@ -285,7 +276,7 @@ void loop() {
       lastTelemetry = now;
     }
 
-    if (now - lastFetch >= canvasConfig.fetchInterval) {
+    if (lastFetch == 0 || now - lastFetch >= canvasConfig.fetchInterval) {
       Serial.println("\n--- Canvas Check Cycle ---");
       assignmentStatus = fetchCanvasAssignments();
       lastFetch = now;
