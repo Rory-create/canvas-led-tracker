@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -367,6 +368,21 @@ app.get('/api/stats', readAuthMiddleware, (req, res) => {
     open_bugs: bugs.filter(b => !b.resolved).length,
     firmware_versions: [...new Set(units.map(u => u.firmware_version))],
   });
+});
+
+// POST /api/deploy — pull latest code and restart. Requires API key.
+// Hit this from a browser or curl when you can't physically access the machine.
+app.post('/api/deploy', authMiddleware, (req, res) => {
+  if (!API_KEY) return res.status(503).json({ error: 'API key not configured — deploy endpoint disabled for safety' });
+  const repoRoot = path.resolve(__dirname, '..');
+  exec(
+    'git pull origin claude/duelight-esp32-review-1pTqB && pm2 restart canvas-dashboard',
+    { cwd: repoRoot, timeout: 60000 },
+    (err, stdout, stderr) => {
+      if (err) return res.status(500).json({ error: err.message, stderr });
+      res.json({ ok: true, stdout, stderr });
+    }
+  );
 });
 
 // ── Start ──────────────────────────────────────────────────────────────────
