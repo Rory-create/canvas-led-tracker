@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DueLight Setup Guide</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f6fa;
+      color: #333;
+    }
+    header {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      text-align: center;
+      padding: 48px 20px 36px;
+    }
+    header h1 { font-size: 32px; margin-bottom: 8px; }
+    header p { font-size: 17px; opacity: 0.9; }
+    .container { max-width: 740px; margin: 0 auto; padding: 36px 20px 60px; }
+
+    /* Video */
+    .video-wrap {
+      background: #1a1a2e;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 36px;
+      aspect-ratio: 16/9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #aaa;
+      font-size: 15px;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .video-wrap .play-icon {
+      width: 60px; height: 60px;
+      border: 3px solid #666;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+    }
+
+    /* Steps */
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #444;
+      margin: 32px 0 16px;
+    }
+    .steps-list { display: flex; flex-direction: column; gap: 16px; }
+    .step {
+      background: white;
+      border-radius: 10px;
+      padding: 20px 20px 20px 72px;
+      position: relative;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .step-num {
+      position: absolute;
+      left: 18px; top: 18px;
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .step h3 { font-size: 16px; margin-bottom: 6px; }
+    .step p { font-size: 14px; color: #555; line-height: 1.6; }
+    .step .tag {
+      display: inline-block;
+      background: #f0f0f0;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 13px;
+      font-family: monospace;
+      color: #555;
+      margin: 4px 2px 0;
+    }
+
+    /* LED reference */
+    .leds { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+    .led-row {
+      background: white;
+      border-radius: 8px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      font-size: 14px;
+      color: #444;
+    }
+    .dot {
+      width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot.green  { background: #28a745; }
+    .dot.yellow { background: #ffc107; animation: pulse 1.4s ease-in-out infinite; }
+    .dot.red    { background: #dc3545; animation: pulse 1s ease-in-out infinite; }
+    .dot.blink-slow { background: #dc3545; animation: blink 2s step-start infinite; }
+    .dot.blink-fast { background: #dc3545; animation: blink 0.6s step-start infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.35; }
+    }
+    @keyframes blink {
+      0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; }
+    }
+
+    /* Token renewal */
+    .renewal {
+      background: white;
+      border-radius: 10px;
+      padding: 20px 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      margin-top: 4px;
+    }
+    .renewal ol { padding-left: 20px; font-size: 14px; color: #555; line-height: 2; }
+    .renewal .warn {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #856404;
+      margin-bottom: 14px;
+    }
+
+    /* FAQ */
+    .faq { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+    details {
+      background: white;
+      border-radius: 8px;
+      padding: 14px 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    summary {
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #444;
+      list-style: none;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    summary::after { content: '+'; font-size: 18px; color: #999; }
+    details[open] summary::after { content: '-'; }
+    details p { font-size: 14px; color: #555; line-height: 1.7; margin-top: 10px; }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 13px;
+      color: #aaa;
+    }
+    footer a { color: #667eea; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>DueLight Setup Guide</h1>
+  <p>Get your device up and tracking assignments in about 5 minutes.</p>
+</header>
+
+<div class="container">
+
+  <!-- Video placeholder — replace src with real YouTube embed URL when ready -->
+  <div class="video-wrap">
+    <!-- <iframe width="100%" height="100%" src="https://www.youtube.com/embed/VIDEO_ID" frameborder="0" allowfullscreen></iframe> -->
+    <div class="play-icon">&#9654;</div>
+    <span>Setup video coming soon</span>
+  </div>
+
+  <div class="section-title">Step-by-step setup</div>
+  <div class="steps-list">
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Power on your DueLight</h3>
+      <p>Plug the device into any USB power source (phone charger, computer, etc.). The LED will blink while it starts up. After a few seconds it will enter setup mode.</p>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Connect to the DueLight Wi-Fi</h3>
+      <p>On your phone or computer, open Wi-Fi settings and connect to:<br>
+        <span class="tag">Network: Canvas_LED_Tracker</span>
+        <span class="tag">Password: canvas123</span><br>
+        Your device may say "No Internet" — that's normal. Stay connected.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Open the setup page</h3>
+      <p>Open a browser and go to <span class="tag">http://192.168.4.1</span><br>
+        You should see the DueLight setup screen. If it doesn't load, make sure you're still on the Canvas_LED_Tracker network.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <h3>Enter your home Wi-Fi and Canvas token</h3>
+      <p>Fill in your home Wi-Fi name and password. Then get your Canvas API token (the student should do this):</p>
+      <ol style="margin-top:10px; padding-left:20px; font-size:13px; color:#555; line-height:2;">
+        <li>Open Canvas and log in as the student</li>
+        <li>Click <strong>Account</strong> (top-left) &rarr; <strong>Settings</strong></li>
+        <li>Scroll to <strong>Approved Integrations</strong> &rarr; click <strong>+ New Access Token</strong></li>
+        <li>Description: <em>DueLight</em></li>
+        <li>Leave the expiry date blank (or set as far ahead as allowed)</li>
+        <li>Click <strong>Generate Token</strong>, then copy and paste it into the setup page</li>
+      </ol>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <h3>Set timezone and save</h3>
+      <p>Choose your timezone from the dropdown (or leave it as US Eastern if you're on the East Coast). Hit <strong>Save Settings</strong>. The device will reboot, connect to your Wi-Fi, and start tracking assignments automatically.</p>
+    </div>
+
+  </div>
+
+  <!-- LED reference -->
+  <div class="section-title">What do the lights mean?</div>
+  <div class="leds">
+    <div class="led-row"><div class="dot green"></div> <div><strong>Solid green</strong> &mdash; No urgent assignments. You're good!</div></div>
+    <div class="led-row"><div class="dot yellow"></div> <div><strong>Pulsing yellow</strong> &mdash; Assignment due within your yellow warning window.</div></div>
+    <div class="led-row"><div class="dot red"></div> <div><strong>Pulsing red</strong> &mdash; Assignment due very soon (within your red warning window).</div></div>
+    <div class="led-row"><div class="dot blink-slow"></div> <div><strong>Red blinking slowly (2 blinks, pause)</strong> &mdash; Wi-Fi disconnected. Check your router.</div></div>
+    <div class="led-row"><div class="dot blink-fast"></div> <div><strong>Red blinking rapidly</strong> &mdash; Canvas token expired. See below to renew.</div></div>
+  </div>
+
+  <!-- Token renewal -->
+  <div class="section-title">Renewing your Canvas token</div>
+  <div class="renewal">
+    <div class="warn">Canvas tokens expire after up to 4 months. Your DueLight will warn you ahead of time &mdash; when it does, follow these steps.</div>
+    <ol>
+      <li>Log into Canvas as the student</li>
+      <li>Go to <strong>Account</strong> &rarr; <strong>Settings</strong></li>
+      <li>Scroll to <strong>Approved Integrations</strong> &rarr; click <strong>+ New Access Token</strong></li>
+      <li>Description: <em>DueLight</em> &mdash; leave expiry blank</li>
+      <li>Click <strong>Generate Token</strong> and copy it</li>
+      <li>Connect to your home Wi-Fi, open <span class="tag">http://duelight.local</span> or <span class="tag">http://192.168.4.1</span> (if in setup mode), paste the new token, and save</li>
+    </ol>
+  </div>
+
+  <!-- FAQ -->
+  <div class="section-title">Frequently asked questions</div>
+  <div class="faq">
+
+    <details>
+      <summary>The setup page won't load at 192.168.4.1</summary>
+      <p>Make sure your phone/computer is connected to <strong>Canvas_LED_Tracker</strong> Wi-Fi. Some devices will automatically switch back to your home network if they detect no internet &mdash; you may need to disable "Auto-switch" or "Smart Network Switch" in your Wi-Fi settings.</p>
+    </details>
+
+    <details>
+      <summary>The Wi-Fi test says it failed but my password is right</summary>
+      <p>Double-check for typos &mdash; passwords are case-sensitive. Also make sure your router is 2.4 GHz; the ESP32 does not support 5 GHz networks.</p>
+    </details>
+
+    <details>
+      <summary>Canvas "Test" says it failed</summary>
+      <p>Make sure the token was copied fully (it's quite long). Also confirm you're logging into Canvas as the <em>student</em>, not a parent account. If the issue persists, delete the token in Canvas Settings and generate a new one.</p>
+    </details>
+
+    <details>
+      <summary>The light is green but I know there are assignments due</summary>
+      <p>The DueLight only tracks items on your Canvas <em>To Do</em> list that haven't been submitted yet. If a teacher hasn't published the assignment yet, or it was submitted through a third-party extension, it may not appear. You can also check the threshold settings at <span class="tag">http://duelight.local</span>.</p>
+    </details>
+
+    <details>
+      <summary>Can I adjust when it turns yellow or red?</summary>
+      <p>Yes! Connect to your home Wi-Fi and open <span class="tag">http://duelight.local</span> in a browser. The Settings page lets you set the yellow and red thresholds (in days/hours), as well as quiet hours when the light stays off.</p>
+    </details>
+
+    <details>
+      <summary>The device isn't connecting to my Wi-Fi after setup</summary>
+      <p>Hold the reset button for 5 seconds to re-enter setup mode, then go through setup again. Make sure you selected the correct network and that the password doesn't include unusual special characters.</p>
+    </details>
+
+  </div>
+
+</div>
+
+<footer>
+  <p>Need more help? Email us at <a href="mailto:support@due-light.com">support@due-light.com</a></p>
+</footer>
+
+</body>
+</html>

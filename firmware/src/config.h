@@ -25,6 +25,7 @@ struct CanvasConfig {
   unsigned long fetchInterval = 10UL * 60UL * 1000UL;
   size_t jsonBufferSize = 8192;  // 8KB; adaptive scaling is in fetchCanvasAssignments()
   bool includeOverdue = false;  // Default: exclude overdue assignments
+  unsigned long tokenLastValidated = 0;  // Unix timestamp of last successful Canvas fetch
 };
 
 struct TimezoneConfig {

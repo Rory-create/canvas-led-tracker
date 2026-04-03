@@ -210,6 +210,15 @@ int fetchCanvasAssignments() {
           consecutiveErrors = 0;
           lastSuccessfulFetch = millis();
           adaptiveBufferSize = 8192;
+          // Record timestamp for token expiry tracking on settings page
+          time_t nowTs;
+          time(&nowTs);
+          if (nowTs > 1000000) {
+            canvasConfig.tokenLastValidated = (unsigned long)nowTs;
+            preferences.begin("config", false);
+            preferences.putULong("tokenAge", canvasConfig.tokenLastValidated);
+            preferences.end();
+          }
           Serial.println("Canvas fetch successful");
           // Reset boot-failure counter now that we know the firmware is working
           preferences.begin("boot", false);
@@ -268,7 +277,8 @@ int fetchCanvasAssignments() {
           }
         }
       } else if (httpCode == 401) {
-        Serial.println("Canvas API: Invalid token (401)");
+        Serial.println("Canvas API: Invalid or expired token (401)");
+        currentErrorCode = ERR_CANVAS_AUTH;
         http.end();
         consecutiveErrors++;
         return 0;  // Return ERROR state

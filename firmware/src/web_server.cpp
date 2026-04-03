@@ -27,10 +27,10 @@ button:hover{opacity:0.9;}
 .section h3{margin-top:0;color:#555;}
 .error{color:#d32f2f;font-size:13px;margin-top:5px;display:none;}
 </style></head><body><div class="container">
-<h1>Canvas LED Tracker</h1>
-<p style="text-align:center;color:#666;">Initial Setup</p>
-<p style="text-align:center;font-size:12px;color:#999;">Firmware v%FW_VERSION% | <a href="/health" target="_blank" style="color:#667eea;">Health</a> | <a href="/logs" target="_blank" style="color:#667eea;">Logs</a></p>
-<p><b>Get Canvas Token:</b> Open Canvas in browser ' Account ' Settings ' Approved Integrations ' + New Access Token</p>
+<h1>DueLight</h1>
+<p style="text-align:center;color:#666;margin-bottom:4px;">Initial Setup</p>
+<a href="https://rory-create.github.io/canvas-led-tracker/setup/" target="_blank" style="display:block;text-align:center;background:#f0eeff;color:#667eea;border:1px solid #c5b8f5;border-radius:8px;padding:10px 14px;margin:10px 0 4px;font-size:14px;text-decoration:none;">&#127891; Need help? View the step-by-step setup guide &rarr;</a>
+<p style="text-align:center;font-size:11px;color:#bbb;margin-bottom:4px;">Firmware v%FW_VERSION% | <a href="/health" target="_blank" style="color:#c5b8f5;">Health</a> | <a href="/logs" target="_blank" style="color:#c5b8f5;">Logs</a></p>
 <form method="POST" action="/save" onsubmit="return validateSetup()">
 <div class="section">
 <h3>WiFi Settings</h3>
@@ -45,6 +45,16 @@ button:hover{opacity:0.9;}
 </div>
 <div class="section">
 <h3>Canvas API Token</h3>
+<label>School Canvas Address<input type="text" name="canvasSchoolUrl" id="canvasSchoolUrl" placeholder="yourschool.instructure.com" value="ojrsd.instructure.com" style="width:100%;padding:10px;" autocomplete="off"></label>
+<p style="font-size:13px;color:#555;margin:8px 0 4px;"><b>How to get your token:</b></p>
+<ol style="font-size:13px;color:#555;margin:0 0 8px 18px;line-height:1.9;">
+<li>Open Canvas in a browser and log in as the student</li>
+<li>Click <b>Account</b> (top-left avatar) &rarr; <b>Settings</b></li>
+<li>Scroll to <b>Approved Integrations</b> &rarr; click <b>+ New Access Token</b></li>
+<li>Name it <b>DueLight</b>, leave expiry blank (or set as far ahead as allowed)</li>
+<li>Click <b>Generate Token</b>, then copy and paste it below</li>
+</ol>
+<p style="font-size:12px;background:#fff3cd;border:1px solid #ffc107;color:#856404;padding:8px;border-radius:5px;margin:4px 0 8px;">&#9888; Tokens expire after about 4 months. You&rsquo;ll get a warning on this page when it&rsquo;s time to renew.</p>
 <textarea name="apiToken" id="apiToken" rows="3" required placeholder="Paste your Canvas API token here"></textarea>
 <button type="button" onclick="testCanvas()" style="background:#28a745;margin:5px 0;">Test Canvas Token</button>
 <div id="canvasResult" style="padding:8px;margin:5px 0;border-radius:5px;display:none;"></div>
@@ -92,7 +102,8 @@ button:hover{opacity:0.9;}
 <label>AP Password (leave blank for no password)<input type="text" name="apPassword" placeholder="canvas123"></label>
 </div>
 <button type="submit">Save & Continue</button>
-</form></div>
+</form>
+<p style="text-align:center;margin-top:20px;font-size:13px;"><a href="https://rory-create.github.io/canvas-led-tracker/setup/" target="_blank" style="color:#667eea;">&#127891; Setup guide &amp; FAQ</a></p></div>
 <script>
 if(/Mobi|Android/i.test(navigator.userAgent)){document.querySelectorAll('.show-pass').forEach(e=>e.style.display='block');}
 function togglePass(btn){let inp=btn.previousElementSibling;inp.type=inp.type==='password'?'text':'password';btn.textContent=inp.type==='password'?'SHOW':'HIDE';}
@@ -147,9 +158,16 @@ function testWifi(){
 }
 function testCanvas(){
   let token=document.getElementById('apiToken').value;
+  let schoolUrl=document.getElementById('canvasSchoolUrl')?document.getElementById('canvasSchoolUrl').value:'';
+  let ssid=document.getElementById('ssidSelect')?document.getElementById('ssidSelect').value:'';
+  let pass=document.getElementById('wifiPass')?document.getElementById('wifiPass').value:'';
   let r=document.getElementById('canvasResult');
   r.style.display='block';r.style.background='#f0f0f0';r.textContent='Testing...';
-  fetch('/test-canvas',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'token='+encodeURIComponent(token)})
+  let body='token='+encodeURIComponent(token);
+  if(schoolUrl)body+='&schoolUrl='+encodeURIComponent(schoolUrl);
+  if(ssid)body+='&ssid='+encodeURIComponent(ssid);
+  if(pass)body+='&wifiPass='+encodeURIComponent(pass);
+  fetch('/test-canvas',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body})
   .then(x=>x.json()).then(d=>{r.style.background=d.success?'#d4edda':'#f8d7da';r.textContent=d.message;})
   .catch(()=>{r.style.background='#f8d7da';r.textContent='Test failed';});
 }
@@ -197,7 +215,10 @@ Device: <span>%DEVICE_NAME%</span> | WiFi: %WIFI_STATUS% | Assignment: <span>%AS
 <label>Backup Password<div class="pass-wrap"><input type="password" name="password2" value="%PASSWORD2%" class="pwd"><span class="show-pass" onclick="togglePass(this)">SHOW</span></div></label>
 </div>
 <div class="section"><h3>Canvas API</h3>
-<label>API Token<textarea name="apiToken" rows="3">%API_TOKEN%</textarea></label>
+%TOKEN_ALERT%
+<label>Canvas School URL (e.g. yourschool.instructure.com)<input type="text" name="canvasSchoolUrl" value="%CANVAS_SCHOOL_URL%"></label>
+<label>Canvas API Token<textarea name="apiToken" rows="3">%API_TOKEN%</textarea></label>
+%TOKEN_STATUS%
 </div>
 <div class="section"><h3>Timezone</h3>
 <label>Your Timezone
@@ -271,7 +292,8 @@ Device: <span>%DEVICE_NAME%</span> | WiFi: %WIFI_STATUS% | Assignment: <span>%AS
 <button type="button" id="cancelSnoozeBtn" style="margin-left:6px;background:#7f2020;color:#fff;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;display:none;" onclick="cancelSnooze()">Cancel Snooze</button>
 <span id="snoozeResult" style="margin-left:8px;font-size:0.9em;color:#7fff7f;"></span>
 </div>
-</form></div>
+</form>
+<p style="text-align:center;margin-top:20px;font-size:13px;"><a href="https://rory-create.github.io/canvas-led-tracker/setup/" target="_blank" style="color:#667eea;">&#127891; Setup guide &amp; FAQ</a></p></div>
 <script>
 if(/Mobi|Android/i.test(navigator.userAgent)){document.querySelectorAll('.show-pass').forEach(e=>e.style.display='block');}
 function togglePass(btn){let inp=btn.previousElementSibling;inp.type=inp.type==='password'?'text':'password';btn.textContent=inp.type==='password'?'SHOW':'HIDE';}
@@ -375,7 +397,7 @@ void handleSettings() {
         statusText = "WiFi Disconnected";
         break;
       case ERR_CANVAS_AUTH:
-        statusText = "Canvas Auth Error (Check Token)";
+        statusText = "Token expired - visit Settings to renew";
         break;
       case ERR_CANVAS_SERVER:
         statusText = "Canvas Server Error";
@@ -410,14 +432,56 @@ void handleSettings() {
 
   // Add error alert if needed
   String errorAlert = "";
-  if (consecutiveErrors >= 3) {
-    errorAlert = "<div class='alert alert-warning'> Canvas API experiencing issues (" +
+  if (currentErrorCode == ERR_CANVAS_AUTH) {
+    errorAlert = "<div class='alert alert-error' style='text-align:left;'><b>&#10060; Canvas token expired or invalid.</b><br>"
+                 "Follow these steps to fix it:<ol style='margin:8px 0 0 18px;line-height:1.9;'>"
+                 "<li>Open Canvas in a browser and log in as the student</li>"
+                 "<li>Click <b>Account</b> (top-left) &rarr; <b>Settings</b></li>"
+                 "<li>Scroll to <b>Approved Integrations</b> &rarr; click <b>+ New Access Token</b></li>"
+                 "<li>Name it <b>DueLight</b>, leave expiry blank (or as far ahead as allowed)</li>"
+                 "<li>Click <b>Generate Token</b>, copy it, and paste it in the Canvas API section below</li>"
+                 "<li>Click <b>Save Settings</b></li></ol></div>";
+  } else if (consecutiveErrors >= 3) {
+    errorAlert = "<div class='alert alert-warning'>&#9888; Canvas API experiencing issues (" +
                  String(consecutiveErrors) + " errors). Using last known status.</div>";
   }
   if (!timeSyncComplete) {
-    errorAlert += "<div class='alert alert-error'> Time sync failed. Assignment checks disabled until time is synced.</div>";
+    errorAlert += "<div class='alert alert-error'>&#10060; Time sync failed. Assignment checks disabled until time is synced.</div>";
   }
   html.replace("%ERROR_ALERT%", errorAlert);
+
+  // Token age status
+  time_t nowTs;
+  time(&nowTs);
+  String tokenStatus = "";
+  String tokenAlert = "";
+  if (canvasConfig.tokenLastValidated > 0 && nowTs > 1000000) {
+    long tokenAgeDays = ((long)nowTs - (long)canvasConfig.tokenLastValidated) / 86400;
+    if (tokenAgeDays < 0) tokenAgeDays = 0;
+    if (currentErrorCode != ERR_CANVAS_AUTH) {
+      if (tokenAgeDays >= 110) {
+        tokenStatus = "<p style='font-size:13px;background:#f8d7da;border:1px solid #f44336;color:#721c24;padding:8px;border-radius:5px;margin:6px 0;'>"
+                      "&#128308; Token likely expired (last verified " + String(tokenAgeDays) + " days ago). Generate a new one in Canvas.</p>";
+      } else if (tokenAgeDays >= 80) {
+        tokenStatus = "<p style='font-size:13px;background:#fff3cd;border:1px solid #ffc107;color:#856404;padding:8px;border-radius:5px;margin:6px 0;'>"
+                      "&#9888; Token expires soon (last verified " + String(tokenAgeDays) + " days ago). Consider renewing before it stops working.</p>";
+      } else {
+        tokenStatus = "<p style='font-size:12px;color:#666;margin:4px 0;'>Last verified " + String(tokenAgeDays) + " day(s) ago &#10003;</p>";
+      }
+    }
+  }
+  html.replace("%TOKEN_STATUS%", tokenStatus);
+  html.replace("%TOKEN_ALERT%", tokenAlert);
+
+  // Extract school domain from stored API URL
+  String canvasSchoolUrl = "";
+  String apiUrlStr = String(canvasConfig.apiUrl);
+  if (apiUrlStr.startsWith("https://")) {
+    String noProto = apiUrlStr.substring(8);
+    int slash = noProto.indexOf('/');
+    canvasSchoolUrl = (slash > 0) ? noProto.substring(0, slash) : noProto;
+  }
+  html.replace("%CANVAS_SCHOOL_URL%", canvasSchoolUrl);
 
   // Build assignments section
   String assignmentsSection = "";
@@ -708,6 +772,20 @@ void handleSave() {
   if (server.hasArg("password2")) server.arg("password2").toCharArray(wifiConfig.password2, sizeof(wifiConfig.password2));
   if (server.hasArg("apiToken")) server.arg("apiToken").toCharArray(canvasConfig.apiToken, sizeof(canvasConfig.apiToken));
 
+  // Build Canvas API URL from school domain field
+  if (server.hasArg("canvasSchoolUrl")) {
+    String school = server.arg("canvasSchoolUrl");
+    school.trim();
+    if (school.startsWith("https://")) school = school.substring(8);
+    if (school.startsWith("http://")) school = school.substring(7);
+    int slash = school.indexOf('/');
+    if (slash > 0) school = school.substring(0, slash);
+    if (school.length() > 0) {
+      String fullUrl = "https://" + school + "/api/v1/users/self/todo";
+      fullUrl.toCharArray(canvasConfig.apiUrl, sizeof(canvasConfig.apiUrl));
+    }
+  }
+
   if (server.hasArg("timezone")) {
     String tz = server.arg("timezone");
     int pipe = tz.indexOf('|');
@@ -891,12 +969,11 @@ void handleTestWifi() {
   String msg = success ? "Connected successfully! Signal: " + String(WiFi.RSSI()) + " dBm" 
                        : "Connection failed. Check password.";
   
-  // Disconnect test connection
-  WiFi.disconnect();
-  delay(100);
-  
-  // Restart AP mode
-  WiFi.softAP(systemConfig.deviceName);
+  // On failure clean up; on success leave STA connected so Canvas test can reuse it.
+  // Do NOT call WiFi.softAP() — the AP was never disrupted (WIFI_AP_STA keeps AP
+  // and STA independent). Restarting the AP kills the browser TCP connection
+  // before the response is sent, causing the button to hang forever.
+  if (!success) WiFi.disconnect(false);
   
   String response = "{\"success\":" + String(success ? "true" : "false") + ",\"message\":\"" + msg + "\"}";
   server.send(200, "application/json", response);
@@ -911,13 +988,25 @@ void handleTestCanvas() {
   String testToken = server.arg("token");
   Serial.println(" Testing Canvas token...");
   
-  // Need WiFi to test Canvas - check if we have a stored connection
+  // Need WiFi to test Canvas
   if (WiFi.status() != WL_CONNECTED) {
-    // Try to connect briefly
-    if (strlen(wifiConfig.ssid) > 0) {
-      WiFi.begin(wifiConfig.ssid, wifiConfig.password);
+    // Try credentials from the form (setup page) then fall back to stored config
+    const char* connectSsid = nullptr;
+    const char* connectPass = nullptr;
+    String formSsid, formPass;
+    if (server.hasArg("ssid") && server.arg("ssid").length() > 0) {
+      formSsid = server.arg("ssid");
+      formPass = server.hasArg("wifiPass") ? server.arg("wifiPass") : "";
+      connectSsid = formSsid.c_str();
+      connectPass = formPass.c_str();
+    } else if (strlen(wifiConfig.ssid) > 0) {
+      connectSsid = wifiConfig.ssid;
+      connectPass = wifiConfig.password;
+    }
+    if (connectSsid) {
+      WiFi.begin(connectSsid, connectPass);
       int attempts = 0;
-      while (WiFi.status() != WL_CONNECTED && attempts < 10) {
+      while (WiFi.status() != WL_CONNECTED && attempts < 20) {
         delay(500);
         attempts++;
       }
@@ -934,7 +1023,19 @@ void handleTestCanvas() {
   HTTPClient testHttp;
   testHttp.setTimeout(15000);
   
-  String testUrl = String(canvasConfig.apiUrl) + "?per_page=1";
+  // Use schoolUrl from form (setup page) or fall back to stored API URL
+  String testUrl;
+  if (server.hasArg("schoolUrl")) {
+    String school = server.arg("schoolUrl");
+    school.trim();
+    if (school.startsWith("https://")) school = school.substring(8);
+    if (school.startsWith("http://")) school = school.substring(7);
+    int slash = school.indexOf('/');
+    if (slash > 0) school = school.substring(0, slash);
+    testUrl = "https://" + school + "/api/v1/users/self/todo?per_page=1";
+  } else {
+    testUrl = String(canvasConfig.apiUrl) + "?per_page=1";
+  }
   
   if (testHttp.begin(testClient, testUrl)) {
     testHttp.addHeader("Authorization", "Bearer " + testToken);

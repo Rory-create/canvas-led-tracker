@@ -57,6 +57,7 @@ void saveConfig() {
 
   preferences.putString("apiUrl", canvasConfig.apiUrl);
   preferences.putString("apiToken", canvasConfig.apiToken);
+  preferences.putULong("tokenAge", canvasConfig.tokenLastValidated);
   preferences.putInt("itemsPer", canvasConfig.itemsPerPage);
   preferences.putULong("fetchInt", canvasConfig.fetchInterval);
   preferences.putBool("inclOverdue", canvasConfig.includeOverdue);
@@ -112,6 +113,8 @@ void loadConfig() {
 
     preferences.getString("apiToken", canvasConfig.apiToken, sizeof(canvasConfig.apiToken));
     if (strlen(canvasConfig.apiToken) == 0) strcpy(canvasConfig.apiToken, "");
+
+    canvasConfig.tokenLastValidated = preferences.getULong("tokenAge", 0);
 
     canvasConfig.itemsPerPage = preferences.getInt("itemsPer", 2);  // Default 2 - Canvas responses are huge
     canvasConfig.fetchInterval = preferences.getULong("fetchInt", 10UL * 60UL * 1000UL);
