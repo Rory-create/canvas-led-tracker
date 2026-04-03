@@ -29,7 +29,7 @@ button:hover{opacity:0.9;}
 </style></head><body><div class="container">
 <h1>DueLight</h1>
 <p style="text-align:center;color:#666;margin-bottom:4px;">Initial Setup</p>
-<a href="https://rory-create.github.io/canvas-led-tracker/setup/" target="_blank" style="display:block;text-align:center;background:#f0eeff;color:#667eea;border:1px solid #c5b8f5;border-radius:8px;padding:10px 14px;margin:10px 0 4px;font-size:14px;text-decoration:none;">&#127891; Need help? View the step-by-step setup guide &rarr;</a>
+<a href="https://setup.due-light.com" target="_blank" style="display:block;text-align:center;background:#f0eeff;color:#667eea;border:1px solid #c5b8f5;border-radius:8px;padding:10px 14px;margin:10px 0 4px;font-size:14px;text-decoration:none;">&#127891; Need help? View the step-by-step setup guide &rarr;</a>
 <p style="text-align:center;font-size:11px;color:#bbb;margin-bottom:4px;">Firmware v%FW_VERSION% | <a href="/health" target="_blank" style="color:#c5b8f5;">Health</a> | <a href="/logs" target="_blank" style="color:#c5b8f5;">Logs</a></p>
 <form method="POST" action="/save" onsubmit="return validateSetup()">
 <div class="section">
@@ -103,7 +103,7 @@ button:hover{opacity:0.9;}
 </div>
 <button type="submit">Save & Continue</button>
 </form>
-<p style="text-align:center;margin-top:20px;font-size:13px;"><a href="https://rory-create.github.io/canvas-led-tracker/setup/" target="_blank" style="color:#667eea;">&#127891; Setup guide &amp; FAQ</a></p></div>
+<p style="text-align:center;margin-top:20px;font-size:13px;"><a href="https://setup.due-light.com" target="_blank" style="color:#667eea;">&#127891; Setup guide &amp; FAQ</a></p></div>
 <script>
 if(/Mobi|Android/i.test(navigator.userAgent)){document.querySelectorAll('.show-pass').forEach(e=>e.style.display='block');}
 function togglePass(btn){let inp=btn.previousElementSibling;inp.type=inp.type==='password'?'text':'password';btn.textContent=inp.type==='password'?'SHOW':'HIDE';}
@@ -293,7 +293,7 @@ Device: <span>%DEVICE_NAME%</span> | WiFi: %WIFI_STATUS% | Assignment: <span>%AS
 <span id="snoozeResult" style="margin-left:8px;font-size:0.9em;color:#7fff7f;"></span>
 </div>
 </form>
-<p style="text-align:center;margin-top:20px;font-size:13px;"><a href="https://rory-create.github.io/canvas-led-tracker/setup/" target="_blank" style="color:#667eea;">&#127891; Setup guide &amp; FAQ</a></p></div>
+<p style="text-align:center;margin-top:20px;font-size:13px;"><a href="https://setup.due-light.com" target="_blank" style="color:#667eea;">&#127891; Setup guide &amp; FAQ</a></p></div>
 <script>
 if(/Mobi|Android/i.test(navigator.userAgent)){document.querySelectorAll('.show-pass').forEach(e=>e.style.display='block');}
 function togglePass(btn){let inp=btn.previousElementSibling;inp.type=inp.type==='password'?'text':'password';btn.textContent=inp.type==='password'?'SHOW':'HIDE';}
