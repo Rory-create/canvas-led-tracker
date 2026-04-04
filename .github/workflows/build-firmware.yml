@@ -15,18 +15,18 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-    
+      uses: actions/checkout@v4.2.2
+
     - name: Cache PlatformIO
-      uses: actions/cache@v4
+      uses: actions/cache@v4.2.3
       with:
         path: |
           ~/.platformio
           .pio
         key: ${{ runner.os }}-pio
-    
+
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v5.6.0
       with:
         python-version: '3.11'
     
@@ -64,13 +64,13 @@ jobs:
         cp firmware/.pio/build/esp32dev/firmware.bin firmware/builds/firmware-latest.bin
     
     - name: Upload firmware artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v4.6.2
       with:
         name: firmware-${{ steps.version.outputs.version }}
         path: firmware/builds/
     
     - name: Create/Update Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v2.3.2
       if: github.ref == 'refs/heads/main'
       with:
         tag_name: v${{ steps.version.outputs.version }}
