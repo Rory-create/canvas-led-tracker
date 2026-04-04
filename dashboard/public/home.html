@@ -1,24 +1,51 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Due Light — Know your deadlines. No screen required.</title>
 <meta name="description" content="A physical LED indicator for Canvas LMS. Plugs in, syncs automatically, and shows your assignment status at a glance.">
 <style>
+/* ── LED hardware colors — fixed across all themes ──────────────────── */
 :root {
-  --bg: #080808;
-  --surface: #111;
-  --border: #222;
-  --text: #e8e8e8;
-  --muted: #666;
-  --subtle: #333;
   --green: #22c55e;
   --yellow: #eab308;
   --red: #ef4444;
   --glow-green: rgba(34,197,94,0.35);
   --glow-yellow: rgba(234,179,8,0.35);
   --glow-red: rgba(239,68,68,0.35);
+}
+
+/* ── THEME DEFINITIONS ───────────────────────────────────────────────────
+   To switch themes, change THEME in the <script> block at the bottom
+   of <head>. Options: 'dark' | 'bright' | 'earthy'
+   ─────────────────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg: #080808; --surface: #111; --border: #222;
+  --text: #e8e8e8; --muted: #666; --subtle: #333;
+  --accent: #22c55e;
+  --accent-dim: rgba(34,197,94,0.08);
+  --accent-border: rgba(34,197,94,0.2);
+  --nav-bg: rgba(8,8,8,0.85);
+  --btn-text: #000;
+}
+[data-theme="bright"] {
+  --bg: #f9fafb; --surface: #ffffff; --border: #e5e7eb;
+  --text: #111827; --muted: #6b7280; --subtle: #f3f4f6;
+  --accent: #16a34a;
+  --accent-dim: rgba(22,163,74,0.07);
+  --accent-border: rgba(22,163,74,0.2);
+  --nav-bg: rgba(249,250,251,0.92);
+  --btn-text: #ffffff;
+}
+[data-theme="earthy"] {
+  --bg: #f5ede0; --surface: #fdf9f3; --border: #e0d0bb;
+  --text: #2c1d0e; --muted: #9c8572; --subtle: #ede3d4;
+  --accent: #b85c2c;
+  --accent-dim: rgba(184,92,44,0.08);
+  --accent-border: rgba(184,92,44,0.22);
+  --nav-bg: rgba(245,237,224,0.92);
+  --btn-text: #ffffff;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -41,7 +68,7 @@ nav {
   align-items: center;
   justify-content: space-between;
   padding: 18px 40px;
-  background: rgba(8,8,8,0.85);
+  background: var(--nav-bg);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
@@ -69,15 +96,15 @@ nav {
 .nav-links a { color: var(--muted); font-size: 14px; transition: color 0.2s; }
 .nav-links a:hover { color: var(--text); }
 .nav-cta {
-  background: var(--green);
-  color: #000 !important;
+  background: var(--accent);
+  color: var(--btn-text) !important;
   font-weight: 600;
   font-size: 13px;
   padding: 8px 18px;
   border-radius: 6px;
   transition: opacity 0.2s !important;
 }
-.nav-cta:hover { opacity: 0.85; color: #000 !important; }
+.nav-cta:hover { opacity: 0.85; color: var(--btn-text) !important; }
 
 /* ── Hero ── */
 .hero {
@@ -93,9 +120,9 @@ nav {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(34,197,94,0.08);
-  border: 1px solid rgba(34,197,94,0.2);
-  color: var(--green);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 500;
   padding: 5px 12px;
@@ -113,7 +140,7 @@ nav {
 }
 .hero h1 em {
   font-style: normal;
-  color: var(--green);
+  color: var(--accent);
 }
 .hero p {
   color: var(--muted);
@@ -124,8 +151,8 @@ nav {
 }
 .hero-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .btn-primary {
-  background: var(--green);
-  color: #000;
+  background: var(--accent);
+  color: var(--btn-text);
   font-weight: 600;
   font-size: 15px;
   padding: 13px 28px;
@@ -240,7 +267,7 @@ nav {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--green);
+  color: var(--accent);
   margin-bottom: 12px;
 }
 .section h2 {
@@ -264,7 +291,7 @@ nav {
 .step-num {
   font-size: 11px;
   font-family: 'SF Mono', 'Fira Code', monospace;
-  color: var(--green);
+  color: var(--accent);
   font-weight: 600;
   letter-spacing: 0.05em;
   margin-bottom: 16px;
@@ -357,14 +384,14 @@ nav {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--green), transparent);
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
 }
 .pricing-card .price-label {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--green);
+  color: var(--accent);
   margin-bottom: 16px;
 }
 .pricing-card .price {
@@ -396,7 +423,7 @@ nav {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--green);
+  background: var(--accent);
   flex-shrink: 0;
 }
 /* TODO: Replace this placeholder button with Stripe Payment Link or Stripe Checkout embed.
@@ -406,8 +433,8 @@ nav {
 .buy-btn {
   display: block;
   width: 100%;
-  background: var(--green);
-  color: #000;
+  background: var(--accent);
+  color: var(--btn-text);
   font-weight: 700;
   font-size: 15px;
   padding: 15px;
@@ -464,6 +491,15 @@ footer a:hover { color: var(--text); }
   footer { padding: 24px 20px; flex-direction: column; align-items: flex-start; }
 }
 </style>
+<script>
+  // ── THEME SELECTOR ──────────────────────────────────────────────────────
+  // Change this value to switch the page theme:
+  //   'dark'   — original dark green
+  //   'bright' — clean white with green accents
+  //   'earthy' — warm cream and terracotta
+  const THEME = 'dark';
+  document.documentElement.setAttribute('data-theme', THEME);
+</script>
 </head>
 <body>
 
@@ -622,7 +658,7 @@ footer a:hover { color: var(--text); }
            Recommended: use a Stripe Payment Link for simplicity on first launch.
            Set the product as a one-time physical purchase and enable shipping collection. -->
       <button class="buy-btn" disabled>Coming soon</button>
-      <div class="coming-soon-note">Join the waitlist — email <a href="mailto:hello@due-light.com" style="color:var(--green)">hello@due-light.com</a></div>
+      <div class="coming-soon-note">Join the waitlist — email <a href="mailto:hello@due-light.com" style="color:var(--accent)">hello@due-light.com</a></div>
     </div>
   </div>
 </section>
