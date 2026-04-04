@@ -34,6 +34,17 @@ jobs:
       run: |
         pip install platformio
     
+    - name: Create secrets.h for CI build
+      run: |
+        cat > firmware/src/secrets.h << 'EOF'
+        #ifndef SECRETS_H
+        #define SECRETS_H
+        #define GITHUB_TOKEN "${{ secrets.GH_ISSUES_TOKEN }}"
+        #define DASHBOARD_URL "${{ secrets.DASHBOARD_URL }}"
+        #define DASHBOARD_API_KEY "${{ secrets.DASHBOARD_API_KEY }}"
+        #endif
+        EOF
+
     - name: Build firmware
       run: |
         cd firmware
