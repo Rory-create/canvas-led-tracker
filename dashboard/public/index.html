@@ -6,11 +6,11 @@
 <title>Canvas LED Tracker — Dashboard</title>
 <style>
 :root {
-  --bg: #ede8da;
-  --surface: #f8f2e8;
-  --border: #d4c8b0;
+  --bg: #ddd6c4;
+  --surface: #faf5eb;
+  --border: #b5a688;
   --text: #1c1408;
-  --muted: #8a7960;
+  --muted: #5e4e38;
   --green: #22c55e;
   --yellow: #eab308;
   --red: #ef4444;
@@ -41,7 +41,7 @@ a { color: var(--blue); text-decoration: none; }
 .stat.purple .value { color: var(--purple); }
 
 /* Section */
-.section-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.section-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
 .section-title .count { background: var(--border); color: var(--muted); font-size: 11px; padding: 2px 8px; border-radius: 10px; }
 .section { margin-bottom: 32px; }
 
@@ -51,10 +51,10 @@ a { color: var(--blue); text-decoration: none; }
 
 /* Units grid */
 .units-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
-.unit-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; transition: border-color 0.2s; }
+.unit-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 10px; padding: 18px; transition: border-color 0.2s; }
 .unit-card.error { border-color: rgba(239,68,68,0.5); }
 .unit-card.stale { border-color: rgba(234,179,8,0.5); }
-.unit-card.healthy { border-color: rgba(77,107,60,0.5); }
+.unit-card.healthy { border-color: rgba(77,107,60,0.5); border-left-color: #3d5a2e; }
 .unit-card.unactivated { border-color: var(--border); opacity: 0.7; }
 
 .unit-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
@@ -78,7 +78,7 @@ a { color: var(--blue); text-decoration: none; }
 .unit-footer .last-seen { color: var(--muted); font-size: 11px; }
 .badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
 .badge.setup { background: rgba(77,107,60,0.15); color: #4d6b3c; }
-.badge.not-setup { background: #e4ddd0; color: var(--muted); }
+.badge.not-setup { background: var(--border); color: var(--muted); }
 .badge.fw { background: rgba(59,130,246,0.1); color: #2563eb; }
 .badge.error { background: rgba(239,68,68,0.1); color: #dc2626; }
 
