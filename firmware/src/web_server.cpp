@@ -11,217 +11,88 @@
 // HTML TEMPLATES
 // ============================================
 const char WELCOME_HTML[] PROGMEM = R"rawliteral(
-<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>Canvas LED Setup</title>
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Due Light &mdash; Setup</title>
 <style>
-body{font-family:Arial;max-width:600px;margin:20px auto;padding:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;}
-.container{background:white;padding:30px;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,0.2);}
-h1{color:#667eea;text-align:center;margin-bottom:10px;}
-input,textarea{width:100%;padding:10px;margin:5px 0;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;}
+:root{--bg:#080808;--sf:#111;--bd:#222;--tx:#e8e8e8;--mt:#666;--gr:#22c55e;--gw:rgba(34,197,94,.3);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh;}
+.wrap{max-width:540px;margin:0 auto;padding:28px 16px 56px;}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;margin-bottom:6px;}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--gr);box-shadow:0 0 8px var(--gw),0 0 16px var(--gw);animation:pulse 3s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.tag{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--gr);margin-bottom:20px;}
+.guide-link{display:block;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);color:var(--gr);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;text-decoration:none;text-align:center;}
+.guide-link:hover{background:rgba(34,197,94,.12);}
+.meta{text-align:center;color:var(--mt);font-size:11px;margin-bottom:24px;}
+.meta a{color:var(--mt);}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:22px;margin-bottom:14px;}
+.card-title{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gr);margin-bottom:16px;}
+label{display:block;font-size:13px;color:var(--mt);margin:12px 0 4px;}
+input[type=text],input[type=password],input[type=number],textarea,select{width:100%;padding:10px 12px;background:#181818;border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;-webkit-appearance:none;}
+input:focus,textarea:focus,select:focus{border-color:rgba(34,197,94,.5);}
+select option{background:#181818;}
 .pass-wrap{position:relative;}
-.pass-wrap input:hover{-webkit-text-security:none !important;}
-.show-pass{position:absolute;right:10px;top:15px;cursor:pointer;display:none;}
-button{background:linear-gradient(135deg,#667eea,#764ba2);color:white;padding:12px;border:none;cursor:pointer;width:100%;margin:10px 0;border-radius:5px;font-size:16px;}
-button:hover{opacity:0.9;}
-.section{border:1px solid #e0e0e0;padding:15px;margin:15px 0;border-radius:8px;background:#f9f9f9;}
-.section h3{margin-top:0;color:#555;}
-.error{color:#d32f2f;font-size:13px;margin-top:5px;display:none;}
-</style></head><body><div class="container">
-<h1>DueLight</h1>
-<p style="text-align:center;color:#666;margin-bottom:4px;">Initial Setup</p>
-<a href="https://setup.due-light.com" target="_blank" style="display:block;text-align:center;background:#f0eeff;color:#667eea;border:1px solid #c5b8f5;border-radius:8px;padding:10px 14px;margin:10px 0 4px;font-size:14px;text-decoration:none;">&#127891; Need help? View the step-by-step setup guide &rarr;</a>
-<p style="text-align:center;font-size:11px;color:#bbb;margin-bottom:4px;">Firmware v%FW_VERSION% | <a href="/health" target="_blank" style="color:#c5b8f5;">Health</a> | <a href="/logs" target="_blank" style="color:#c5b8f5;">Logs</a></p>
+.show-pass{position:absolute;right:10px;top:11px;cursor:pointer;display:none;font-size:11px;color:var(--mt);letter-spacing:.05em;}
+.btn{display:block;width:100%;padding:13px;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin:6px 0;}
+.btn-save{background:var(--gr);color:#000;}
+.btn-save:hover{opacity:.87;}
+.btn-test{background:rgba(34,197,94,.1);color:var(--gr);border:1px solid rgba(34,197,94,.25);}
+.btn-test:hover{background:rgba(34,197,94,.18);}
+.btn-scan{background:rgba(255,255,255,.05);color:var(--mt);border:1px solid var(--bd);}
+.btn-scan:hover{background:rgba(255,255,255,.09);}
+.result{padding:10px 12px;margin:8px 0;border-radius:7px;font-size:13px;display:none;}
+.result.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:var(--gr);}
+.result.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#ef4444;}
+.result.info{background:rgba(255,255,255,.04);border:1px solid var(--bd);color:var(--mt);}
+.hint{font-size:12px;color:var(--mt);line-height:1.55;margin:6px 0;}
+.hint b{color:var(--tx);}
+.steps{padding-left:16px;margin:8px 0 6px;}
+.steps li{font-size:13px;color:var(--mt);margin:4px 0;line-height:1.5;}
+.steps li b{color:var(--tx);}
+.warn{background:rgba(234,179,8,.07);border:1px solid rgba(234,179,8,.25);color:#c8961a;border-radius:7px;padding:10px 12px;font-size:12px;margin:10px 0;}
+.scan-st{font-size:12px;color:var(--mt);margin:8px 0;}
+.ferr{color:#ef4444;font-size:12px;margin-top:4px;display:none;}
+.footer{text-align:center;margin-top:20px;font-size:12px;}
+.footer a{color:var(--mt);}
+.footer a:hover{color:var(--tx);}
+</style></head>
+<body><div class="wrap">
+<div class="logo"><div class="dot"></div>Due Light</div>
+<div class="tag">Initial Setup</div>
+<a href="https://setup.due-light.com" target="_blank" class="guide-link">Need help? Step-by-step setup guide &rarr;</a>
+<p class="meta">Firmware v%FW_VERSION% &nbsp;&middot;&nbsp; <a href="/health" target="_blank">Health</a> &nbsp;&middot;&nbsp; <a href="/logs" target="_blank">Logs</a></p>
 <form method="POST" action="/save" onsubmit="return validateSetup()">
-<div class="section">
-<h3>WiFi Settings</h3>
-<label>Network Name<input type="text" name="ssid" id="ssidSelect" list="ssidList" placeholder="Scanning..." style="width:100%;padding:10px;" autocomplete="off"><datalist id="ssidList"></datalist></label>
-<label>WiFi Password<div class="pass-wrap"><input type="password" name="password" id="wifiPass" class="pwd"><span class="show-pass" onclick="togglePass(this)">SHOW</span></div></label>
-<button type="button" onclick="testWifi()" style="background:#28a745;margin:5px 0;">Test WiFi</button>
-<div id="wifiResult" style="padding:8px;margin:5px 0;border-radius:5px;display:none;"></div>
-<label>Backup SSID<input type="text" name="ssid2" id="ssid2Select" list="ssid2List" placeholder="Optional backup network" style="width:100%;padding:10px;" autocomplete="off"><datalist id="ssid2List"></datalist></label>
-<label>Backup Password<div class="pass-wrap"><input type="password" name="password2" class="pwd"><span class="show-pass" onclick="togglePass(this)">SHOW</span></div></label>
-<div id="scanStatus" style="font-size:13px;color:#666;margin:8px 0;"></div>
-<button type="button" id="scanBtn" onclick="scanWifi()" style="background:#17a2b8;margin:5px 0;">Re-scan Networks</button>
+<div class="card">
+<div class="card-title">Wi-Fi</div>
+<label>Network name<input type="text" name="ssid" id="ssidSelect" list="ssidList" placeholder="Scanning..." autocomplete="off"><datalist id="ssidList"></datalist></label>
+<label>Password<div class="pass-wrap"><input type="password" name="password" id="wifiPass" class="pwd"><span class="show-pass" onclick="togglePass(this)">SHOW</span></div></label>
+<button type="button" class="btn btn-test" onclick="testWifi()">Test Wi-Fi connection</button>
+<div id="wifiResult" class="result"></div>
+<label>Backup network <span style="color:var(--mt);font-weight:400;">(optional)</span><input type="text" name="ssid2" id="ssid2Select" list="ssid2List" placeholder="Leave blank if not needed" autocomplete="off"><datalist id="ssid2List"></datalist></label>
+<label>Backup password<div class="pass-wrap"><input type="password" name="password2" class="pwd"><span class="show-pass" onclick="togglePass(this)">SHOW</span></div></label>
+<p class="scan-st" id="scanStatus"></p>
+<button type="button" id="scanBtn" class="btn btn-scan" onclick="scanWifi()">Re-scan networks</button>
 </div>
-<div class="section">
-<h3>Canvas API Token</h3>
-<label>School Canvas Address<input type="text" name="canvasSchoolUrl" id="canvasSchoolUrl" placeholder="yourschool.instructure.com" value="ojrsd.instructure.com" style="width:100%;padding:10px;" autocomplete="off"></label>
-<p style="font-size:13px;color:#555;margin:8px 0 4px;"><b>How to get your token:</b></p>
-<ol style="font-size:13px;color:#555;margin:0 0 8px 18px;line-height:1.9;">
-<li>Open Canvas in a browser and log in as the student</li>
-<li>Click <b>Account</b> (top-left avatar) &rarr; <b>Settings</b></li>
-<li>Scroll to <b>Approved Integrations</b> &rarr; click <b>+ New Access Token</b></li>
-<li>Name it <b>DueLight</b>, leave expiry blank (or set as far ahead as allowed)</li>
-<li>Click <b>Generate Token</b>, then copy and paste it below</li>
+<div class="card">
+<div class="card-title">Canvas API Token</div>
+<label>School Canvas address<input type="text" name="canvasSchoolUrl" id="canvasSchoolUrl" placeholder="yourschool.instructure.com" value="ojrsd.instructure.com" autocomplete="off"></label>
+<p class="hint"><b>How to get your token:</b></p>
+<ol class="steps">
+<li>Open Canvas and log in as the <b>student</b></li>
+<li>Click <b>Account</b> (top-left) &rarr; <b>Settings</b></li>
+<li>Scroll to <b>Approved Integrations</b> &rarr; <b>+ New Access Token</b></li>
+<li>Name it <b>DueLight</b>, leave expiry blank or as far ahead as allowed</li>
+<li>Click <b>Generate Token</b>, copy and paste it below</li>
 </ol>
-<p style="font-size:12px;background:#fff3cd;border:1px solid #ffc107;color:#856404;padding:8px;border-radius:5px;margin:4px 0 8px;">&#9888; Tokens expire after about 4 months. You&rsquo;ll get a warning on this page when it&rsquo;s time to renew.</p>
-<textarea name="apiToken" id="apiToken" rows="3" required placeholder="Paste your Canvas API token here"></textarea>
-<button type="button" onclick="testCanvas()" style="background:#28a745;margin:5px 0;">Test Canvas Token</button>
-<div id="canvasResult" style="padding:8px;margin:5px 0;border-radius:5px;display:none;"></div>
+<div class="warn">Tokens expire after about 4 months. DueLight will warn you when it&rsquo;s time to renew.</div>
+<label>Paste token here<textarea name="apiToken" id="apiToken" rows="3" required placeholder="Canvas API token"></textarea></label>
+<button type="button" class="btn btn-test" onclick="testCanvas()">Test Canvas token</button>
+<div id="canvasResult" class="result"></div>
 </div>
-<div class="section">
-<h3>Timezone</h3>
-<label>Your Timezone
-<select name="timezone" style="width:100%;padding:10px;">
-<option value="EST5EDT,M3.2.0/2,M11.1.0/2|US Eastern">US Eastern (EST/EDT)</option>
-<option value="CST6CDT,M3.2.0/2,M11.1.0/2|US Central">US Central (CST/CDT)</option>
-<option value="MST7MDT,M3.2.0/2,M11.1.0/2|US Mountain">US Mountain (MST/MDT)</option>
-<option value="PST8PDT,M3.2.0/2,M11.1.0/2|US Pacific">US Pacific (PST/PDT)</option>
-<option value="AKST9AKDT,M3.2.0/2,M11.1.0/2|Alaska">Alaska (AKST/AKDT)</option>
-<option value="HST10|Hawaii">Hawaii (HST)</option>
-<option value="AST4ADT,M3.2.0/2,M11.1.0/2|Atlantic">Atlantic (AST/ADT)</option>
-<option value="GMT0BST,M3.5.0/1,M10.5.0/2|UK">UK (GMT/BST)</option>
-<option value="CET-1CEST,M3.5.0/2,M10.5.0/3|Central Europe">Central Europe (CET/CEST)</option>
-<option value="EET-2EEST,M3.5.0/3,M10.5.0/4|Eastern Europe">Eastern Europe (EET/EEST)</option>
-<option value="MSK-3|Moscow">Moscow (MSK)</option>
-<option value="GST-4|Gulf">Gulf (GST)</option>
-<option value="PKT-5|Pakistan">Pakistan (PKT)</option>
-<option value="IST-5:30|India">India (IST)</option>
-<option value="BST-6|Bangladesh">Bangladesh (BST)</option>
-<option value="ICT-7|Indochina">Indochina (ICT)</option>
-<option value="CST-8|China">China (CST)</option>
-<option value="JST-9|Japan">Japan (JST)</option>
-<option value="KST-9|Korea">Korea (KST)</option>
-<option value="AEST-10AEDT,M10.1.0/2,M4.1.0/3|Australia East">Australia East (AEST/AEDT)</option>
-<option value="ACST-9:30ACDT,M10.1.0/2,M4.1.0/3|Australia Central">Australia Central (ACST/ACDT)</option>
-<option value="AWST-8|Australia West">Australia West (AWST)</option>
-<option value="NZST-12NZDT,M9.5.0/2,M4.1.0/3|New Zealand">New Zealand (NZST/NZDT)</option>
-<option value="UTC0|UTC">UTC (Universal)</option>
-</select>
-</label>
-</div>
-<div class="section">
-<h3>LED Settings</h3>
-<label>Red LED (days ahead)<input type="number" name="redDays" id="redDays" value="0" min="0" max="7"></label>
-<label>Yellow LED (days ahead)<input type="number" name="yellowDays" id="yellowDays" value="1" min="0" max="14"></label>
-<div class="error" id="daysError">Yellow days must be greater than or equal to red days</div>
-<label>Brightness (10-255)<input type="number" name="maxBrightness" value="100" min="10" max="255"></label>
-</div>
-<div class="section">
-<h3>Access Point Password (optional)</h3>
-<label>AP Password (leave blank for no password)<input type="text" name="apPassword" placeholder="canvas123"></label>
-</div>
-<button type="submit">Save & Continue</button>
-</form>
-<p style="text-align:center;margin-top:20px;font-size:13px;"><a href="https://setup.due-light.com" target="_blank" style="color:#667eea;">&#127891; Setup guide &amp; FAQ</a></p></div>
-<script>
-if(/Mobi|Android/i.test(navigator.userAgent)){document.querySelectorAll('.show-pass').forEach(e=>e.style.display='block');}
-function togglePass(btn){let inp=btn.previousElementSibling;inp.type=inp.type==='password'?'text':'password';btn.textContent=inp.type==='password'?'SHOW':'HIDE';}
-function validateSetup(){
-  let red=parseInt(document.getElementById('redDays').value);
-  let yellow=parseInt(document.getElementById('yellowDays').value);
-  let err=document.getElementById('daysError');
-  if(yellow<red){err.style.display='block';return false;}
-  err.style.display='none';return true;
-}
-function scanWifi(){
-  let s=document.getElementById('ssidSelect'),dl=document.getElementById('ssidList'),dl2=document.getElementById('ssid2List');
-  let sb=document.getElementById('scanBtn'),st=document.getElementById('scanStatus');
-  s.placeholder='Scanning...';if(sb)sb.disabled=true;
-  if(st)st.textContent='Scanning for networks...';
-  let opts={};
-  try{opts.signal=AbortSignal.timeout(15000);}catch(e){}
-  fetch('/scan',opts).then(r=>r.json()).then(data=>{
-    let nets=data.networks||data;
-    dl.innerHTML='';dl2.innerHTML='';
-    if(data.error){
-      if(st)st.textContent='Scan issue: '+(data.errorDetail||data.error)+' Type your network name manually.';
-      s.placeholder='Type network name';if(sb)sb.disabled=false;return;
-    }
-    if(!nets||nets.length===0){
-      if(st)st.textContent='No networks found. Type your network name manually.';
-      s.placeholder='Type network name';if(sb)sb.disabled=false;return;
-    }
-    nets.forEach(n=>{
-      let sig=n.rssi>-50?'Strong':n.rssi>-60?'Good':n.rssi>-70?'Fair':'Weak';
-      let lbl=n.ssid+' ('+sig+(n.secure?', secured':'')+')';
-      dl.innerHTML+='<option value="'+n.ssid+'">'+lbl+'</option>';
-      dl2.innerHTML+='<option value="'+n.ssid+'">'+lbl+'</option>';
-    });
-    s.placeholder='Select or type network name';
-    if(st)st.textContent='Found '+nets.length+' network(s). You can also type a name manually.';
-    if(sb)sb.disabled=false;
-  }).catch(e=>{
-    s.placeholder='Type network name';
-    if(st)st.textContent='Scan failed (timeout or connection error). Type your network name manually.';
-    if(sb)sb.disabled=false;
-  });
-}
-function testWifi(){
-  let ssid=document.getElementById('ssidSelect').value;
-  let pass=document.getElementById('wifiPass').value;
-  let r=document.getElementById('wifiResult');
-  r.style.display='block';r.style.background='#f0f0f0';r.textContent='Testing...';
-  fetch('/test-wifi',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'ssid='+encodeURIComponent(ssid)+'&password='+encodeURIComponent(pass)})
-  .then(x=>x.json()).then(d=>{r.style.background=d.success?'#d4edda':'#f8d7da';r.textContent=d.message;})
-  .catch(()=>{r.style.background='#f8d7da';r.textContent='Test failed';});
-}
-function testCanvas(){
-  let token=document.getElementById('apiToken').value;
-  let schoolUrl=document.getElementById('canvasSchoolUrl')?document.getElementById('canvasSchoolUrl').value:'';
-  let ssid=document.getElementById('ssidSelect')?document.getElementById('ssidSelect').value:'';
-  let pass=document.getElementById('wifiPass')?document.getElementById('wifiPass').value:'';
-  let r=document.getElementById('canvasResult');
-  r.style.display='block';r.style.background='#f0f0f0';r.textContent='Testing...';
-  let body='token='+encodeURIComponent(token);
-  if(schoolUrl)body+='&schoolUrl='+encodeURIComponent(schoolUrl);
-  if(ssid)body+='&ssid='+encodeURIComponent(ssid);
-  if(pass)body+='&wifiPass='+encodeURIComponent(pass);
-  fetch('/test-canvas',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body})
-  .then(x=>x.json()).then(d=>{r.style.background=d.success?'#d4edda':'#f8d7da';r.textContent=d.message;})
-  .catch(()=>{r.style.background='#f8d7da';r.textContent='Test failed';});
-}
-document.addEventListener('DOMContentLoaded',scanWifi);
-</script></body></html>
-)rawliteral";
-
-const char SETTINGS_HTML[] PROGMEM = R"rawliteral(
-<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>Canvas LED Settings</title>
-<style>
-body{font-family:Arial;max-width:600px;margin:20px auto;padding:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;}
-.container{background:white;padding:30px;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,0.2);}
-h1{color:#667eea;text-align:center;margin-bottom:5px;}
-.status{text-align:center;padding:10px;background:#f0f0f0;border-radius:5px;margin:15px 0;font-size:14px;}
-.status span{font-weight:bold;}
-.alert{padding:10px;margin:10px 0;border-radius:5px;text-align:center;}
-.alert-warning{background:#fff3cd;border:1px solid #ffc107;color:#856404;}
-.alert-error{background:#f8d7da;border:1px solid #f44336;color:#721c24;}
-input,textarea,select{width:100%;padding:10px;margin:5px 0;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;}
-.pass-wrap{position:relative;}
-.pass-wrap input:hover{-webkit-text-security:none !important;}
-.show-pass{position:absolute;right:10px;top:15px;cursor:pointer;display:none;}
-button{color:white;padding:12px;border:none;cursor:pointer;width:100%;margin:5px 0;border-radius:5px;font-size:15px;}
-.btn-save{background:linear-gradient(135deg,#667eea,#764ba2);}
-.btn-reboot{background:#ff9800;}
-.btn-reset{background:#f44336;}
-button:hover{opacity:0.9;}
-.section{border:1px solid #e0e0e0;padding:15px;margin:15px 0;border-radius:8px;background:#f9f9f9;}
-.section h3{margin-top:0;color:#555;}
-label{display:block;margin:8px 0;font-size:14px;}
-.error{color:#d32f2f;font-size:13px;margin-top:5px;display:none;}
-</style></head><body><div class="container">
-<h1>Canvas LED Settings</h1>
-<div class="status">
-Device: <span>%DEVICE_NAME%</span> | WiFi: %WIFI_STATUS% | Assignment: <span>%ASSIGNMENT_STATUS%</span> | Checked: <span>%LAST_CHECK%</span>
-</div>
-%ERROR_ALERT%
-%ASSIGNMENTS_SECTION%
-<form method="POST" action="/save" onsubmit="return validateSettings()">
-<div class="section"><h3>WiFi</h3>
-<label>Primary SSID<input type="text" name="ssid" value="%SSID%"></label>
-<label>Password<div class="pass-wrap"><input type="password" name="password" value="%PASSWORD%" class="pwd"><span class="show-pass" onclick="togglePass(this)">SHOW</span></div></label>
-<label>Backup SSID<input type="text" name="ssid2" value="%SSID2%"></label>
-<label>Backup Password<div class="pass-wrap"><input type="password" name="password2" value="%PASSWORD2%" class="pwd"><span class="show-pass" onclick="togglePass(this)">SHOW</span></div></label>
-</div>
-<div class="section"><h3>Canvas API</h3>
-%TOKEN_ALERT%
-<label>Canvas School URL (e.g. yourschool.instructure.com)<input type="text" name="canvasSchoolUrl" value="%CANVAS_SCHOOL_URL%"></label>
-<label>Canvas API Token<textarea name="apiToken" rows="3">%API_TOKEN%</textarea></label>
-%TOKEN_STATUS%
-</div>
-<div class="section"><h3>Timezone</h3>
-<label>Your Timezone
+<div class="card">
+<div class="card-title">Timezone</div>
+<label>Your timezone
 <select name="timezone">
 <option value="EST5EDT,M3.2.0/2,M11.1.0/2|US Eastern">US Eastern (EST/EDT)</option>
 <option value="CST6CDT,M3.2.0/2,M11.1.0/2|US Central">US Central (CST/CDT)</option>
@@ -247,53 +118,237 @@ Device: <span>%DEVICE_NAME%</span> | WiFi: %WIFI_STATUS% | Assignment: <span>%AS
 <option value="AWST-8|Australia West">Australia West (AWST)</option>
 <option value="NZST-12NZDT,M9.5.0/2,M4.1.0/3|New Zealand">New Zealand (NZST/NZDT)</option>
 <option value="UTC0|UTC">UTC (Universal)</option>
-</select>
-</label>
-<small style="color:#666;">Current: %TIMEZONE%</small>
+</select></label>
 </div>
-<div class="section"><h3>LED Settings</h3>
-<label><input type="checkbox" name="useFlashing" %FLASH_CHECKED%> Use Pulsing Effect</label>
-<label>Brightness (10-255)<input type="number" name="maxBrightness" value="%MAX_BRIGHTNESS%" min="10" max="255"></label>
-<label>Flash Interval (ms)<input type="number" name="flashInterval" value="%FLASH_INT%" min="1"></label>
-<label>Flash Step<input type="number" name="flashStep" value="%FLASH_STEP%" min="1"></label>
-<label>Red LED (days ahead)<input type="number" name="redDays" id="redDays" value="%RED_DAYS%" min="0" max="7"></label>
-<label>Yellow LED (days ahead)<input type="number" name="yellowDays" id="yellowDays" value="%YELLOW_DAYS%" min="0" max="14"></label>
-<div class="error" id="daysError">Yellow days must be greater than or equal to red days</div>
+<div class="card">
+<div class="card-title">LED Thresholds</div>
+<label>Red LED &mdash; days ahead<input type="number" name="redDays" id="redDays" value="0" min="0" max="7"></label>
+<label>Yellow LED &mdash; days ahead<input type="number" name="yellowDays" id="yellowDays" value="1" min="0" max="14"></label>
+<p class="ferr" id="daysError">Yellow must be &ge; red days</p>
+<label>Brightness (10&ndash;255)<input type="number" name="maxBrightness" value="100" min="10" max="255"></label>
 </div>
-<div class="section"><h3>Quiet Hours</h3>
-<label><input type="checkbox" name="quietHours" %QUIET_CHECKED%> Enable Quiet Hours</label>
-<label>Start Hour (0-23)<input type="number" name="quietStart" value="%QUIET_START%" min="0" max="23"></label>
-<label>End Hour (0-23)<input type="number" name="quietEnd" value="%QUIET_END%" min="0" max="23"></label>
+<div class="card">
+<div class="card-title">Access Point Password</div>
+<label>AP password <span style="color:var(--mt);font-weight:400;">(leave blank for open)</span><input type="text" name="apPassword" placeholder="canvas123"></label>
 </div>
-<div class="section"><h3>System</h3>
-<label>Device Name<input type="text" name="deviceName" value="%DEVICE_NAME%"></label>
-<label>Check Interval (minutes)<input type="number" name="fetchInterval" value="%FETCH_INT%" min="1"></label>
-<label><input type="checkbox" name="includeOverdue" %INCLUDE_OVERDUE_CHECKED%> Include Overdue Assignments</label>
-<small style="color:#666;"> Note: If you use browser extensions like BetterCanvas to mark assignments complete, they may not sync with Canvas API. Leave this OFF to avoid seeing old completed assignments.</small>
-<label>AP Password<input type="text" name="apPassword" value="%AP_PASSWORD%"></label>
-<label><input type="checkbox" name="bugReport" %BUG_REPORT_CHECKED%> Enable Auto Bug Reports</label>
-<small style="color:#666;">Automatically report critical errors to GitHub for faster support</small>
-<label><input type="checkbox" name="debug" %DEBUG_CHECKED%> Debug Mode</label>
+<button type="submit" class="btn btn-save">Save &amp; Continue</button>
+</form>
+<div class="footer"><a href="https://setup.due-light.com" target="_blank">Setup guide &amp; FAQ</a></div>
 </div>
-<button type="submit" class="btn-save">Save Settings</button>
-<button type="button" class="btn-refresh" onclick="manualRefresh()" style="background:#17a2b8;">Check Canvas Now</button>
-<div id="refreshResult" style="padding:8px;margin:5px 0;border-radius:5px;display:none;"></div>
-<button type="button" class="btn-reboot" onclick="if(confirm('Reboot device?'))fetch('/reboot',{method:'POST'});">Reboot</button>
-<button type="button" class="btn-reset" onclick="if(confirm('FACTORY RESET? All settings erased!'))fetch('/factory-reset',{method:'POST'});">Factory Reset</button>
-<div style="margin-top:12px;padding:10px;background:#1a2a1a;border-radius:6px;border:1px solid #2e5f2e;">
-<b style="color:#7fff7f;">Snooze Alerts</b><br>
-<small style="color:#999;">Temporarily force the LED green (suppress red/yellow) for N hours.</small><br>
-<div id="snoozeStatus" style="margin-top:6px;font-size:0.85em;color:#aaa;"></div>
-<select id="snoozeHours" style="margin-top:6px;padding:4px;background:#222;color:#ccc;border:1px solid #444;border-radius:4px;">
+<script>
+if(/Mobi|Android/i.test(navigator.userAgent)){document.querySelectorAll('.show-pass').forEach(e=>e.style.display='block');}
+function togglePass(btn){let inp=btn.previousElementSibling;inp.type=inp.type==='password'?'text':'password';btn.textContent=inp.type==='password'?'SHOW':'HIDE';}
+function validateSetup(){
+  let red=parseInt(document.getElementById('redDays').value);
+  let yellow=parseInt(document.getElementById('yellowDays').value);
+  let err=document.getElementById('daysError');
+  if(yellow<red){err.style.display='block';return false;}
+  err.style.display='none';return true;
+}
+function setResult(id,ok,msg){let r=document.getElementById(id);r.style.display='block';r.className='result '+(ok?'ok':'err');r.textContent=msg;}
+function scanWifi(){
+  let s=document.getElementById('ssidSelect'),dl=document.getElementById('ssidList'),dl2=document.getElementById('ssid2List');
+  let sb=document.getElementById('scanBtn'),st=document.getElementById('scanStatus');
+  s.placeholder='Scanning...';if(sb)sb.disabled=true;
+  if(st)st.textContent='Scanning for networks...';
+  let opts={};try{opts.signal=AbortSignal.timeout(15000);}catch(e){}
+  fetch('/scan',opts).then(r=>r.json()).then(data=>{
+    let nets=data.networks||data;dl.innerHTML='';dl2.innerHTML='';
+    if(data.error){if(st)st.textContent='Scan issue: '+(data.errorDetail||data.error)+'. Type name manually.';s.placeholder='Type network name';if(sb)sb.disabled=false;return;}
+    if(!nets||nets.length===0){if(st)st.textContent='No networks found. Type manually.';s.placeholder='Type network name';if(sb)sb.disabled=false;return;}
+    nets.forEach(n=>{
+      let sig=n.rssi>-50?'Strong':n.rssi>-60?'Good':n.rssi>-70?'Fair':'Weak';
+      let lbl=n.ssid+' ('+sig+(n.secure?', secured':'')+')';
+      dl.innerHTML+='<option value="'+n.ssid+'">'+lbl+'</option>';
+      dl2.innerHTML+='<option value="'+n.ssid+'">'+lbl+'</option>';
+    });
+    s.placeholder='Select or type network name';
+    if(st)st.textContent='Found '+nets.length+' network(s).';
+    if(sb)sb.disabled=false;
+  }).catch(()=>{s.placeholder='Type network name';if(st)st.textContent='Scan failed. Type manually.';if(sb)sb.disabled=false;});
+}
+function testWifi(){
+  let ssid=document.getElementById('ssidSelect').value,pass=document.getElementById('wifiPass').value;
+  let r=document.getElementById('wifiResult');r.style.display='block';r.className='result info';r.textContent='Testing...';
+  fetch('/test-wifi',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'ssid='+encodeURIComponent(ssid)+'&password='+encodeURIComponent(pass)})
+  .then(x=>x.json()).then(d=>{setResult('wifiResult',d.success,d.message);}).catch(()=>{setResult('wifiResult',false,'Test failed');});
+}
+function testCanvas(){
+  let token=document.getElementById('apiToken').value;
+  let schoolUrl=document.getElementById('canvasSchoolUrl')?document.getElementById('canvasSchoolUrl').value:'';
+  let ssid=document.getElementById('ssidSelect')?document.getElementById('ssidSelect').value:'';
+  let pass=document.getElementById('wifiPass')?document.getElementById('wifiPass').value:'';
+  let r=document.getElementById('canvasResult');r.style.display='block';r.className='result info';r.textContent='Testing...';
+  let body='token='+encodeURIComponent(token);
+  if(schoolUrl)body+='&schoolUrl='+encodeURIComponent(schoolUrl);
+  if(ssid)body+='&ssid='+encodeURIComponent(ssid);
+  if(pass)body+='&wifiPass='+encodeURIComponent(pass);
+  fetch('/test-canvas',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body})
+  .then(x=>x.json()).then(d=>{setResult('canvasResult',d.success,d.message);}).catch(()=>{setResult('canvasResult',false,'Test failed');});
+}
+document.addEventListener('DOMContentLoaded',scanWifi);
+</script></body></html>
+)rawliteral";
+
+const char SETTINGS_HTML[] PROGMEM = R"rawliteral(
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Due Light &mdash; Settings</title>
+<style>
+:root{--bg:#080808;--sf:#111;--bd:#222;--tx:#e8e8e8;--mt:#666;--gr:#22c55e;--gw:rgba(34,197,94,.3);--red:#ef4444;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh;}
+.wrap{max-width:600px;margin:0 auto;padding:28px 16px 56px;}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;margin-bottom:14px;}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--gr);box-shadow:0 0 8px var(--gw),0 0 16px var(--gw);animation:pulse 3s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.status-bar{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--mt);display:flex;flex-wrap:wrap;gap:6px 20px;}
+.status-bar span{color:var(--tx);}
+.alert{padding:12px 16px;margin-bottom:14px;border-radius:8px;font-size:13px;}
+.alert-warn{background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.25);color:#c8961a;}
+.alert-err{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:22px;margin-bottom:14px;}
+.card-title{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gr);margin-bottom:16px;}
+label{display:block;font-size:13px;color:var(--mt);margin:12px 0 4px;}
+input[type=text],input[type=password],input[type=number],textarea,select{width:100%;padding:10px 12px;background:#181818;border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;-webkit-appearance:none;}
+input:focus,textarea:focus,select:focus{border-color:rgba(34,197,94,.5);}
+select option{background:#181818;}
+input[type=checkbox]{width:auto;accent-color:var(--gr);margin-right:6px;}
+.pass-wrap{position:relative;}
+.show-pass{position:absolute;right:10px;top:11px;cursor:pointer;display:none;font-size:11px;color:var(--mt);letter-spacing:.05em;}
+small{font-size:11px;color:var(--mt);line-height:1.5;display:block;margin-top:4px;}
+.btn{display:block;width:100%;padding:13px;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin:6px 0;}
+.btn-save{background:var(--gr);color:#000;}
+.btn-save:hover{opacity:.87;}
+.btn-refresh{background:rgba(23,162,184,.12);color:#17a2b8;border:1px solid rgba(23,162,184,.25);}
+.btn-refresh:hover{background:rgba(23,162,184,.2);}
+.btn-reboot{background:rgba(255,152,0,.1);color:#ff9800;border:1px solid rgba(255,152,0,.25);}
+.btn-reboot:hover{background:rgba(255,152,0,.18);}
+.btn-reset{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.25);}
+.btn-reset:hover{background:rgba(239,68,68,.18);}
+.result{padding:10px 12px;margin:8px 0;border-radius:7px;font-size:13px;display:none;}
+.result.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:var(--gr);}
+.result.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--red);}
+.ferr{color:var(--red);font-size:12px;margin-top:4px;display:none;}
+.snooze-card{background:#0d1a0d;border:1px solid #1e3d1e;border-radius:12px;padding:18px 20px;margin:6px 0;}
+.snooze-label{font-size:13px;font-weight:600;color:#7fff7f;}
+.snooze-sub{font-size:11px;color:var(--mt);margin-top:2px;}
+.snooze-status{margin-top:8px;font-size:12px;color:var(--mt);}
+.snooze-controls{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.snooze-controls select{width:auto;padding:6px 10px;background:#181818;color:var(--mt);border:1px solid var(--bd);border-radius:6px;font-size:13px;}
+.snooze-btn{background:#1a4d1a;color:#7fff7f;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;}
+.snooze-btn:hover{background:#1f5c1f;}
+.cancel-snooze{background:#4d1a1a;color:#ff9999;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;display:none;}
+.cancel-snooze:hover{background:#5c1f1f;}
+.snooze-result{font-size:12px;color:#7fff7f;}
+.footer{text-align:center;margin-top:24px;font-size:12px;}
+.footer a{color:var(--mt);}
+.footer a:hover{color:var(--tx);}
+</style></head>
+<body><div class="wrap">
+<div class="logo"><div class="dot"></div>Due Light</div>
+<div class="status-bar">
+Device: <span>%DEVICE_NAME%</span>
+WiFi: %WIFI_STATUS%
+Assignment: <span>%ASSIGNMENT_STATUS%</span>
+Checked: <span>%LAST_CHECK%</span>
+</div>
+%ERROR_ALERT%
+%ASSIGNMENTS_SECTION%
+<form method="POST" action="/save" onsubmit="return validateSettings()">
+<div class="card">
+<div class="card-title">Wi-Fi</div>
+<label>Primary network<input type="text" name="ssid" value="%SSID%"></label>
+<label>Password<div class="pass-wrap"><input type="password" name="password" value="%PASSWORD%" class="pwd"><span class="show-pass" onclick="togglePass(this)">SHOW</span></div></label>
+<label>Backup network<input type="text" name="ssid2" value="%SSID2%"></label>
+<label>Backup password<div class="pass-wrap"><input type="password" name="password2" value="%PASSWORD2%" class="pwd"><span class="show-pass" onclick="togglePass(this)">SHOW</span></div></label>
+</div>
+<div class="card">
+<div class="card-title">Canvas API</div>
+%TOKEN_ALERT%
+<label>Canvas school URL<input type="text" name="canvasSchoolUrl" value="%CANVAS_SCHOOL_URL%"></label>
+<label>API token<textarea name="apiToken" rows="3">%API_TOKEN%</textarea></label>
+%TOKEN_STATUS%
+</div>
+<div class="card">
+<div class="card-title">Timezone</div>
+<label>Your timezone
+<select name="timezone">
+<option value="EST5EDT,M3.2.0/2,M11.1.0/2|US Eastern">US Eastern (EST/EDT)</option>
+<option value="CST6CDT,M3.2.0/2,M11.1.0/2|US Central">US Central (CST/CDT)</option>
+<option value="MST7MDT,M3.2.0/2,M11.1.0/2|US Mountain">US Mountain (MST/MDT)</option>
+<option value="PST8PDT,M3.2.0/2,M11.1.0/2|US Pacific">US Pacific (PST/PDT)</option>
+<option value="AKST9AKDT,M3.2.0/2,M11.1.0/2|Alaska">Alaska (AKST/AKDT)</option>
+<option value="HST10|Hawaii">Hawaii (HST)</option>
+<option value="AST4ADT,M3.2.0/2,M11.1.0/2|Atlantic">Atlantic (AST/ADT)</option>
+<option value="GMT0BST,M3.5.0/1,M10.5.0/2|UK">UK (GMT/BST)</option>
+<option value="CET-1CEST,M3.5.0/2,M10.5.0/3|Central Europe">Central Europe (CET/CEST)</option>
+<option value="EET-2EEST,M3.5.0/3,M10.5.0/4|Eastern Europe">Eastern Europe (EET/EEST)</option>
+<option value="MSK-3|Moscow">Moscow (MSK)</option>
+<option value="GST-4|Gulf">Gulf (GST)</option>
+<option value="PKT-5|Pakistan">Pakistan (PKT)</option>
+<option value="IST-5:30|India">India (IST)</option>
+<option value="BST-6|Bangladesh">Bangladesh (BST)</option>
+<option value="ICT-7|Indochina">Indochina (ICT)</option>
+<option value="CST-8|China">China (CST)</option>
+<option value="JST-9|Japan">Japan (JST)</option>
+<option value="KST-9|Korea">Korea (KST)</option>
+<option value="AEST-10AEDT,M10.1.0/2,M4.1.0/3|Australia East">Australia East (AEST/AEDT)</option>
+<option value="ACST-9:30ACDT,M10.1.0/2,M4.1.0/3|Australia Central">Australia Central (ACST/ACDT)</option>
+<option value="AWST-8|Australia West">Australia West (AWST)</option>
+<option value="NZST-12NZDT,M9.5.0/2,M4.1.0/3|New Zealand">New Zealand (NZST/NZDT)</option>
+<option value="UTC0|UTC">UTC (Universal)</option>
+</select></label>
+<small>Current: %TIMEZONE%</small>
+</div>
+<div class="card">
+<div class="card-title">LED Settings</div>
+<label><input type="checkbox" name="useFlashing" %FLASH_CHECKED%> Use pulsing effect</label>
+<label>Brightness (10&ndash;255)<input type="number" name="maxBrightness" value="%MAX_BRIGHTNESS%" min="10" max="255"></label>
+<label>Flash interval (ms)<input type="number" name="flashInterval" value="%FLASH_INT%" min="1"></label>
+<label>Flash step<input type="number" name="flashStep" value="%FLASH_STEP%" min="1"></label>
+<label>Red LED &mdash; days ahead<input type="number" name="redDays" id="redDays" value="%RED_DAYS%" min="0" max="7"></label>
+<label>Yellow LED &mdash; days ahead<input type="number" name="yellowDays" id="yellowDays" value="%YELLOW_DAYS%" min="0" max="14"></label>
+<p class="ferr" id="daysError">Yellow must be &ge; red days</p>
+</div>
+<div class="card">
+<div class="card-title">Quiet Hours</div>
+<label><input type="checkbox" name="quietHours" %QUIET_CHECKED%> Enable quiet hours</label>
+<label>Start hour (0&ndash;23)<input type="number" name="quietStart" value="%QUIET_START%" min="0" max="23"></label>
+<label>End hour (0&ndash;23)<input type="number" name="quietEnd" value="%QUIET_END%" min="0" max="23"></label>
+</div>
+<div class="card">
+<div class="card-title">System</div>
+<label>Device name<input type="text" name="deviceName" value="%DEVICE_NAME%"></label>
+<label>Check interval (minutes)<input type="number" name="fetchInterval" value="%FETCH_INT%" min="1"></label>
+<label><input type="checkbox" name="includeOverdue" %INCLUDE_OVERDUE_CHECKED%> Include overdue assignments</label>
+<small>If you use browser extensions like BetterCanvas, leave this OFF to avoid seeing old completed assignments.</small>
+<label>AP password<input type="text" name="apPassword" value="%AP_PASSWORD%"></label>
+<label><input type="checkbox" name="bugReport" %BUG_REPORT_CHECKED%> Enable auto bug reports</label>
+<small>Automatically report critical errors to GitHub for faster support.</small>
+<label><input type="checkbox" name="debug" %DEBUG_CHECKED%> Debug mode</label>
+</div>
+<button type="submit" class="btn btn-save">Save Settings</button>
+<button type="button" class="btn btn-refresh" onclick="manualRefresh()">Check Canvas Now</button>
+<div id="refreshResult" class="result"></div>
+<button type="button" class="btn btn-reboot" onclick="if(confirm('Reboot device?'))fetch('/reboot',{method:'POST'});">Reboot</button>
+<button type="button" class="btn btn-reset" onclick="if(confirm('FACTORY RESET? All settings erased!'))fetch('/factory-reset',{method:'POST'});">Factory Reset</button>
+<div class="snooze-card">
+<div class="snooze-label">Snooze Alerts</div>
+<div class="snooze-sub">Temporarily force the LED green for N hours.</div>
+<div class="snooze-status" id="snoozeStatus"></div>
+<div class="snooze-controls">
+<select id="snoozeHours">
 <option value="1">1 hour</option><option value="2">2 hours</option><option value="4">4 hours</option>
 <option value="8">8 hours</option><option value="12">12 hours</option><option value="24">24 hours</option>
 </select>
-<button type="button" style="margin-left:8px;background:#2e7d32;color:#fff;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;" onclick="activateSnooze()">Snooze</button>
-<button type="button" id="cancelSnoozeBtn" style="margin-left:6px;background:#7f2020;color:#fff;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;display:none;" onclick="cancelSnooze()">Cancel Snooze</button>
-<span id="snoozeResult" style="margin-left:8px;font-size:0.9em;color:#7fff7f;"></span>
+<button type="button" class="snooze-btn" onclick="activateSnooze()">Snooze</button>
+<button type="button" id="cancelSnoozeBtn" class="cancel-snooze" onclick="cancelSnooze()">Cancel Snooze</button>
+<span id="snoozeResult" class="snooze-result"></span>
+</div>
 </div>
 </form>
-<p style="text-align:center;margin-top:20px;font-size:13px;"><a href="https://setup.due-light.com" target="_blank" style="color:#667eea;">&#127891; Setup guide &amp; FAQ</a></p></div>
+<div class="footer"><a href="https://setup.due-light.com" target="_blank">Setup guide &amp; FAQ</a></div>
+</div>
 <script>
 if(/Mobi|Android/i.test(navigator.userAgent)){document.querySelectorAll('.show-pass').forEach(e=>e.style.display='block');}
 function togglePass(btn){let inp=btn.previousElementSibling;inp.type=inp.type==='password'?'text':'password';btn.textContent=inp.type==='password'?'SHOW':'HIDE';}
@@ -306,12 +361,12 @@ function validateSettings(){
 }
 function manualRefresh(){
   let r=document.getElementById('refreshResult');
-  r.style.display='block';r.style.background='#f0f0f0';r.textContent='Checking Canvas...';
+  r.style.display='block';r.className='result';r.style.background='rgba(255,255,255,.04)';r.style.color='var(--mt)';r.textContent='Checking Canvas...';
   fetch('/refresh',{method:'POST'}).then(x=>x.json()).then(d=>{
-    r.style.background=d.success?'#d4edda':'#f8d7da';
+    r.className='result '+(d.success?'ok':'err');
     r.textContent=d.statusName+(d.changed?' (changed!)':'');
     setTimeout(()=>location.reload(),2000);
-  }).catch(()=>{r.style.background='#f8d7da';r.textContent='Refresh failed';});
+  }).catch(()=>{r.className='result err';r.textContent='Refresh failed';});
 }
 function activateSnooze(){
   let h=document.getElementById('snoozeHours').value;
@@ -331,15 +386,8 @@ function checkSnoozeStatus(){
   fetch('/snooze/status').then(x=>x.json()).then(d=>{
     let s=document.getElementById('snoozeStatus');
     let btn=document.getElementById('cancelSnoozeBtn');
-    if(d.active){
-      s.textContent='Snooze active  '+d.remaining_minutes+' min remaining';
-      s.style.color='#7fff7f';
-      btn.style.display='inline-block';
-    } else {
-      s.textContent='No snooze active';
-      s.style.color='#888';
-      btn.style.display='none';
-    }
+    if(d.active){s.textContent='Snooze active — '+d.remaining_minutes+' min remaining';s.style.color='#7fff7f';btn.style.display='inline-block';}
+    else{s.textContent='No snooze active';s.style.color='var(--mt)';btn.style.display='none';}
   }).catch(()=>{});
 }
 checkSnoozeStatus();
