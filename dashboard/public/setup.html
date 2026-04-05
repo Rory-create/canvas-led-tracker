@@ -204,9 +204,26 @@ footer a:hover { color: var(--text); }
 <div class="hero">
   <div class="tag">Setup Guide</div>
   <h1>Get your Due Light running in minutes.</h1>
-  <p>No computer needed — everything is done from your phone or tablet. Follow the steps below in order.</p>
+  <p>Most of setup is done from your phone — but <strong>you'll need a computer for one step</strong>: generating the Canvas access key. The Canvas mobile app doesn't support this, so you'll need Canvas open in a browser on a Mac, PC, or Chromebook.</p>
   <div class="time-badge">
-    <strong>About 5 minutes</strong> &nbsp;·&nbsp; Phone or tablet &nbsp;·&nbsp; WiFi required
+    <strong>About 5 minutes</strong> &nbsp;·&nbsp; Computer + phone &nbsp;·&nbsp; WiFi required
+  </div>
+</div>
+
+<!-- Video walkthrough -->
+<div class="steps-wrap" style="padding-bottom:0;">
+  <div class="step-card" style="border-left-color: var(--border); padding: 0; overflow: hidden;">
+    <!-- Drop your walkthrough video into dashboard/public/ named setup-walkthrough.mp4 -->
+    <!-- Remove the poster div and uncomment the <video> tag once the file is in place -->
+    <div style="background:#1c1408; border-radius:11px; aspect-ratio:16/9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:#faf5eb; opacity:0.5;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg>
+      <span style="font-size:14px;">Setup walkthrough video coming soon</span>
+    </div>
+    <!-- Uncomment once setup-walkthrough.mp4 is in dashboard/public/:
+    <video controls style="width:100%; display:block; border-radius:11px;">
+      <source src="/setup-walkthrough.mp4" type="video/mp4">
+    </video>
+    -->
   </div>
 </div>
 
@@ -251,8 +268,9 @@ footer a:hover { color: var(--text); }
   <div class="step-card">
     <div class="step-num">Step 5</div>
     <h2>Get your student's Canvas access key</h2>
+    <div class="callout-warn" style="font-weight:600;">This step must be done on a computer. The Canvas mobile app does not support creating access keys — open Canvas in a browser on a Mac, PC, or Chromebook.</div>
     <p>Due Light reads your student's assignments using a <strong>Canvas access key</strong> — a code that gives it read-only access to their Canvas account. It can't submit anything, change grades, or post on their behalf.</p>
-    <p>To get the key, have your student log into Canvas on a computer or phone, then:</p>
+    <p>Have your student log into Canvas in a web browser, then:</p>
     <ul class="substeps">
       <li><span>Click <strong>Account</strong> in the left sidebar, then <strong>Settings</strong></span></li>
       <li><span>Scroll down to <strong>Approved Integrations</strong></span></li>
