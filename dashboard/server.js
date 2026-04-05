@@ -185,11 +185,14 @@ function checkAndAlert(units) {
 
 app.use(express.json({ limit: '64kb' }));
 
-// Host-based routing: due-light.com (and www.) → marketing page; everything else → dashboard
+// Host-based routing: due-light.com (and www.) → marketing page; setup.due-light.com → setup guide; everything else → dashboard
 app.get('/', (req, res, next) => {
   const host = (req.headers.host || '').split(':')[0].toLowerCase();
   if (host === 'due-light.com' || host === 'www.due-light.com') {
     return res.sendFile(path.join(__dirname, 'public', 'home.html'));
+  }
+  if (host === 'setup.due-light.com') {
+    return res.sendFile(path.join(__dirname, 'public', 'setup.html'));
   }
   next();
 });
