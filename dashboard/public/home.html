@@ -527,8 +527,9 @@ footer a:hover { color: var(--text); }
     <div class="hero-tag">
       <span>Works with Canvas</span>
     </div>
-    <h1>Your kid's deadlines,<br><em>at a glance.</em></h1>
-    <p>Due Light plugs into any wall outlet and quietly monitors your child's school assignments. A small colored light on their desk tells you both — instantly — whether they're keeping up. No app to check. No texts to send.</p>
+    <h1>Your deadlines,<br><em>at a glance.</em></h1>
+    <p>I started Due Light because if I forgot an assignment, it wasn't because I didn't care, it was because I forgot it existed. Sure I could get a planner, set reminders, but that requires effort.</p>
+    <p>With Due Light I only have to remember to set it up once, not every time I get a new assignment. From then on it's always in the background, a constant reminder for me if I have work to do. No notifications that get lost, no need to set a reminder.</p>
     <div class="hero-actions">
       <a href="#pricing" class="btn-primary">Get Due Light</a>
       <a href="#how-it-works" class="btn-secondary">See how it works</a>
@@ -554,22 +555,23 @@ footer a:hover { color: var(--text); }
 <!-- How it works -->
 <section class="section" id="how-it-works">
   <div class="section-label">Setup</div>
-  <h2>Set up in minutes. Works for years.</h2>
+  <h2>Set up in minutes. Just Works.</h2>
   <div class="steps">
     <div class="step">
       <div class="step-num">01</div>
       <h3>Plug it in</h3>
-      <p>Plug Due Light into any USB-C wall charger — the same kind used to charge a phone. No computer needed. It creates its own temporary WiFi network the first time it powers on, ready to be configured from your phone.</p>
+      <p>Plug your Due Light into any USB-C power source, the same kind for phones. Once it lights up it makes its own WiFi hotspot, but before you connect you need to get your access key from Canvas.</p>
     </div>
     <div class="step">
       <div class="step-num">02</div>
       <h3>Set it up from a computer</h3>
-      <p>Open the setup page on your phone and enter your home WiFi password. Then, on a computer, log into Canvas and generate a read-only access key — a short code that lets Due Light see assignments. The Canvas mobile app doesn't support this, so a computer is needed for that one step. Total setup time is about five minutes.</p>
+      <p>Go to whatever Canvas account you want to monitor, this has to be on a computer on the website, not the Canvas app, and then go to settings and scroll down to approved integrations. Make a new access token, copy it, then join the Due Light hotspot, put in your home WiFi info, paste the Canvas key, and voila!</p>
     </div>
     <div class="step">
       <div class="step-num">03</div>
-      <h3>Leave it alone</h3>
-      <p>Due Light checks Canvas automatically every few minutes and updates the light. No apps to open, no notifications to manage. It even updates its own software in the background. You genuinely never have to touch it again.</p>
+      <h3>Leave it alone <span style="font-size:13px;font-weight:400;color:var(--muted)">(for 120 days)</span></h3>
+      <p>Now — unless I did something wrong — you shouldn't have to touch your Due Light again... until Canvas makes you make a new access key. I'm not a big company so Canvas won't let my access keys for Due Light stick around forever like for Google Drive.</p>
+      <p style="margin-top:12px;">So your Due Light won't be able to see and track your assignments after 120 days, but don't worry, it'll blink and let you know, and then all you do is go to your settings website on your home WiFi, make a new Canvas key and then you're all set for another 120 days. Maybe if you help me sell enough units I won't have to make you do this anymore!</p>
     </div>
   </div>
 </section>
@@ -583,18 +585,18 @@ footer a:hover { color: var(--text); }
   <div class="colors-grid">
     <div class="color-card">
       <div class="color-indicator green"></div>
-      <h3>Green — All clear</h3>
-      <p>No assignments due within your configured window. Nothing to worry about right now.</p>
+      <h3>Green — All good</h3>
+      <p>No assignments due within the deadline window you set up. Nothing to worry about.</p>
     </div>
     <div class="color-card">
       <div class="color-indicator yellow"></div>
       <h3>Yellow — Due soon</h3>
-      <p>Something is due within the next few days. A heads-up to check your calendar, not a panic alarm.</p>
+      <p>Something is due within the next few days. Time to open Canvas maybe?</p>
     </div>
     <div class="color-card">
       <div class="color-indicator red"></div>
-      <h3>Red — Due today</h3>
-      <p>An assignment is due today. Hard to miss, even from across the room — which is the point.</p>
+      <h3>Red — Due today <span style="font-size:13px;font-weight:400;color:var(--muted)">(or whenever you set)</span></h3>
+      <p>An assignment is due today, or whenever you set red to light up! Time to stop procrastinating and start working.</p>
     </div>
   </div>
 </section>
@@ -616,15 +618,15 @@ footer a:hover { color: var(--text); }
     </div>
     <div class="spec-row">
       <span class="spec-key">Power</span>
-      <span class="spec-val">USB-C wall charger — not a computer</span>
+      <span class="spec-val">USB-C wall plug, or any USB-C power source</span>
     </div>
     <div class="spec-row">
-      <span class="spec-key">Home WiFi</span>
-      <span class="spec-val">Standard home network required</span>
+      <span class="spec-key">WiFi</span>
+      <span class="spec-val">Standard home WiFi network required</span>
     </div>
     <div class="spec-row">
       <span class="spec-key">Canvas access</span>
-      <span class="spec-val">Requires your child's Canvas account</span>
+      <span class="spec-val">Requires access to the Canvas account to monitor</span>
     </div>
     <div class="spec-row">
       <span class="spec-key">Updates</span>
@@ -636,7 +638,7 @@ footer a:hover { color: var(--text); }
     </div>
     <div class="spec-row">
       <span class="spec-key">Warranty</span>
-      <span class="spec-val">1 year</span>
+      <span class="spec-val">Rory's Guarantee — reach out with any issues, I'll help you out.</span>
     </div>
   </div>
   <details style="margin-top:20px;">
@@ -664,10 +666,10 @@ footer a:hover { color: var(--text); }
       <ul class="feature-list">
         <li>Due Light device + USB-C cable included</li>
         <li>Works at any school that uses Canvas</li>
-        <li>Plugs into a wall outlet — no computer required</li>
-        <li>Takes about 5 minutes — needs a computer once to set up</li>
+        <li>Plugs into a wall outlet</li>
+        <li>Takes about 5 minutes — needs a computer to set up</li>
         <li>Updates itself automatically over WiFi</li>
-        <li>1-year warranty</li>
+        <li>Rory's Guarantee</li>
       </ul>
       <!-- TODO: Create a Stripe Payment Link at stripe.com/payment-links and replace
            the button href below. For embedded checkout, use Stripe.js instead.
