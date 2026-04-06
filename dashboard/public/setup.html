@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Due Light — Setup Guide</title>
+<meta name="description" content="Step-by-step setup guide for Due Light. Takes about 5 minutes from your phone.">
+<style>
+:root {
+  --bg: #ddd6c4;
+  --surface: #faf5eb;
+  --border: #b5a688;
+  --text: #1c1408;
+  --muted: #5e4e38;
+  --accent: #3d5a2e;
+  --accent-dim: rgba(61,90,46,0.09);
+  --accent-border: rgba(61,90,46,0.25);
+  --nav-bg: rgba(221,214,196,0.93);
+  --green: #22c55e;
+  --yellow: #eab308;
+  --red: #ef4444;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+nav {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 32px;
+  background: var(--nav-bg);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; text-decoration: none; color: var(--text); }
+.led-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.4); animation: pulse 3s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
+.nav-link { font-size: 14px; color: var(--muted); text-decoration: none; }
+.nav-link:hover { color: var(--text); }
+
+.hero {
+  max-width: 680px; margin: 0 auto;
+  padding: 56px 24px 32px;
+}
+.tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent-dim); border: 1px solid var(--accent-border);
+  color: var(--accent); font-size: 12px; font-weight: 600;
+  padding: 4px 12px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  margin-bottom: 20px;
+}
+.hero h1 { font-size: 36px; font-weight: 700; line-height: 1.2; margin-bottom: 14px; font-family: Georgia, 'Palatino Linotype', Palatino, serif; }
+.hero p { color: var(--muted); font-size: 17px; margin-bottom: 32px; }
+.time-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px; padding: 10px 16px;
+  font-size: 14px; color: var(--muted);
+}
+.time-badge strong { color: var(--text); }
+
+/* Steps */
+.steps-wrap { max-width: 680px; margin: 0 auto; padding: 0 24px 80px; }
+
+.step-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 14px;
+  padding: 28px 32px;
+  margin-bottom: 20px;
+  position: relative;
+}
+.step-num {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 6px;
+}
+.step-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 12px; font-family: Georgia, 'Palatino Linotype', Palatino, serif; }
+.step-card p { color: var(--muted); font-size: 15px; margin-bottom: 10px; }
+.step-card p:last-child { margin-bottom: 0; }
+.step-card strong { color: var(--text); }
+
+.substeps { list-style: none; margin: 14px 0 10px; }
+.substeps li {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px; color: var(--muted);
+}
+.substeps li:last-child { border-bottom: none; }
+.substeps li::before {
+  content: '';
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+  margin-top: 8px;
+}
+.substeps li strong { color: var(--text); }
+
+.callout {
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px; padding: 12px 16px;
+  font-size: 14px; color: var(--accent);
+  margin: 14px 0;
+}
+.callout-warn {
+  background: rgba(234,179,8,0.07);
+  border: 1px solid rgba(234,179,8,0.3);
+  border-radius: 8px; padding: 12px 16px;
+  font-size: 14px; color: #7a5c00;
+  margin: 14px 0;
+}
+
+.led-row { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; }
+.led-item { display: flex; align-items: center; gap: 14px; }
+.led-pip { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; }
+.led-pip.g { background: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.4); }
+.led-pip.y { background: var(--yellow); box-shadow: 0 0 8px rgba(234,179,8,0.4); }
+.led-pip.r { background: var(--red); box-shadow: 0 0 8px rgba(239,68,68,0.4); }
+.led-item span { font-size: 15px; color: var(--muted); }
+.led-item span strong { color: var(--text); }
+
+code {
+  background: var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.done-card {
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  border-radius: 14px;
+  padding: 32px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.done-card h2 { font-size: 24px; font-weight: 700; color: var(--accent); margin-bottom: 8px; font-family: Georgia, 'Palatino Linotype', Palatino, serif; }
+.done-card p { color: var(--muted); font-size: 15px; }
+
+.faq-wrap { max-width: 680px; margin: 0 auto; padding: 0 24px 80px; }
+.faq-wrap h2 { font-size: 22px; font-weight: 700; margin-bottom: 20px; font-family: Georgia, 'Palatino Linotype', Palatino, serif; }
+details {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+summary {
+  padding: 16px 20px;
+  font-size: 15px; font-weight: 600;
+  cursor: pointer; list-style: none;
+  display: flex; justify-content: space-between; align-items: center;
+}
+summary::after { content: '+'; color: var(--accent); font-size: 18px; font-weight: 400; }
+details[open] summary::after { content: '−'; }
+summary::-webkit-details-marker { display: none; }
+.faq-body { padding: 0 20px 18px; font-size: 15px; color: var(--muted); line-height: 1.6; }
+.faq-body p { margin-bottom: 8px; }
+.faq-body p:last-child { margin-bottom: 0; }
+
+footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+  font-size: 13px; color: var(--muted);
+}
+footer a { color: var(--muted); text-decoration: none; }
+footer a:hover { color: var(--text); }
+
+@media (max-width: 600px) {
+  .hero { padding: 40px 20px 24px; }
+  .hero h1 { font-size: 28px; }
+  .steps-wrap, .faq-wrap { padding-left: 20px; padding-right: 20px; }
+  .step-card { padding: 22px 20px; }
+  nav { padding: 14px 20px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <div class="led-dot"></div>
+    Due Light
+  </a>
+  <a href="/" class="nav-link">← Back to home</a>
+</nav>
+
+<div class="hero">
+  <div class="tag">Setup Guide</div>
+  <h1>Get your Due Light running in minutes.</h1>
+  <p>Most of setup is done from your phone — but <strong>you'll need a computer for one step</strong>: generating the Canvas access key. The Canvas mobile app doesn't support this, so you'll need Canvas open in a browser on a Mac, PC, or Chromebook.</p>
+  <div class="time-badge">
+    <strong>About 5 minutes</strong> &nbsp;·&nbsp; Computer + phone &nbsp;·&nbsp; WiFi required
+  </div>
+</div>
+
+<!-- Video walkthrough -->
+<div class="steps-wrap" style="padding-bottom:0;">
+  <div class="step-card" style="border-left-color: var(--border); padding: 0; overflow: hidden;">
+    <!-- Drop your walkthrough video into dashboard/public/ named setup-walkthrough.mp4 -->
+    <!-- Remove the poster div and uncomment the <video> tag once the file is in place -->
+    <div style="background:#1c1408; border-radius:11px; aspect-ratio:16/9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:#faf5eb; opacity:0.5;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg>
+      <span style="font-size:14px;">Setup walkthrough video coming soon</span>
+    </div>
+    <!-- Uncomment once setup-walkthrough.mp4 is in dashboard/public/:
+    <video controls style="width:100%; display:block; border-radius:11px;">
+      <source src="/setup-walkthrough.mp4" type="video/mp4">
+    </video>
+    -->
+  </div>
+</div>
+
+<div class="steps-wrap">
+
+  <!-- Step 1 -->
+  <div class="step-card">
+    <div class="step-num">Step 1</div>
+    <h2>Plug it in</h2>
+    <p>Plug Due Light into a USB-C wall charger — the same kind used to charge a phone. Any charger works. It does <strong>not</strong> need to be plugged into a computer.</p>
+    <p>The light will blink a few times as it starts up. After about 10 seconds it will be ready to connect to.</p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step-card">
+    <div class="step-num">Step 2</div>
+    <h2>Connect to Due Light's WiFi</h2>
+    <p>Due Light creates its own temporary WiFi network the first time it powers on. On your phone, open <strong>Settings → WiFi</strong> and look for a network named:</p>
+    <div class="callout"><strong>DueLight-</strong> followed by a short code (e.g. <code>DueLight-A3F2</code>)</div>
+    <p>Connect to it. Your phone may warn you that this network has no internet — that's expected. Stay connected anyway.</p>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step-card">
+    <div class="step-num">Step 3</div>
+    <h2>Open the setup page</h2>
+    <p>Once connected to Due Light's WiFi, open your phone's browser and go to:</p>
+    <div class="callout" style="font-size:16px; font-weight:600; text-align:center; letter-spacing:0.02em;">192.168.4.1</div>
+    <p>You should see the Due Light setup form. If it doesn't load, make sure you're still connected to the DueLight WiFi network and try again.</p>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step-card">
+    <div class="step-num">Step 4</div>
+    <h2>Enter your home WiFi</h2>
+    <p>The setup page will scan for nearby WiFi networks automatically. Select your home network from the list and enter the password.</p>
+    <p>Use the <strong>Test WiFi connection</strong> button to confirm it works before moving on.</p>
+    <div class="callout-warn">Make sure to use your <strong>home</strong> WiFi, not your phone's hotspot. Due Light needs a permanent connection to check Canvas daily.</div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step-card">
+    <div class="step-num">Step 5</div>
+    <h2>Get your student's Canvas access key</h2>
+    <div class="callout-warn" style="font-weight:600;">This step must be done on a computer. The Canvas mobile app does not support creating access keys — open Canvas in a browser on a Mac, PC, or Chromebook.</div>
+    <p>Due Light reads your student's assignments using a <strong>Canvas access key</strong> — a code that gives it read-only access to their Canvas account. It can't submit anything, change grades, or post on their behalf.</p>
+    <p>Have your student log into Canvas in a web browser, then:</p>
+    <ul class="substeps">
+      <li><span>Click <strong>Account</strong> in the left sidebar, then <strong>Settings</strong></span></li>
+      <li><span>Scroll down to <strong>Approved Integrations</strong></span></li>
+      <li><span>Click <strong>+ New Access Token</strong></span></li>
+      <li><span>Name it <strong>DueLight</strong> — the name is just for their reference</span></li>
+      <li><span>Leave the expiry date blank if possible, or set it as far ahead as Canvas allows</span></li>
+      <li><span>Click <strong>Generate Token</strong>, then copy the long code that appears</span></li>
+    </ul>
+    <div class="callout-warn"><strong>Copy it before closing the window</strong> — Canvas only shows the token once. If you lose it, you'll need to generate a new one.</div>
+    <p>Also enter your school's Canvas address — it usually looks like <code>yourschool.instructure.com</code>. You can find it in the browser address bar when your student is logged into Canvas.</p>
+    <p>Use the <strong>Test Canvas token</strong> button to confirm everything works.</p>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step-card">
+    <div class="step-num">Step 6</div>
+    <h2>Pick a timezone and adjust the light</h2>
+    <p>Select the timezone you're in so Due Light knows when assignments are actually due.</p>
+    <p>You can also set how far ahead the light should warn:</p>
+    <div class="led-row">
+      <div class="led-item"><div class="led-pip r"></div><span><strong>Red</strong> — assignment is due today (or already overdue)</span></div>
+      <div class="led-item"><div class="led-pip y"></div><span><strong>Yellow</strong> — due within the next day or two</span></div>
+      <div class="led-item"><div class="led-pip g"></div><span><strong>Green</strong> — all clear, nothing due soon</span></div>
+    </div>
+    <p>The defaults work well for most students. You can always change them later from the settings page.</p>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step-card">
+    <div class="step-num">Step 7</div>
+    <h2>Save and finish</h2>
+    <p>Tap <strong>Save & Continue</strong>. Due Light will connect to your home WiFi and check Canvas for the first time. This takes about 30 seconds.</p>
+    <p>The light will show the current assignment status once it's connected. You can unplug it from your computer setup area now and put it anywhere with a wall outlet and WiFi signal.</p>
+    <div class="callout">After saving, the DueLight WiFi network will disappear — that's normal. Your phone will switch back to your home WiFi automatically.</div>
+  </div>
+
+  <!-- Done -->
+  <div class="done-card">
+    <h2>You're all set.</h2>
+    <p>Due Light will check Canvas automatically every few hours and update the light on its own. No app, no account, nothing to log into.</p>
+  </div>
+
+</div>
+
+<!-- FAQ -->
+<div class="faq-wrap">
+  <h2>Common questions</h2>
+
+  <details>
+    <summary>The light is on but stuck on one color — is something wrong?</summary>
+    <div class="faq-body">
+      <p>It may still be connecting for the first time. Give it a minute or two after setup. If it stays stuck, the Canvas token or school address may have been entered incorrectly — go back to <code>192.168.4.1</code> while connected to your home WiFi to check the settings.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>I can't find the DueLight WiFi network.</summary>
+    <div class="faq-body">
+      <p>If Due Light has been set up before, it won't create the hotspot again automatically — it will try to connect to your home WiFi instead. To reset it and start fresh, hold the small button on the side for 5 seconds until the light flashes, then release. It will restart in setup mode.</p>
+      <p>If you've never set it up and still can't see it, try unplugging and replugging the device and waiting 15 seconds.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>The Canvas token expired. How do I update it?</summary>
+    <div class="faq-body">
+      <p>Due Light will warn you on the light before a token expires. To update, connect your phone to your home WiFi and go to the device's local settings page — the address is printed on a sticker on the bottom of the device, or shown in the setup app. Generate a new token in Canvas following Step 5 above, paste it in, and save.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>We moved or changed our WiFi password. How do I reconnect?</summary>
+    <div class="faq-body">
+      <p>Hold the small button on the side of Due Light for 5 seconds until it flashes. It will restart in setup mode and create the DueLight WiFi hotspot again. Follow the setup steps from the beginning — your Canvas token will be saved and you won't need to re-enter it.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Does it work with any school that uses Canvas?</summary>
+    <div class="faq-body">
+      <p>Yes — if your student's school uses Canvas (by Instructure), Due Light will work. Most K–12 schools and many colleges in the US use Canvas. If you're not sure, check whether your student logs into a website ending in <code>.instructure.com</code> to see their assignments.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Is it safe? Can it change anything in Canvas?</summary>
+    <div class="faq-body">
+      <p>The Canvas access key is read-only. Due Light can only see assignment names and due dates — it cannot submit work, send messages, change grades, or access anything else. The key is stored on the device itself and is never sent to our servers.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Does Due Light need to be near the router?</summary>
+    <div class="faq-body">
+      <p>It just needs to be within range of your home WiFi — the same range your phone would need to be on the same network. Most homes have no issues anywhere inside. If you have a large home, a spot closer to a router or WiFi extender works best.</p>
+    </div>
+  </details>
+
+</div>
+
+<footer>
+  <div class="nav-logo" style="font-size:14px;">
+    <div class="led-dot" style="width:7px;height:7px;"></div>
+    Due Light
+  </div>
+  <span>Questions? <a href="mailto:hello@due-light.com">hello@due-light.com</a></span>
+  <span>&copy; 2026 Due Light.</span>
+</footer>
+
+</body>
+</html>

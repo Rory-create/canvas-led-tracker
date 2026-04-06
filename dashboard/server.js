@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -89,6 +90,7 @@ function authMiddleware(req, res, next) {
 const DASHBOARD_TOKEN = process.env.DASHBOARD_READ_TOKEN || null;
 
 function isLocalhost(req) {
+  if (req.headers['cf-connecting-ip']) return false; // came through Cloudflare Tunnel
   const ip = req.socket.remoteAddress;
   return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
 }
@@ -185,11 +187,14 @@ function checkAndAlert(units) {
 
 app.use(express.json({ limit: '64kb' }));
 
-// Host-based routing: due-light.com (and www.) → marketing page; everything else → dashboard
+// Host-based routing: due-light.com (and www.) → marketing page; setup.due-light.com → setup guide; everything else → dashboard
 app.get('/', (req, res, next) => {
   const host = (req.headers.host || '').split(':')[0].toLowerCase();
   if (host === 'due-light.com' || host === 'www.due-light.com') {
     return res.sendFile(path.join(__dirname, 'public', 'home.html'));
+  }
+  if (host === 'setup.due-light.com') {
+    return res.sendFile(path.join(__dirname, 'public', 'setup.html'));
   }
   next();
 });

@@ -6,19 +6,51 @@
 <title>Due Light — Know your deadlines. No screen required.</title>
 <meta name="description" content="A physical LED indicator for Canvas LMS. Plugs in, syncs automatically, and shows your assignment status at a glance.">
 <style>
+/* ── LED hardware colors — fixed across all themes ──────────────────── */
 :root {
-  --bg: #080808;
-  --surface: #111;
-  --border: #222;
-  --text: #e8e8e8;
-  --muted: #666;
-  --subtle: #333;
   --green: #22c55e;
   --yellow: #eab308;
   --red: #ef4444;
   --glow-green: rgba(34,197,94,0.35);
   --glow-yellow: rgba(234,179,8,0.35);
   --glow-red: rgba(239,68,68,0.35);
+}
+
+/* ── THEME DEFINITIONS ───────────────────────────────────────────────────
+   To switch themes, change THEME in the <script> block at the bottom
+   of <head>. Options: 'dark' | 'bright' | 'earthy'
+   ─────────────────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg: #080808; --surface: #111; --border: #222;
+  --text: #e8e8e8; --muted: #666; --subtle: #333;
+  --accent: #22c55e;
+  --accent-dim: rgba(34,197,94,0.08);
+  --accent-border: rgba(34,197,94,0.2);
+  --nav-bg: rgba(8,8,8,0.85);
+  --btn-text: #000;
+}
+[data-theme="bright"] {
+  --bg: #f9fafb; --surface: #ffffff; --border: #e5e7eb;
+  --text: #111827; --muted: #6b7280; --subtle: #f3f4f6;
+  --accent: #16a34a;
+  --accent-dim: rgba(22,163,74,0.07);
+  --accent-border: rgba(22,163,74,0.2);
+  --nav-bg: rgba(249,250,251,0.92);
+  --btn-text: #ffffff;
+}
+[data-theme="earthy"] {
+  --bg: #ede8da; --surface: #f8f2e8; --border: #d4c8b0;
+  --text: #1c1408; --muted: #8a7960; --subtle: #e4ddd0;
+  --accent: #4d6b3c;
+  --accent-dim: rgba(77,107,60,0.09);
+  --accent-border: rgba(77,107,60,0.22);
+  --nav-bg: rgba(237,232,218,0.93);
+  --btn-text: #ffffff;
+}
+[data-theme="earthy"] h1,
+[data-theme="earthy"] h2,
+[data-theme="earthy"] h3 {
+  font-family: Georgia, 'Palatino Linotype', Palatino, serif;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -41,7 +73,7 @@ nav {
   align-items: center;
   justify-content: space-between;
   padding: 18px 40px;
-  background: rgba(8,8,8,0.85);
+  background: var(--nav-bg);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
@@ -69,15 +101,15 @@ nav {
 .nav-links a { color: var(--muted); font-size: 14px; transition: color 0.2s; }
 .nav-links a:hover { color: var(--text); }
 .nav-cta {
-  background: var(--green);
-  color: #000 !important;
+  background: var(--accent);
+  color: var(--btn-text) !important;
   font-weight: 600;
   font-size: 13px;
   padding: 8px 18px;
   border-radius: 6px;
   transition: opacity 0.2s !important;
 }
-.nav-cta:hover { opacity: 0.85; color: #000 !important; }
+.nav-cta:hover { opacity: 0.85; color: var(--btn-text) !important; }
 
 /* ── Hero ── */
 .hero {
@@ -93,9 +125,9 @@ nav {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(34,197,94,0.08);
-  border: 1px solid rgba(34,197,94,0.2);
-  color: var(--green);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 500;
   padding: 5px 12px;
@@ -113,7 +145,7 @@ nav {
 }
 .hero h1 em {
   font-style: normal;
-  color: var(--green);
+  color: var(--accent);
 }
 .hero p {
   color: var(--muted);
@@ -124,8 +156,8 @@ nav {
 }
 .hero-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .btn-primary {
-  background: var(--green);
-  color: #000;
+  background: var(--accent);
+  color: var(--btn-text);
   font-weight: 600;
   font-size: 15px;
   padding: 13px 28px;
@@ -240,7 +272,7 @@ nav {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--green);
+  color: var(--accent);
   margin-bottom: 12px;
 }
 .section h2 {
@@ -264,7 +296,7 @@ nav {
 .step-num {
   font-size: 11px;
   font-family: 'SF Mono', 'Fira Code', monospace;
-  color: var(--green);
+  color: var(--accent);
   font-weight: 600;
   letter-spacing: 0.05em;
   margin-bottom: 16px;
@@ -357,14 +389,14 @@ nav {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--green), transparent);
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
 }
 .pricing-card .price-label {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--green);
+  color: var(--accent);
   margin-bottom: 16px;
 }
 .pricing-card .price {
@@ -396,7 +428,7 @@ nav {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--green);
+  background: var(--accent);
   flex-shrink: 0;
 }
 /* TODO: Replace this placeholder button with Stripe Payment Link or Stripe Checkout embed.
@@ -406,8 +438,8 @@ nav {
 .buy-btn {
   display: block;
   width: 100%;
-  background: var(--green);
-  color: #000;
+  background: var(--accent);
+  color: var(--btn-text);
   font-weight: 700;
   font-size: 15px;
   padding: 15px;
@@ -464,6 +496,15 @@ footer a:hover { color: var(--text); }
   footer { padding: 24px 20px; flex-direction: column; align-items: flex-start; }
 }
 </style>
+<script>
+  // ── THEME SELECTOR ──────────────────────────────────────────────────────
+  // Change this value to switch the page theme:
+  //   'dark'   — original dark green
+  //   'bright' — clean white with green accents
+  //   'earthy' — warm cream and terracotta
+  const THEME = 'dark';
+  document.documentElement.setAttribute('data-theme', THEME);
+</script>
 </head>
 <body>
 
@@ -484,10 +525,10 @@ footer a:hover { color: var(--text); }
 <section class="hero">
   <div class="hero-text">
     <div class="hero-tag">
-      <span>Canvas LMS</span>
+      <span>Works with Canvas</span>
     </div>
-    <h1>Know your deadlines.<br><em>No screen required.</em></h1>
-    <p>Due Light sits on your desk and shows your Canvas assignment status through a single LED. Green means clear. Yellow means soon. Red means now.</p>
+    <h1>Your kid's deadlines,<br><em>at a glance.</em></h1>
+    <p>Due Light plugs into any wall outlet and quietly monitors your child's school assignments. A small colored light on their desk tells you both — instantly — whether they're keeping up. No app to check. No texts to send.</p>
     <div class="hero-actions">
       <a href="#pricing" class="btn-primary">Get Due Light</a>
       <a href="#how-it-works" class="btn-secondary">See how it works</a>
@@ -513,22 +554,22 @@ footer a:hover { color: var(--text); }
 <!-- How it works -->
 <section class="section" id="how-it-works">
   <div class="section-label">Setup</div>
-  <h2>Up and running in minutes.</h2>
+  <h2>Set up in minutes. Works for years.</h2>
   <div class="steps">
     <div class="step">
       <div class="step-num">01</div>
       <h3>Plug it in</h3>
-      <p>USB-C power. No drivers, no software to install on your computer. The device runs its own setup hotspot the first time you turn it on.</p>
+      <p>Plug Due Light into any USB-C wall charger — the same kind used to charge a phone. No computer needed. It creates its own temporary WiFi network the first time it powers on, ready to be configured from your phone.</p>
     </div>
     <div class="step">
       <div class="step-num">02</div>
-      <h3>Connect from your phone</h3>
-      <p>Join the setup WiFi from your phone, enter your home network and Canvas API token. That's the whole configuration — takes under two minutes.</p>
+      <h3>Set it up from a computer</h3>
+      <p>Open the setup page on your phone and enter your home WiFi password. Then, on a computer, log into Canvas and generate a read-only access key — a short code that lets Due Light see assignments. The Canvas mobile app doesn't support this, so a computer is needed for that one step. Total setup time is about five minutes.</p>
     </div>
     <div class="step">
       <div class="step-num">03</div>
       <h3>Leave it alone</h3>
-      <p>Due Light checks Canvas automatically and updates the LED. OTA firmware updates happen in the background. You never need to touch it again.</p>
+      <p>Due Light checks Canvas automatically every few minutes and updates the light. No apps to open, no notifications to manage. It even updates its own software in the background. You genuinely never have to touch it again.</p>
     </div>
   </div>
 </section>
@@ -537,8 +578,8 @@ footer a:hover { color: var(--text); }
 
 <!-- Colors -->
 <section class="section" id="colors">
-  <div class="section-label">Signal</div>
-  <h2>One color. Total clarity.</h2>
+  <div class="section-label">The light</div>
+  <h2>One look tells you everything.</h2>
   <div class="colors-grid">
     <div class="color-card">
       <div class="color-indicator green"></div>
@@ -562,42 +603,53 @@ footer a:hover { color: var(--text); }
 
 <!-- Specs -->
 <section class="section" id="specs">
-  <div class="section-label">Hardware</div>
-  <h2>Built to sit on a desk forever.</h2>
+  <div class="section-label">Before you buy</div>
+  <h2>What you need to know.</h2>
   <div class="specs-grid">
     <div class="spec-row">
-      <span class="spec-key">Processor</span>
-      <span class="spec-val">ESP32 dual-core 240 MHz</span>
+      <span class="spec-key">Works with</span>
+      <span class="spec-val">Any school using Canvas</span>
     </div>
     <div class="spec-row">
-      <span class="spec-key">Connectivity</span>
-      <span class="spec-val">WiFi 802.11 b/g/n (2.4 GHz)</span>
+      <span class="spec-key">Setup time</span>
+      <span class="spec-val">About 5 minutes — needs a computer for one step</span>
     </div>
     <div class="spec-row">
       <span class="spec-key">Power</span>
-      <span class="spec-val">USB-C, 5V / ~100mA</span>
+      <span class="spec-val">USB-C wall charger — not a computer</span>
     </div>
     <div class="spec-row">
-      <span class="spec-key">LEDs</span>
-      <span class="spec-val">3× high-brightness (green, yellow, red)</span>
+      <span class="spec-key">Home WiFi</span>
+      <span class="spec-val">Standard home network required</span>
     </div>
     <div class="spec-row">
-      <span class="spec-key">Update method</span>
-      <span class="spec-val">OTA over WiFi, automatic</span>
+      <span class="spec-key">Canvas access</span>
+      <span class="spec-val">Requires your child's Canvas account</span>
     </div>
     <div class="spec-row">
-      <span class="spec-key">Configuration</span>
-      <span class="spec-val">Mobile web UI, no app install</span>
+      <span class="spec-key">Updates</span>
+      <span class="spec-val">Automatic — no action needed</span>
     </div>
     <div class="spec-row">
-      <span class="spec-key">Compatible with</span>
-      <span class="spec-val">Canvas LMS (Instructure)</span>
+      <span class="spec-key">Subscription</span>
+      <span class="spec-val">None — one-time purchase</span>
     </div>
     <div class="spec-row">
-      <span class="spec-key">Works at</span>
-      <span class="spec-val">Any school using Canvas</span>
+      <span class="spec-key">Warranty</span>
+      <span class="spec-val">1 year</span>
     </div>
   </div>
+  <details style="margin-top:20px;">
+    <summary style="cursor:pointer;font-size:13px;color:var(--muted);padding:8px 0;list-style:none;display:flex;align-items:center;gap:6px;">
+      <span style="font-size:10px;">▶</span> Technical specifications
+    </summary>
+    <div class="specs-grid" style="margin-top:12px;">
+      <div class="spec-row"><span class="spec-key">Processor</span><span class="spec-val">ESP32 dual-core 240 MHz</span></div>
+      <div class="spec-row"><span class="spec-key">Connectivity</span><span class="spec-val">WiFi 802.11 b/g/n (2.4 GHz)</span></div>
+      <div class="spec-row"><span class="spec-key">Power draw</span><span class="spec-val">5V / ~100mA via USB-C</span></div>
+      <div class="spec-row"><span class="spec-key">Indicators</span><span class="spec-val">3× high-brightness LEDs</span></div>
+    </div>
+  </details>
 </section>
 
 <hr class="divider">
@@ -610,11 +662,11 @@ footer a:hover { color: var(--text); }
       <div class="price"><sup>$</sup>??</div>
       <div class="price-note">One-time purchase. No subscription.</div>
       <ul class="feature-list">
-        <li>Due Light hardware unit</li>
-        <li>USB-C cable included</li>
-        <li>Free OTA firmware updates</li>
-        <li>Works with any Canvas institution</li>
-        <li>Setup takes under 2 minutes</li>
+        <li>Due Light device + USB-C cable included</li>
+        <li>Works at any school that uses Canvas</li>
+        <li>Plugs into a wall outlet — no computer required</li>
+        <li>Takes about 5 minutes — needs a computer once to set up</li>
+        <li>Updates itself automatically over WiFi</li>
         <li>1-year warranty</li>
       </ul>
       <!-- TODO: Create a Stripe Payment Link at stripe.com/payment-links and replace
@@ -622,7 +674,7 @@ footer a:hover { color: var(--text); }
            Recommended: use a Stripe Payment Link for simplicity on first launch.
            Set the product as a one-time physical purchase and enable shipping collection. -->
       <button class="buy-btn" disabled>Coming soon</button>
-      <div class="coming-soon-note">Join the waitlist — email <a href="mailto:hello@due-light.com" style="color:var(--green)">hello@due-light.com</a></div>
+      <div class="coming-soon-note">Join the waitlist — email <a href="mailto:hello@due-light.com" style="color:var(--accent)">hello@due-light.com</a></div>
     </div>
   </div>
 </section>
@@ -638,7 +690,7 @@ footer a:hover { color: var(--text); }
     <a href="mailto:hello@due-light.com">Contact</a>
     <a href="https://dashboard.due-light.com">Dashboard</a>
   </div>
-  <span>&copy; 2025 Due Light. All rights reserved.</span>
+  <span>&copy; 2026 Due Light. All rights reserved.</span>
 </footer>
 
 </body>

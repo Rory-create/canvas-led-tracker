@@ -6,11 +6,11 @@
 <title>Canvas LED Tracker — Dashboard</title>
 <style>
 :root {
-  --bg: #0f1117;
-  --surface: #1a1d27;
-  --border: #2a2d3a;
-  --text: #e2e8f0;
-  --muted: #6b7280;
+  --bg: #ddd6c4;
+  --surface: #faf5eb;
+  --border: #b5a688;
+  --text: #1c1408;
+  --muted: #5e4e38;
   --green: #22c55e;
   --yellow: #eab308;
   --red: #ef4444;
@@ -26,7 +26,7 @@ a { color: var(--blue); text-decoration: none; }
 .header h1 { font-size: 18px; font-weight: 600; }
 .header .subtitle { color: var(--muted); font-size: 13px; }
 .header .refresh-btn { margin-left: auto; background: var(--border); border: 1px solid var(--border); color: var(--text); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
-.header .refresh-btn:hover { background: #3a3d4a; }
+.header .refresh-btn:hover { background: var(--border); }
 .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
 
 /* Stat cards */
@@ -41,20 +41,20 @@ a { color: var(--blue); text-decoration: none; }
 .stat.purple .value { color: var(--purple); }
 
 /* Section */
-.section-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.section-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
 .section-title .count { background: var(--border); color: var(--muted); font-size: 11px; padding: 2px 8px; border-radius: 10px; }
 .section { margin-bottom: 32px; }
 
 /* Alert banner */
-.alert-banner { background: #2d1b1b; border: 1px solid #7f1d1d; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; color: #fca5a5; font-size: 13px; display: none; }
+.alert-banner { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; color: #b91c1c; font-size: 13px; display: none; }
 .alert-banner.visible { display: block; }
 
 /* Units grid */
 .units-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
-.unit-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; transition: border-color 0.2s; }
-.unit-card.error { border-color: #7f1d1d; }
-.unit-card.stale { border-color: #78350f; }
-.unit-card.healthy { border-color: #14532d; }
+.unit-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 10px; padding: 18px; transition: border-color 0.2s; }
+.unit-card.error { border-color: rgba(239,68,68,0.5); }
+.unit-card.stale { border-color: rgba(234,179,8,0.5); }
+.unit-card.healthy { border-color: rgba(77,107,60,0.5); border-left-color: #3d5a2e; }
 .unit-card.unactivated { border-color: var(--border); opacity: 0.7; }
 
 .unit-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
@@ -77,10 +77,10 @@ a { color: var(--blue); text-decoration: none; }
 .unit-footer { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
 .unit-footer .last-seen { color: var(--muted); font-size: 11px; }
 .badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
-.badge.setup { background: #14532d; color: #86efac; }
-.badge.not-setup { background: #1c1917; color: var(--muted); }
-.badge.fw { background: #1e1b4b; color: #a5b4fc; }
-.badge.error { background: #450a0a; color: #fca5a5; }
+.badge.setup { background: rgba(77,107,60,0.15); color: #4d6b3c; }
+.badge.not-setup { background: var(--border); color: var(--muted); }
+.badge.fw { background: rgba(59,130,246,0.1); color: #2563eb; }
+.badge.error { background: rgba(239,68,68,0.1); color: #dc2626; }
 
 /* Assignment status labels */
 .assign-label { font-size: 12px; font-weight: 600; }
@@ -94,7 +94,7 @@ a { color: var(--blue); text-decoration: none; }
 .bugs-table th { text-align: left; color: var(--muted); font-size: 12px; font-weight: 500; padding: 8px 12px; border-bottom: 1px solid var(--border); }
 .bugs-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
 .bugs-table tr:last-child td { border-bottom: none; }
-.bugs-table tr:hover td { background: #1f2233; }
+.bugs-table tr:hover td { background: var(--border); }
 .bugs-table .resolve-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
 .bugs-table .resolve-btn:hover { border-color: var(--green); color: var(--green); }
 .bug-detail { font-family: monospace; font-size: 11px; color: var(--muted); max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
