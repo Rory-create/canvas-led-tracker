@@ -221,6 +221,7 @@ app.get('/api/whoami', (req, res) => {
 
 // POST /api/telemetry  — heartbeat from a device
 app.post('/api/telemetry', rateLimitMiddleware, authMiddleware, (req, res) => {
+  console.log(`[telemetry] POST from ${req.headers['cf-connecting-ip'] || req.socket.remoteAddress} — device_id: ${req.body && req.body.device_id}`);
   const body = req.body;
   if (!body || !body.device_id) {
     return res.status(400).json({ error: 'device_id required' });
