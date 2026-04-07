@@ -44,10 +44,12 @@ setInterval(() => {
 // Discord webhook for alerting — set DISCORD_WEBHOOK_URL env var to enable
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL || null;
 
-// Stripe — set STRIPE_SECRET_KEY, STRIPE_PRICE_ID, and STRIPE_WEBHOOK_SECRET in .env
-// Run `node create-stripe-product.js` once to create the product and get STRIPE_PRICE_ID.
+// Stripe — set STRIPE_SECRET_KEY, STRIPE_PRICE_ID, STRIPE_CABLE_PRICE_ID, and
+// STRIPE_WEBHOOK_SECRET in .env. Run `node create-stripe-product.js` once to
+// create both products and get the price IDs.
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || null;
 const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID || null;
+const STRIPE_CABLE_PRICE_ID = process.env.STRIPE_CABLE_PRICE_ID || null;
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || null;
 const stripe = STRIPE_SECRET_KEY ? Stripe(STRIPE_SECRET_KEY) : null;
 
@@ -250,14 +252,21 @@ app.get('/api/whoami', (req, res) => {
 });
 
 // POST /create-checkout-session — start a Stripe Checkout for a Due Light purchase
+// Body: { addCable: boolean }
 app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
   if (!STRIPE_PRICE_ID) return res.status(503).json({ error: 'STRIPE_PRICE_ID not set — run create-stripe-product.js first' });
 
+  const addCable = req.body && req.body.addCable === true;
+  const lineItems = [{ price: STRIPE_PRICE_ID, quantity: 1 }];
+  if (addCable && STRIPE_CABLE_PRICE_ID) {
+    lineItems.push({ price: STRIPE_CABLE_PRICE_ID, quantity: 1 });
+  }
+
   const origin = req.headers.origin || `https://${req.headers.host}`;
   try {
     const session = await stripe.checkout.sessions.create({
-      line_items: [{ price: STRIPE_PRICE_ID, quantity: 1 }],
+      line_items: lineItems,
       mode: 'payment',
       shipping_address_collection: { allowed_countries: ['US'] },
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,

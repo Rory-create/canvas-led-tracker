@@ -1,9 +1,12 @@
-// One-time setup script — run this once to create the Due Light product and price in Stripe.
+// One-time setup script — run this once to create both Stripe products.
 // Usage:
-//   STRIPE_SECRET_KEY=sk_live_... PRICE_CENTS=4900 node create-stripe-product.js
+//   STRIPE_SECRET_KEY=sk_live_... node create-stripe-product.js
 //
-// PRICE_CENTS is required — set it to your price in cents (e.g. 5000 for $50.00).
-// After running, copy the printed STRIPE_PRICE_ID into your .env file.
+// Creates:
+//   Due Light device   — $20.00  → STRIPE_PRICE_ID
+//   USB-C cable add-on — $2.00   → STRIPE_CABLE_PRICE_ID
+//
+// After running, copy both printed values into your .env file.
 
 require('dotenv').config();
 const Stripe = require('stripe');
@@ -13,32 +16,29 @@ if (!secretKey) {
   console.error('Error: STRIPE_SECRET_KEY is not set.');
   process.exit(1);
 }
-
-const priceCents = parseInt(process.env.PRICE_CENTS || '', 10);
-if (!priceCents || isNaN(priceCents)) {
-  console.error('Error: PRICE_CENTS is required. Example: PRICE_CENTS=5000 node create-stripe-product.js');
-  process.exit(1);
-}
 const stripe = Stripe(secretKey);
 
 async function main() {
-  console.log(`Creating Due Light product at $${(priceCents / 100).toFixed(2)}...`);
+  console.log('Creating Due Light products in Stripe...\n');
 
-  const product = await stripe.products.create({
+  const device = await stripe.products.create({
     name: 'Due Light',
     description: 'LED assignment deadline tracker. Works with any school that uses Canvas. One-time purchase, no subscription.',
-    default_price_data: {
-      currency: 'usd',
-      unit_amount: priceCents,
-    },
+    default_price_data: { currency: 'usd', unit_amount: 2000 },
     shippable: true,
   });
 
-  console.log('\nDone!\n');
-  console.log('Product ID:', product.id);
-  console.log('Price ID: ', product.default_price);
-  console.log('\nAdd this to your .env file:');
-  console.log(`STRIPE_PRICE_ID=${product.default_price}`);
+  const cable = await stripe.products.create({
+    name: 'USB-C Cable',
+    description: 'USB-C power cable for Due Light.',
+    default_price_data: { currency: 'usd', unit_amount: 200 },
+    shippable: true,
+  });
+
+  console.log('Done!\n');
+  console.log('Add these to your .env file:');
+  console.log(`STRIPE_PRICE_ID=${device.default_price}`);
+  console.log(`STRIPE_CABLE_PRICE_ID=${cable.default_price}`);
 }
 
 main().catch((err) => {
