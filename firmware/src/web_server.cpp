@@ -219,12 +219,12 @@ small{font-size:12px;color:var(--mt);line-height:1.5;display:block;margin-top:4p
 .btn{display:block;width:100%;padding:13px;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin:6px 0;}
 .btn-save{background:var(--gr);color:#fff;}
 .btn-save:hover{opacity:.87;}
-.btn-refresh{background:rgba(23,162,184,.12);color:#17a2b8;border:1px solid rgba(23,162,184,.25);}
-.btn-refresh:hover{background:rgba(23,162,184,.2);}
-.btn-reboot{background:rgba(255,152,0,.1);color:#ff9800;border:1px solid rgba(255,152,0,.25);}
-.btn-reboot:hover{background:rgba(255,152,0,.18);}
-.btn-reset{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.25);}
-.btn-reset:hover{background:rgba(239,68,68,.18);}
+.btn-refresh{background:rgba(23,162,184,.22);color:#17a2b8;border:1px solid rgba(23,162,184,.35);}
+.btn-refresh:hover{background:rgba(23,162,184,.32);}
+.btn-reboot{background:rgba(255,152,0,.2);color:#ff9800;border:1px solid rgba(255,152,0,.35);}
+.btn-reboot:hover{background:rgba(255,152,0,.28);}
+.btn-reset{background:rgba(239,68,68,.2);color:var(--red);border:1px solid rgba(239,68,68,.35);}
+.btn-reset:hover{background:rgba(239,68,68,.28);}
 .result{padding:10px 12px;margin:8px 0;border-radius:7px;font-size:13px;display:none;}
 .result.ok{background:rgba(77,107,60,.1);border:1px solid rgba(77,107,60,.25);color:var(--gr);}
 .result.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--red);}
@@ -254,6 +254,7 @@ Device: <span>%DEVICE_NAME%</span>
 WiFi: %WIFI_STATUS%
 Assignment: <span>%ASSIGNMENT_STATUS%</span>
 Checked: <span>%LAST_CHECK%</span>
+Firmware: <span>%FW_VERSION%</span>
 </div>
 %ERROR_ALERT%
 %ASSIGNMENTS_SECTION%
@@ -445,7 +446,12 @@ void handleRoot() {
 void handleSettings() {
   String html = FPSTR(SETTINGS_HTML);
   html.replace("%DEVICE_NAME%", systemConfig.deviceName);
-  html.replace("%WIFI_STATUS%", WiFi.status() == WL_CONNECTED ? "" : "");
+  html.replace("%FW_VERSION%", FIRMWARE_VERSION);
+  if (WiFi.status() == WL_CONNECTED) {
+    html.replace("%WIFI_STATUS%", "<span>" + WiFi.SSID() + " (" + WiFi.localIP().toString() + ")</span>");
+  } else {
+    html.replace("%WIFI_STATUS%", "<span style='color:var(--red)'>Disconnected</span>");
+  }
 
   String statusText = "None";
   if (assignmentStatus == 0) {

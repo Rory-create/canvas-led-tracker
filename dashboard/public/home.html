@@ -110,6 +110,9 @@ nav {
   transition: opacity 0.2s !important;
 }
 .nav-cta:hover { opacity: 0.85; color: var(--btn-text) !important; }
+.nav-left { display: flex; align-items: center; }
+.nav-setup-link { color: var(--muted); font-size: 14px; transition: color 0.2s; margin-left: 18px; padding-left: 18px; border-left: 1px solid var(--border); }
+.nav-setup-link:hover { color: var(--text); }
 
 /* ── Hero ── */
 .hero {
@@ -431,10 +434,6 @@ nav {
   background: var(--accent);
   flex-shrink: 0;
 }
-/* TODO: Replace this placeholder button with Stripe Payment Link or Stripe Checkout embed.
-   Stripe docs: https://stripe.com/docs/payments/payment-links
-   For one-time hardware purchase, a Payment Link is simplest.
-   Add STRIPE_PAYMENT_LINK env var and inject it here server-side, or hardcode after creating the link. */
 .buy-btn {
   display: block;
   width: 100%;
@@ -446,16 +445,13 @@ nav {
   border-radius: 8px;
   text-align: center;
   border: none;
-  cursor: not-allowed;
-  opacity: 0.5;
-  font-family: inherit;
-}
-.buy-btn.active {
   cursor: pointer;
   opacity: 1;
   transition: opacity 0.2s;
+  font-family: inherit;
 }
-.buy-btn.active:hover { opacity: 0.85; }
+.buy-btn:hover { opacity: 0.85; }
+.buy-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 .coming-soon-note {
   text-align: center;
   color: var(--muted);
@@ -485,6 +481,7 @@ footer a:hover { color: var(--text); }
 @media (max-width: 768px) {
   nav { padding: 16px 20px; }
   .nav-links { display: none; }
+  .nav-setup-link { display: none; }
   .hero { grid-template-columns: 1fr; padding: 60px 20px 40px; gap: 40px; text-align: center; }
   .hero-actions { justify-content: center; }
   .device-wrap { order: -1; }
@@ -509,15 +506,17 @@ footer a:hover { color: var(--text); }
 <body>
 
 <nav>
-  <a href="/" class="nav-logo" style="text-decoration:none;color:inherit;">
-    <div class="led-dot"></div>
-    Due Light
-  </a>
+  <div class="nav-left">
+    <a href="/" class="nav-logo" style="text-decoration:none;color:inherit;">
+      <div class="led-dot"></div>
+      Due Light
+    </a>
+    <a href="https://setup.due-light.com" class="nav-setup-link">Setup guide</a>
+  </div>
   <div class="nav-links">
     <a href="#how-it-works">How it works</a>
     <a href="#colors">Colors</a>
     <a href="#specs">Specs</a>
-    <a href="https://setup.due-light.com">Setup guide</a>
     <a href="#pricing" class="nav-cta">Buy now</a>
   </div>
 </nav>
@@ -662,22 +661,22 @@ footer a:hover { color: var(--text); }
   <div class="pricing-wrap">
     <div class="pricing-card">
       <div class="price-label">Due Light — Device</div>
-      <div class="price"><sup>$</sup>??</div>
+      <div class="price"><sup>$</sup>20</div>
       <div class="price-note">One-time purchase. No subscription.</div>
       <ul class="feature-list">
-        <li>Due Light device + USB-C cable included</li>
+        <li>Due Light device included</li>
         <li>Works at any school that uses Canvas</li>
         <li>Plugs into a wall outlet</li>
         <li>Takes about 5 minutes — needs a computer to set up</li>
         <li>Updates itself automatically over WiFi</li>
         <li>Rory's Guarantee</li>
       </ul>
-      <!-- TODO: Create a Stripe Payment Link at stripe.com/payment-links and replace
-           the button href below. For embedded checkout, use Stripe.js instead.
-           Recommended: use a Stripe Payment Link for simplicity on first launch.
-           Set the product as a one-time physical purchase and enable shipping collection. -->
-      <button class="buy-btn" disabled>Coming soon</button>
-      <div class="coming-soon-note">Join the waitlist — email <a href="mailto:hello@due-light.com" style="color:var(--accent)">hello@due-light.com</a></div>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer;font-size:14px;color:var(--muted);">
+        <input type="checkbox" id="add-cable" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+        Add USB-C cable &mdash; <strong style="color:var(--text);">+$2</strong>
+      </label>
+      <button class="buy-btn" id="buy-btn">Buy now</button>
+      <div id="buy-error" style="display:none;margin-top:10px;text-align:center;font-size:13px;color:#dc2626;"></div>
     </div>
   </div>
 </section>
@@ -695,6 +694,33 @@ footer a:hover { color: var(--text); }
   </div>
   <span>&copy; 2026 Due Light. All rights reserved.</span>
 </footer>
+
+<script>
+  document.getElementById('buy-btn').addEventListener('click', async function () {
+    const btn = this;
+    const errEl = document.getElementById('buy-error');
+    btn.disabled = true;
+    btn.textContent = 'Loading…';
+    errEl.style.display = 'none';
+
+    try {
+      const addCable = document.getElementById('add-cable').checked;
+      const res = await fetch('/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addCable }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || 'Unexpected error');
+      window.location.href = data.url;
+    } catch (err) {
+      errEl.textContent = 'Could not start checkout — please try again or email hello@due-light.com';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Buy now';
+    }
+  });
+</script>
 
 </body>
 </html>

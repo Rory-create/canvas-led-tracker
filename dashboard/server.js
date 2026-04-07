@@ -3,6 +3,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
+const Stripe = require('stripe');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,6 +43,15 @@ setInterval(() => {
 
 // Discord webhook for alerting — set DISCORD_WEBHOOK_URL env var to enable
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL || null;
+
+// Stripe — set STRIPE_SECRET_KEY, STRIPE_PRICE_ID, STRIPE_CABLE_PRICE_ID, and
+// STRIPE_WEBHOOK_SECRET in .env. Run `node create-stripe-product.js` once to
+// create both products and get the price IDs.
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || null;
+const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID || null;
+const STRIPE_CABLE_PRICE_ID = process.env.STRIPE_CABLE_PRICE_ID || null;
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || null;
+const stripe = STRIPE_SECRET_KEY ? Stripe(STRIPE_SECRET_KEY) : null;
 
 const DATA_DIR = path.join(__dirname, 'data');
 const UNITS_FILE = path.join(DATA_DIR, 'units.json');
@@ -185,6 +195,30 @@ function checkAndAlert(units) {
 
 // ── Middleware ─────────────────────────────────────────────────────────────
 
+// Stripe webhook must receive the raw body for signature verification —
+// register it before express.json() consumes the stream.
+app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
+  if (!STRIPE_WEBHOOK_SECRET) return res.status(503).json({ error: 'Webhook secret not configured' });
+
+  const sig = req.headers['stripe-signature'];
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error('[stripe webhook] signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    console.log(`[stripe] checkout.session.completed — session ${session.id}, customer ${session.customer_details?.email}`);
+    // TODO: fulfil the order here (e.g. send confirmation email, record sale)
+  }
+
+  res.json({ received: true });
+});
+
 app.use(express.json({ limit: '64kb' }));
 
 // Host-based routing: due-light.com (and www.) → marketing page; setup.due-light.com → setup guide; everything else → dashboard
@@ -215,6 +249,35 @@ app.post('/api/login', rateLimitMiddleware, (req, res) => {
 // GET /api/whoami — lets the browser check if it's on localhost (auto-auth)
 app.get('/api/whoami', (req, res) => {
   res.json({ localhost: isLocalhost(req) });
+});
+
+// POST /create-checkout-session — start a Stripe Checkout for a Due Light purchase
+// Body: { addCable: boolean }
+app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
+  if (!STRIPE_PRICE_ID) return res.status(503).json({ error: 'STRIPE_PRICE_ID not set — run create-stripe-product.js first' });
+
+  const addCable = req.body && req.body.addCable === true;
+  const lineItems = [{ price: STRIPE_PRICE_ID, quantity: 1 }];
+  if (addCable && STRIPE_CABLE_PRICE_ID) {
+    lineItems.push({ price: STRIPE_CABLE_PRICE_ID, quantity: 1 });
+  }
+
+  const origin = req.headers.origin || `https://${req.headers.host}`;
+  try {
+    const session = await stripe.checkout.sessions.create({
+      line_items: lineItems,
+      mode: 'payment',
+      allow_promotion_codes: true,
+      shipping_address_collection: { allowed_countries: ['US'] },
+      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/#pricing`,
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('[stripe] create-checkout-session error:', err.message);
+    res.status(500).json({ error: 'Failed to create checkout session' });
+  }
 });
 
 // ── Device API ─────────────────────────────────────────────────────────────
@@ -382,7 +445,7 @@ app.post('/api/deploy', authMiddleware, (req, res) => {
   if (!API_KEY) return res.status(503).json({ error: 'API key not configured — deploy endpoint disabled for safety' });
   const repoRoot = path.resolve(__dirname, '..');
   exec(
-    'git pull origin claude/duelight-esp32-review-1pTqB && pm2 restart canvas-dashboard',
+    'git rm --cached dashboard/package-lock.json 2>/dev/null; git clean -f dashboard/package-lock.json && git pull origin claude/duelight-esp32-review-1pTqB && pm2 restart canvas-dashboard',
     { cwd: repoRoot, timeout: 60000 },
     (err, stdout, stderr) => {
       if (err) return res.status(500).json({ error: err.message, stderr });

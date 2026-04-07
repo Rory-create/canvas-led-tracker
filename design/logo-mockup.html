@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Due Light — Logo Mockups</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #111; font-family: monospace; color: #666; padding: 48px; }
+    h1 { color: #22c55e; font-size: 16px; margin-bottom: 4px; }
+    .sub { font-size: 11px; color: #444; margin-bottom: 40px; }
+    .section { margin-bottom: 56px; }
+    .section h2 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: #333; margin-bottom: 6px; }
+    .section p  { font-size: 10px; color: #2a2a2a; margin-bottom: 16px; }
+    .row { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; }
+    .option { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .option canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
+    .option label { font-size: 10px; color: #444; letter-spacing: 0.05em; text-align: center; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <h1>Due Light — Logo Mockups</h1>
+  <p class="sub">No AI — pure canvas math &nbsp;·&nbsp; Right-click any logo → Save image as to export</p>
+
+  <!-- ── DL Monogram variations (64×64 virtual, 4× scale = 256×256) ── -->
+  <div class="section">
+    <h2>DL Monogram — Color Variants</h2>
+    <p>LED colors: green = all clear &nbsp;·&nbsp; yellow = coming up &nbsp;·&nbsp; red = urgent</p>
+    <div class="row">
+      <div class="option"><canvas id="DL1-dark"  width="256" height="256"></canvas><label>Traffic Light<br>D=green · L=red · dot=yellow</label></div>
+      <div class="option"><canvas id="DL2-dark"  width="256" height="256"></canvas><label>Gradient<br>green → yellow → red top-to-bottom</label></div>
+      <div class="option"><canvas id="DL3-dark"  width="256" height="256"></canvas><label>Glow Blooms<br>white letters on colored halos</label></div>
+      <div class="option"><canvas id="DL4-dark"  width="256" height="256"></canvas><label>Outline<br>hollow letters, RGB dot trio</label></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>DL Monogram — Earthy background</h2>
+    <div class="row">
+      <div class="option"><canvas id="DL1-light" width="256" height="256"></canvas><label>Traffic Light</label></div>
+      <div class="option"><canvas id="DL2-light" width="256" height="256"></canvas><label>Gradient</label></div>
+      <div class="option"><canvas id="DL3-light" width="256" height="256"></canvas><label>Glow Blooms</label></div>
+      <div class="option"><canvas id="DL4-light" width="256" height="256"></canvas><label>Outline</label></div>
+    </div>
+  </div>
+
+  <!-- ── Original four concepts (32×32 virtual, 6× scale = 192×192) ── -->
+  <div class="section">
+    <h2>Other Concepts — Dark</h2>
+    <div class="row">
+      <div class="option"><canvas id="A-dark" width="192" height="192"></canvas><label>A — Glow Dot</label></div>
+      <div class="option"><canvas id="B-dark" width="192" height="192"></canvas><label>B — Urgency Bars</label></div>
+      <div class="option"><canvas id="D-dark" width="192" height="192"></canvas><label>D — Pixel Bulb</label></div>
+    </div>
+  </div>
+
+  <script>
+  // ── Shared pixel primitives ───────────────────────────────────────────────
+
+  function makePx(vsize) {
+    return function px(ctx, x, y, color) {
+      if (x < 0 || x >= vsize || y < 0 || y >= vsize) return;
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, 1, 1);
+    };
+  }
+
+  function makeCircle(px, vsize) {
+    return function circle(ctx, cx, cy, r, color) {
+      for (let y = Math.ceil(cy-r); y <= Math.floor(cy+r); y++)
+        for (let x = Math.ceil(cx-r); x <= Math.floor(cx+r); x++) {
+          const dx = x-cx+0.5, dy = y-cy+0.5;
+          if (dx*dx + dy*dy <= r*r) px(ctx, x, y, color);
+        }
+    };
+  }
+
+  function makeRect(px) {
+    return function rect(ctx, x, y, w, h, color) {
+      for (let dy = 0; dy < h; dy++)
+        for (let dx = 0; dx < w; dx++)
+          px(ctx, x+dx, y+dy, color);
+    };
+  }
+
+  // Hex color lerp
+  function lerpHex(a, b, t) {
+    const p = (s, i) => parseInt(s.slice(i, i+2), 16);
+    const r = Math.round(p(a,1) + (p(b,1)-p(a,1))*t);
+    const g = Math.round(p(a,3) + (p(b,3)-p(a,3))*t);
+    const bl= Math.round(p(a,5) + (p(b,5)-p(a,5))*t);
+    return `rgb(${r},${g},${bl})`;
+  }
+
+  // green → yellow → red gradient for a given row (0..maxRow)
+  function ledColor(row, maxRow) {
+    const t = row / maxRow;
+    return t < 0.5 ? lerpHex('#22c55e', '#eab308', t*2)
+                   : lerpHex('#eab308', '#ef4444', (t-0.5)*2);
+  }
+
+  // Render an offscreen canvas of `vsize` virtual pixels scaled to `canvas`
+  function render(id, vsize, drawFn, bg) {
+    const canvas = document.getElementById(id);
+    if (!canvas) return;
+    const off = document.createElement('canvas');
+    off.width = off.height = vsize;
+    const oc = off.getContext('2d');
+    oc.imageSmoothingEnabled = false;
+    oc.fillStyle = bg;
+    oc.fillRect(0, 0, vsize, vsize);
+    drawFn(oc, vsize);
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
+  }
+
+  // ── DL glyph data ─────────────────────────────────────────────────────────
+
+  const GLYPH_D = [
+    [1,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,1,1,1,0],
+  ];
+  const GLYPH_L = [
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,1,1,1,1],
+  ];
+
+  // Draw a glyph with a per-row color callback: colorFn(row) → color string
+  function drawGlyph(px, rect, glyph, ox, oy, ps, colorFn) {
+    for (let gy = 0; gy < glyph.length; gy++) {
+      const color = colorFn(gy);
+      for (let gx = 0; gx < glyph[gy].length; gx++)
+        if (glyph[gy][gx])
+          rect(null, ox + gx*ps, oy + gy*ps, ps, ps, color);  // rect uses closure ctx
+    }
+  }
+
+  // ── DL monogram shared layout (64×64 virtual) ─────────────────────────────
+  // Returns { ox, oy, ps, gW, gH, gapX, dotCx, dotCy }
+  function dlLayout() {
+    const ps = 3, gW = 5*ps, gH = 7*ps, gapX = 6, vsize = 64;
+    const totalW = gW + gapX + gW;
+    const ox = Math.floor((vsize - totalW) / 2);
+    const oy = Math.floor((vsize - gH) / 2) + 1;
+    // separator dot: horizontally centred in the gap, vertically centred in letters
+    const dotCx = ox + gW + gapX/2 - 0.5;
+    const dotCy = oy + gH/2 - 0.5;
+    return { ox, oy, ps, gW, gH, gapX, dotCx, dotCy };
+  }
+
+  // ── DL1: Traffic Light ────────────────────────────────────────────────────
+  // D = green, separator dot = yellow, L = red
+  function drawDL1(ctx) {
+    const px = makePx(64), circle = makeCircle(px, 64);
+    const rect = (_, x, y, w, h, c) => { for(let dy=0;dy<h;dy++) for(let dx=0;dx<w;dx++) px(ctx,x+dx,y+dy,c); };
+    const { ox, oy, ps, gW, gH, gapX, dotCx, dotCy } = dlLayout();
+
+    // subtle glow halos behind each letter
+    circle(ctx, ox + gW/2,        oy + gH/2, gW*0.9, 'rgba(34,197,94,0.18)');
+    circle(ctx, ox + gW + gapX + gW/2, oy + gH/2, gW*0.9, 'rgba(239,68,68,0.18)');
+
+    // D — green
+    for (let gy = 0; gy < GLYPH_D.length; gy++)
+      for (let gx = 0; gx < GLYPH_D[gy].length; gx++)
+        if (GLYPH_D[gy][gx]) rect(null, ox + gx*ps, oy + gy*ps, ps, ps, '#22c55e');
+
+    // L — red
+    const lx = ox + gW + gapX;
+    for (let gy = 0; gy < GLYPH_L.length; gy++)
+      for (let gx = 0; gx < GLYPH_L[gy].length; gx++)
+        if (GLYPH_L[gy][gx]) rect(null, lx + gx*ps, oy + gy*ps, ps, ps, '#ef4444');
+
+    // separator dot — yellow, glowing
+    circle(ctx, dotCx, dotCy, 3.5, 'rgba(234,179,8,0.35)');
+    circle(ctx, dotCx, dotCy, 2,   '#eab308');
+    px(ctx, Math.floor(dotCx)-1, Math.floor(dotCy)-1, '#ffffff');
+  }
+
+  // ── DL2: Gradient ─────────────────────────────────────────────────────────
+  // Both letters: green (top) → yellow (mid) → red (bottom) row by row
+  function drawDL2(ctx) {
+    const px = makePx(64), circle = makeCircle(px, 64);
+    const rect = (_, x, y, w, h, c) => { for(let dy=0;dy<h;dy++) for(let dx=0;dx<w;dx++) px(ctx,x+dx,y+dy,c); };
+    const { ox, oy, ps, gW, gH, gapX, dotCx, dotCy } = dlLayout();
+    const lx = ox + gW + gapX;
+    const rows = GLYPH_D.length - 1;
+
+    for (let gy = 0; gy < GLYPH_D.length; gy++) {
+      const color = ledColor(gy, rows);
+      for (let gx = 0; gx < GLYPH_D[gy].length; gx++)
+        if (GLYPH_D[gy][gx]) rect(null, ox + gx*ps, oy + gy*ps, ps, ps, color);
+      for (let gx = 0; gx < GLYPH_L[gy].length; gx++)
+        if (GLYPH_L[gy][gx]) rect(null, lx + gx*ps, oy + gy*ps, ps, ps, color);
+    }
+
+    // 3 LED dots stacked in the gap — green · yellow · red
+    const spacing = 7;
+    const leds = [
+      ['#22c55e', 'rgba(34,197,94,0.35)',  -spacing],
+      ['#eab308', 'rgba(234,179,8,0.35)',   0],
+      ['#ef4444', 'rgba(239,68,68,0.35)',   spacing],
+    ];
+    leds.forEach(([col, glow, dy]) => {
+      circle(ctx, dotCx, dotCy + dy, 2.5, glow);
+      circle(ctx, dotCx, dotCy + dy, 1.5, col);
+      px(ctx, Math.floor(dotCx), Math.floor(dotCy + dy) - 1, '#ffffff');
+    });
+  }
+
+  // ── DL3: Glow Blooms ──────────────────────────────────────────────────────
+  // White pixel letters sitting on top of strong green/red color halos
+  function drawDL3(ctx) {
+    const px = makePx(64), circle = makeCircle(px, 64);
+    const rect = (_, x, y, w, h, c) => { for(let dy=0;dy<h;dy++) for(let dx=0;dx<w;dx++) px(ctx,x+dx,y+dy,c); };
+    const { ox, oy, ps, gW, gH, gapX, dotCx, dotCy } = dlLayout();
+    const lx = ox + gW + gapX;
+
+    // large soft color blooms
+    circle(ctx, ox + gW/2,           oy + gH/2, gW*1.1, 'rgba(34,197,94,0.22)');
+    circle(ctx, ox + gW/2,           oy + gH/2, gW*0.7, 'rgba(34,197,94,0.30)');
+    circle(ctx, lx + gW/2,           oy + gH/2, gW*1.1, 'rgba(239,68,68,0.22)');
+    circle(ctx, lx + gW/2,           oy + gH/2, gW*0.7, 'rgba(239,68,68,0.30)');
+
+    // white letters
+    for (let gy = 0; gy < GLYPH_D.length; gy++) {
+      for (let gx = 0; gx < GLYPH_D[gy].length; gx++)
+        if (GLYPH_D[gy][gx]) rect(null, ox + gx*ps, oy + gy*ps, ps, ps, '#ffffff');
+      for (let gx = 0; gx < GLYPH_L[gy].length; gx++)
+        if (GLYPH_L[gy][gx]) rect(null, lx + gx*ps, oy + gy*ps, ps, ps, '#ffffff');
+    }
+
+    // yellow glow dot
+    circle(ctx, dotCx, dotCy, 3.5, 'rgba(234,179,8,0.4)');
+    circle(ctx, dotCx, dotCy, 2,   '#eab308');
+    px(ctx, Math.floor(dotCx), Math.floor(dotCy)-1, '#ffffff');
+  }
+
+  // ── DL4: Outline ──────────────────────────────────────────────────────────
+  // Hollow outlined letters; RGB trio of dots as accent
+  function drawDL4(ctx) {
+    const px = makePx(64), circle = makeCircle(px, 64);
+    const { ox, oy, ps, gW, gapX, dotCx, dotCy } = dlLayout();
+    const lx = ox + gW + gapX;
+
+    function isEdge(glyph, gy, gx) {
+      if (!glyph[gy][gx]) return false;
+      return [[gy-1,gx],[gy+1,gx],[gy,gx-1],[gy,gx+1]].some(
+        ([ny,nx]) => ny < 0 || ny >= glyph.length || nx < 0 || nx >= glyph[0].length || !glyph[ny][nx]
+      );
+    }
+
+    for (let gy = 0; gy < GLYPH_D.length; gy++) {
+      const color = ledColor(gy, GLYPH_D.length - 1);
+      for (let gx = 0; gx < GLYPH_D[gy].length; gx++) {
+        if (!isEdge(GLYPH_D, gy, gx)) continue;
+        for (let dy = 0; dy < ps; dy++)
+          for (let dx = 0; dx < ps; dx++)
+            px(ctx, ox + gx*ps+dx, oy + gy*ps+dy, color);
+      }
+      for (let gx = 0; gx < GLYPH_L[gy].length; gx++) {
+        if (!isEdge(GLYPH_L, gy, gx)) continue;
+        for (let dy = 0; dy < ps; dy++)
+          for (let dx = 0; dx < ps; dx++)
+            px(ctx, lx + gx*ps+dx, oy + gy*ps+dy, color);
+      }
+    }
+
+    // RGB trio of dots: green · yellow · red stacked in the gap
+    const { oy: baseY, gH } = dlLayout();
+    const spacing = 6;
+    const trioCy = baseY + gH/2;
+    [['#22c55e', -spacing], ['#eab308', 0], ['#ef4444', spacing]].forEach(([col, dy]) => {
+      circle(ctx, dotCx, trioCy + dy, 2, col);
+      px(ctx, Math.floor(dotCx), Math.floor(trioCy + dy) - 1, '#ffffff');
+    });
+  }
+
+  // ── Original concepts (32×32 virtual) ────────────────────────────────────
+
+  const C32 = {
+    gDark:'#2d4a22', gMid:'#4d6b3c', gBright:'#22c55e',
+    gGlow:'#86efac', gFaint:'#dcfce7', white:'#ffffff',
+  };
+
+  function drawA(ctx) {
+    const px = makePx(32), circle = makeCircle(px, 32);
+    const cx = 15.5, cy = 15.5;
+    circle(ctx, cx, cy, 10,  C32.gFaint);
+    circle(ctx, cx, cy, 7.5, C32.gGlow);
+    circle(ctx, cx, cy, 5.5, C32.gBright);
+    circle(ctx, cx, cy, 3.5, C32.gMid);
+    px(ctx, 12, 11, C32.white); px(ctx, 13, 11, C32.white); px(ctx, 12, 12, C32.white);
+  }
+
+  function drawB(ctx) {
+    const px = makePx(32), circle = makeCircle(px, 32);
+    const barW = 4, gap = 3, startX = 7, bottom = 27;
+    const bars = [{h:8,color:C32.gMid},{h:13,color:C32.gBright},{h:19,color:C32.gBright}];
+    bars.forEach(({h, color}, i) => {
+      for (let y = bottom-h; y < bottom; y++)
+        for (let x = startX+i*(barW+gap); x < startX+i*(barW+gap)+barW; x++)
+          px(ctx, x, y, color);
+    });
+    const dotCx = startX + 2*(barW+gap) + barW/2 - 0.5;
+    const dotCy = bottom - bars[2].h - 4.5;
+    circle(ctx, dotCx, dotCy, 3.5, C32.gGlow);
+    circle(ctx, dotCx, dotCy, 2,   C32.gBright);
+    px(ctx, Math.round(dotCx)-1, Math.round(dotCy)-1, C32.white);
+  }
+
+  function drawDPixelBulb(ctx) {
+    const px = makePx(32), circle = makeCircle(px, 32);
+    const body = [
+      [14,17],[12,19],[11,20],[10,21],[10,21],[10,21],[10,21],
+      [11,20],[12,19],[13,18],[14,17],[14,17],
+      [13,18],[13,18],[14,17],[14,17],[15,16],
+    ];
+    circle(ctx, 16, 9, 9, C32.gFaint);
+    body.forEach(([x0,x1], i) => {
+      const color = i >= 12 ? C32.gDark : i >= 9 ? C32.gMid : i <= 4 ? C32.gBright : C32.gMid;
+      for (let x = x0; x <= x1; x++) px(ctx, x, 5+i, color);
+    });
+    circle(ctx, 16, 9, 4.5, C32.gBright);
+    circle(ctx, 16, 9, 2.5, C32.gGlow);
+    px(ctx, 13, 7, C32.white); px(ctx, 14, 7, C32.white); px(ctx, 13, 8, C32.white);
+  }
+
+  // ── Render all ────────────────────────────────────────────────────────────
+
+  const BG_DARK  = '#111111';
+  const BG_LIGHT = '#ede8da';
+
+  ['DL1','DL2','DL3','DL4'].forEach(name => {
+    const fn = {DL1:drawDL1, DL2:drawDL2, DL3:drawDL3, DL4:drawDL4}[name];
+    render(`${name}-dark`,  64, fn, BG_DARK);
+    render(`${name}-light`, 64, fn, BG_LIGHT);
+  });
+
+  render('A-dark', 32, drawA,          BG_DARK);
+  render('B-dark', 32, drawB,          BG_DARK);
+  render('D-dark', 32, drawDPixelBulb, BG_DARK);
+  </script>
+</body>
+</html>
