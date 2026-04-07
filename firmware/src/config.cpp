@@ -1,5 +1,6 @@
 #include "config.h"
 #include "secrets.h"
+#include <WiFi.h>
 
 // ============================================
 // GLOBAL VARIABLE DEFINITIONS
@@ -138,7 +139,11 @@ void loadConfig() {
     if (strlen(timezoneConfig.displayName) == 0) strcpy(timezoneConfig.displayName, "US Eastern");
 
     preferences.getString("devName", systemConfig.deviceName, sizeof(systemConfig.deviceName));
-    if (strlen(systemConfig.deviceName) == 0) strcpy(systemConfig.deviceName, "Canvas_LED_Tracker");
+    if (strlen(systemConfig.deviceName) == 0) {
+      uint8_t mac[6];
+      WiFi.macAddress(mac);
+      snprintf(systemConfig.deviceName, sizeof(systemConfig.deviceName), "DueLight-%02X%02X", mac[4], mac[5]);
+    }
 
     systemConfig.debugMode = preferences.getBool("debug", true);
 
