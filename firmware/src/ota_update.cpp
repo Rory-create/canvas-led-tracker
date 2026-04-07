@@ -31,7 +31,8 @@ void checkForOTAUpdate() {
   unsigned long now = millis();
 
   // Normal 24h check; if last attempt failed, allow retry after 1h
-  bool normalDue  = (now - lastOTACheck   >= OTA_CHECK_INTERVAL_MS);
+  // lastOTACheck == 0 means never checked — always run on first boot
+  bool normalDue  = (lastOTACheck == 0) || (now - lastOTACheck >= OTA_CHECK_INTERVAL_MS);
   bool retryDue   = (lastOTAFailure > 0) && (now - lastOTAFailure >= OTA_RETRY_INTERVAL_MS);
   if (!normalDue && !retryDue) return;
 
