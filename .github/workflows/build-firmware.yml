@@ -72,6 +72,18 @@ jobs:
         name: firmware-${{ steps.version.outputs.version }}
         path: firmware/builds/
     
+    - name: Update OTA firmware binary in repo
+      if: github.ref == 'refs/heads/main'
+      run: |
+        cp firmware/.pio/build/esp32dev/firmware.bin ota/firmware.bin
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add ota/firmware.bin
+        git commit -m "ota: update firmware.bin to v${{ steps.version.outputs.version }}" || echo "No changes to commit"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Create/Update Release
       uses: softprops/action-gh-release@v2.3.2
       if: github.ref == 'refs/heads/main'
