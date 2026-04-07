@@ -444,7 +444,7 @@ app.post('/api/deploy', authMiddleware, (req, res) => {
   if (!API_KEY) return res.status(503).json({ error: 'API key not configured — deploy endpoint disabled for safety' });
   const repoRoot = path.resolve(__dirname, '..');
   exec(
-    'git pull origin claude/duelight-esp32-review-1pTqB && pm2 restart canvas-dashboard',
+    'git rm --cached dashboard/package-lock.json 2>/dev/null; git clean -f dashboard/package-lock.json && git pull origin claude/duelight-esp32-review-1pTqB && pm2 restart canvas-dashboard',
     { cwd: repoRoot, timeout: 60000 },
     (err, stdout, stderr) => {
       if (err) return res.status(500).json({ error: err.message, stderr });
