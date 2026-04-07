@@ -13,7 +13,7 @@ int fetchCanvasAssignments() {
 
     // Report critical errors to GitHub
     if (consecutiveErrors >= 10) {
-      createGitHubIssue();
+      reportBug();
     }
 
     return 0;  // Return 0 = ERROR state (all LEDs flash)
@@ -62,7 +62,7 @@ int fetchCanvasAssignments() {
         if (freeHeap < 15000) {
           currentErrorCode = ERR_MEMORY_LOW;
           Serial.println("[CRITICAL] Memory below 15KB threshold!");
-          createGitHubIssue();
+          reportBug();
         }
 
         // Memory analysis
@@ -267,7 +267,7 @@ int fetchCanvasAssignments() {
               Serial.printf("   Max allowed (90%% heap): %d bytes\n", maxBuffer);
               Serial.println("   Returning ERROR state - all LEDs will flash");
               currentErrorCode = ERR_BUFFER_EXHAUSTED;
-              createGitHubIssue();
+              reportBug();
               http.end();
               consecutiveErrors++;
               return 0;  // Return ERROR state
