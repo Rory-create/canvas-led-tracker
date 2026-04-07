@@ -81,9 +81,10 @@ temp/
 # -------------------------------
 # Dependencies & Libraries
 # -------------------------------
-node_modules/          # If you use Node.js tools
+node_modules/
 .npm/
-vendor/                # Third-party code
+# Third-party code
+vendor/
 
 # -------------------------------
 # Build & Test Artifacts
