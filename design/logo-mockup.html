@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Due Light — Logo Mockups</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #111; font-family: monospace; color: #666; padding: 48px; }
+    h1 { color: #22c55e; font-size: 16px; margin-bottom: 4px; }
+    .sub { font-size: 11px; color: #444; margin-bottom: 40px; }
+    .section { margin-bottom: 48px; }
+    .section h2 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: #333; margin-bottom: 16px; }
+    .row { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; }
+    .option { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .option canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
+    .option label { font-size: 10px; color: #444; letter-spacing: 0.05em; }
+  </style>
+</head>
+<body>
+  <h1>Due Light — Logo Mockups</h1>
+  <p class="sub">No AI — pure canvas math &nbsp;·&nbsp; Right-click any logo → Save image as to export</p>
+
+  <div class="section">
+    <h2>Dark background</h2>
+    <div class="row">
+      <div class="option"><canvas id="A-dark" width="192" height="192"></canvas><label>A — Glow Dot</label></div>
+      <div class="option"><canvas id="B-dark" width="192" height="192"></canvas><label>B — Urgency Bars</label></div>
+      <div class="option"><canvas id="C-dark" width="192" height="192"></canvas><label>C — DL Monogram</label></div>
+      <div class="option"><canvas id="D-dark" width="192" height="192"></canvas><label>D — Pixel Bulb</label></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Earthy background (site color)</h2>
+    <div class="row">
+      <div class="option"><canvas id="A-light" width="192" height="192"></canvas><label>A — Glow Dot</label></div>
+      <div class="option"><canvas id="B-light" width="192" height="192"></canvas><label>B — Urgency Bars</label></div>
+      <div class="option"><canvas id="C-light" width="192" height="192"></canvas><label>C — DL Monogram</label></div>
+      <div class="option"><canvas id="D-light" width="192" height="192"></canvas><label>D — Pixel Bulb</label></div>
+    </div>
+  </div>
+
+  <script>
+  // ── Palette ───────────────────────────────────────────────────────────────
+  const C = {
+    gDark:   '#2d4a22',
+    gMid:    '#4d6b3c',
+    gBright: '#22c55e',
+    gGlow:   '#86efac',
+    gFaint:  '#dcfce7',
+    white:   '#ffffff',
+  };
+
+  const VSIZE = 32;   // virtual canvas: 32×32 pixels
+  const SCALE = 6;    // each virtual pixel → 6×6 real pixels = 192×192
+
+  // Draw one virtual pixel on a 32×32 ctx
+  function px(ctx, x, y, color) {
+    if (x < 0 || x >= VSIZE || y < 0 || y >= VSIZE) return;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  // Filled circle (pixel-exact, no anti-aliasing)
+  function circle(ctx, cx, cy, r, color) {
+    const x0 = Math.ceil(cx - r), x1 = Math.floor(cx + r);
+    const y0 = Math.ceil(cy - r), y1 = Math.floor(cy + r);
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const dx = x - cx + 0.5, dy = y - cy + 0.5;
+        if (dx*dx + dy*dy <= r*r) px(ctx, x, y, color);
+      }
+    }
+  }
+
+  // Filled rect on virtual grid
+  function rect(ctx, x, y, w, h, color) {
+    for (let dy = 0; dy < h; dy++)
+      for (let dx = 0; dx < w; dx++)
+        px(ctx, x+dx, y+dy, color);
+  }
+
+  // ── Logo A: Glow Dot ─────────────────────────────────────────────────────
+  // Concentric glow circles + white specular highlight — the LED itself
+  function drawA(ctx) {
+    const cx = 15.5, cy = 15.5;
+    circle(ctx, cx, cy, 10,  C.gFaint);
+    circle(ctx, cx, cy, 7.5, C.gGlow);
+    circle(ctx, cx, cy, 5.5, C.gBright);
+    circle(ctx, cx, cy, 3.5, C.gMid);
+    // specular highlight (top-left quadrant)
+    px(ctx, 12, 11, C.white);
+    px(ctx, 13, 11, C.white);
+    px(ctx, 12, 12, C.white);
+  }
+
+  // ── Logo B: Urgency Bars ─────────────────────────────────────────────────
+  // Three rising bars (deadline urgency meter) + glowing dot on the tallest
+  function drawB(ctx) {
+    const barW = 4, gap = 3, startX = 7, bottom = 27;
+    const bars = [
+      { h: 8,  color: C.gMid    },
+      { h: 13, color: C.gBright },
+      { h: 19, color: C.gBright },
+    ];
+
+    for (let i = 0; i < bars.length; i++) {
+      const { h, color } = bars[i];
+      rect(ctx, startX + i*(barW+gap), bottom - h, barW, h, color);
+    }
+
+    // Glowing dot above tallest bar
+    const tallBar = bars[2];
+    const dotCx = startX + 2*(barW+gap) + barW/2 - 0.5;
+    const dotCy = bottom - tallBar.h - 4.5;
+    circle(ctx, dotCx, dotCy, 3.5, C.gGlow);
+    circle(ctx, dotCx, dotCy, 2,   C.gBright);
+    px(ctx, Math.round(dotCx)-1, Math.round(dotCy)-1, C.white);
+  }
+
+  // ── Logo C: DL Monogram ──────────────────────────────────────────────────
+  // Pixel-font D and L, with a small glowing LED dot as the accent mark
+  function drawC(ctx) {
+    const D = [
+      [1,1,1,1,0],
+      [1,0,0,0,1],
+      [1,0,0,0,1],
+      [1,0,0,0,1],
+      [1,0,0,0,1],
+      [1,0,0,0,1],
+      [1,1,1,1,0],
+    ];
+    const L = [
+      [1,0,0,0,0],
+      [1,0,0,0,0],
+      [1,0,0,0,0],
+      [1,0,0,0,0],
+      [1,0,0,0,0],
+      [1,0,0,0,0],
+      [1,1,1,1,1],
+    ];
+
+    const ps = 2;               // each font pixel → 2×2 virtual pixels
+    const gW = 5*ps, gH = 7*ps;
+    const gap = 3;
+    const ox = Math.floor((VSIZE - (gW + gap + gW)) / 2);
+    const oy = Math.floor((VSIZE - gH) / 2) + 1;
+
+    function glyph(grid, dx, color) {
+      for (let gy = 0; gy < grid.length; gy++)
+        for (let gx = 0; gx < grid[gy].length; gx++)
+          if (grid[gy][gx])
+            rect(ctx, dx + gx*ps, oy + gy*ps, ps, ps, color);
+    }
+
+    glyph(D, ox,           C.gBright);
+    glyph(L, ox + gW + gap, C.gMid);
+
+    // LED dot accent above the L (top-right)
+    const dotX = ox + gW + gap + gW + 1.5;
+    const dotY = oy - 4;
+    circle(ctx, dotX, dotY, 2.5, C.gGlow);
+    circle(ctx, dotX, dotY, 1.5, C.white);
+  }
+
+  // ── Logo D: Pixel Bulb ───────────────────────────────────────────────────
+  // Classic pixel-art lightbulb playing off "Due Light"
+  function drawD(ctx) {
+    // Each row: [x_start, x_end] (inclusive) for the bulb body
+    const body = [
+      [14, 17],   // y=5  top cap
+      [12, 19],   // y=6
+      [11, 20],   // y=7
+      [10, 21],   // y=8
+      [10, 21],   // y=9
+      [10, 21],   // y=10
+      [10, 21],   // y=11
+      [11, 20],   // y=12
+      [12, 19],   // y=13
+      [13, 18],   // y=14  lower curve
+      // neck
+      [14, 17],   // y=15
+      [14, 17],   // y=16
+      // screw base (wider → narrower)
+      [13, 18],   // y=17
+      [13, 18],   // y=18
+      [14, 17],   // y=19
+      [14, 17],   // y=20
+      [15, 16],   // y=21
+    ];
+
+    const startY = 5;
+
+    // Outer glow
+    circle(ctx, 16, 9, 9, C.gFaint);
+
+    // Bulb body: glow layer, bright layer, mid core
+    for (let i = 0; i < body.length; i++) {
+      const y = startY + i;
+      const [x0, x1] = body[i];
+      const isNeck  = i >= 9  && i <= 11;
+      const isBase  = i >= 12;
+      let color;
+      if (isBase)  color = C.gDark;
+      else if (isNeck) color = C.gMid;
+      else color = (i <= 4) ? C.gBright : C.gMid;
+
+      for (let x = x0; x <= x1; x++) px(ctx, x, y, color);
+    }
+
+    // Bright inner glow of bulb
+    circle(ctx, 16, 9, 4.5, C.gBright);
+    circle(ctx, 16, 9, 2.5, C.gGlow);
+
+    // Specular highlight
+    px(ctx, 13, 7, C.white);
+    px(ctx, 14, 7, C.white);
+    px(ctx, 13, 8, C.white);
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  function render(id, drawFn, bg) {
+    const canvas = document.getElementById(id);
+    const ctx    = canvas.getContext('2d');
+
+    // draw onto 32×32 offscreen
+    const off    = document.createElement('canvas');
+    off.width    = VSIZE;
+    off.height   = VSIZE;
+    const oc     = off.getContext('2d');
+    oc.imageSmoothingEnabled = false;
+    oc.fillStyle = bg;
+    oc.fillRect(0, 0, VSIZE, VSIZE);
+    drawFn(oc);
+
+    // scale up 6× with no smoothing → crisp pixel art
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
+  }
+
+  const BG_DARK  = '#111111';
+  const BG_LIGHT = '#ede8da';
+
+  ['A','B','C','D'].forEach(name => {
+    const fn = { A: drawA, B: drawB, C: drawC, D: drawD }[name];
+    render(`${name}-dark`,  fn, BG_DARK);
+    render(`${name}-light`, fn, BG_LIGHT);
+  });
+  </script>
+</body>
+</html>
