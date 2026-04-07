@@ -203,9 +203,18 @@
         if (GLYPH_L[gy][gx]) rect(null, lx + gx*ps, oy + gy*ps, ps, ps, color);
     }
 
-    // yellow dot separator
-    circle(ctx, dotCx, dotCy, 3, 'rgba(234,179,8,0.3)');
-    circle(ctx, dotCx, dotCy, 1.5, '#eab308');
+    // 3 LED dots stacked in the gap — green · yellow · red
+    const spacing = 7;
+    const leds = [
+      ['#22c55e', 'rgba(34,197,94,0.35)',  -spacing],
+      ['#eab308', 'rgba(234,179,8,0.35)',   0],
+      ['#ef4444', 'rgba(239,68,68,0.35)',   spacing],
+    ];
+    leds.forEach(([col, glow, dy]) => {
+      circle(ctx, dotCx, dotCy + dy, 2.5, glow);
+      circle(ctx, dotCx, dotCy + dy, 1.5, col);
+      px(ctx, Math.floor(dotCx), Math.floor(dotCy + dy) - 1, '#ffffff');
+    });
   }
 
   // ── DL3: Glow Blooms ──────────────────────────────────────────────────────
