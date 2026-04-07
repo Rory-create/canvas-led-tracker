@@ -268,6 +268,7 @@ app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       line_items: lineItems,
       mode: 'payment',
+      allow_promotion_codes: true,
       shipping_address_collection: { allowed_countries: ['US'] },
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/#pricing`,
