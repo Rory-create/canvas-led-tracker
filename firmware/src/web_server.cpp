@@ -243,8 +243,11 @@ small{font-size:12px;color:var(--mt);line-height:1.5;display:block;margin-top:4p
 .footer{text-align:center;margin-top:24px;font-size:12px;}
 .footer a{color:var(--mt);}
 .footer a:hover{color:var(--tx);}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--gr);color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
 </style></head>
 <body><div class="wrap">
+<div id="toast" class="toast">&#10003; Settings saved</div>
 <div class="logo"><div class="dot"></div>Due Light</div>
 <div class="status-bar">
 Device: <span>%DEVICE_NAME%</span>
@@ -391,6 +394,12 @@ function checkSnoozeStatus(){
   }).catch(()=>{});
 }
 checkSnoozeStatus();
+if(new URLSearchParams(location.search).get('saved')==='1'){
+  var t=document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},3500);
+  history.replaceState(null,'','/settings');
+}
 </script></body></html>
 )rawliteral";
 
@@ -883,36 +892,63 @@ void handleSave() {
   bool isFromAP = (clientIP[0] == apIP[0] && clientIP[1] == apIP[1] && clientIP[2] == apIP[2]);
 
   if (isFromAP) {
-    // From AP - show simple success message that auto-closes
-    String confirmHtml = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'>";
-    confirmHtml += "<style>body{font-family:Arial;max-width:600px;margin:50px auto;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;text-align:center;}";
-    confirmHtml += ".container{background:white;padding:40px;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,0.2);}";
-    confirmHtml += "h1{color:#4CAF50;font-size:48px;margin:0;}p{font-size:18px;color:#666;}</style></head><body><div class='container'>";
-    confirmHtml += "<h1>&#10003;</h1><h2>Settings Saved!</h2><p>Device is rebooting...<br>You can close this window.</p>";
-    confirmHtml += "<p>Access settings at:<br><b>http://" + WiFi.localIP().toString() + "</b></p>";
-    confirmHtml += "</div><script>setTimeout(function(){window.close();},3000);</script></body></html>";
+    // From AP (initial setup) — earthy theme, show local IP, auto-reboot
+    String localIp = WiFi.localIP().toString();
+    String confirmHtml = F("<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>");
+    confirmHtml += F("<style>:root{--bg:#ddd6c4;--sf:#faf5eb;--bd:#b5a688;--tx:#1c1408;--mt:#5e4e38;--gr:#3d5a2e;--gw:rgba(61,90,46,.3);}");
+    confirmHtml += F("*{box-sizing:border-box;margin:0;padding:0;}");
+    confirmHtml += F("body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);font-size:15px;line-height:1.6;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}");
+    confirmHtml += F(".card{background:var(--sf);border:1px solid var(--bd);border-left:3px solid var(--gr);border-radius:14px;padding:32px 28px;max-width:420px;width:100%;text-align:center;}");
+    confirmHtml += F(".dot{width:40px;height:40px;border-radius:50%;background:var(--gr);margin:0 auto 18px;display:flex;align-items:center;justify-content:center;}");
+    confirmHtml += F(".dot svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}");
+    confirmHtml += F("h2{font-size:20px;font-weight:700;margin-bottom:10px;}");
+    confirmHtml += F("p{color:var(--mt);font-size:14px;margin-bottom:14px;}");
+    confirmHtml += F(".url-box{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;font-size:14px;font-weight:600;color:var(--gr);margin:14px 0;word-break:break-all;}");
+    confirmHtml += F(".note{font-size:12px;color:var(--mt);}</style></head><body><div class='card'>");
+    confirmHtml += F("<div class='dot'><svg viewBox='0 0 24 24'><polyline points='20 6 9 17 4 12'/></svg></div>");
+    confirmHtml += F("<h2>Setup complete!</h2>");
+    confirmHtml += F("<p>Due Light is connecting to your home WiFi and will be ready in a moment.</p>");
+    confirmHtml += "<div class='url-box'>http://" + localIp + "</div>";
+    confirmHtml += F("<p>To adjust settings later, connect to your home WiFi and visit the address above.</p>");
+    confirmHtml += F("<p class='note'>This page will close automatically.</p>");
+    confirmHtml += F("</div><script>setTimeout(function(){window.close();},4000);</script></body></html>");
 
     server.sendHeader("Connection", "close");
     server.send(200, "text/html", confirmHtml);
     delay(2000);
     ESP.restart();
   } else {
-    // From local WiFi - show confirmation page with reboot button
-    String confirmHtml = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'>";
-    confirmHtml += "<style>body{font-family:Arial;max-width:600px;margin:20px auto;padding:20px;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;}";
-    confirmHtml += ".container{background:white;padding:30px;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,0.2);text-align:center;}";
-    confirmHtml += "h1{color:#4CAF50;}input{width:100%;padding:10px;margin:10px 0;font-size:16px;border:2px solid #667eea;border-radius:5px;text-align:center;}";
-    confirmHtml += "button{background:linear-gradient(135deg,#667eea,#764ba2);color:white;padding:12px 30px;border:none;cursor:pointer;border-radius:5px;font-size:16px;margin:10px;}";
-    confirmHtml += ".note{background:#d4edda;padding:15px;border-radius:5px;margin:20px 0;border:2px solid #4CAF50;color:#155724;}</style></head><body><div class='container'>";
-    confirmHtml += "<h1>Settings Saved Successfully!</h1>";
-    confirmHtml += "<div class='note'>Your changes have been saved.<br>Reboot the device to apply all changes.</div>";
-
-    String localUrl = "http://" + WiFi.localIP().toString();
-    confirmHtml += "<p>Bookmark this URL:<br><input type='text' id='url' value='" + localUrl + "' readonly onclick='this.select();document.execCommand(\"copy\");alert(\"Copied!\");'></p>";
-    confirmHtml += "<button onclick='doReboot()'>Reboot Now</button>";
-    confirmHtml += "<button onclick='location.href=\"/settings\"'>Back to Settings</button>";
-    confirmHtml += "<script>function doReboot(){if(confirm('Reboot device now?')){fetch('/reboot',{method:'POST'}).then(()=>{document.body.innerHTML='<div class=\"container\"><h2>Rebooting...</h2><p>Please wait 10 seconds then refresh the page.</p></div>';});}}</script>";
-    confirmHtml += "</div></body></html>";
+    // From local WiFi — earthy theme, auto-reboot, spinner, poll until back up, redirect to /settings?saved=1
+    String confirmHtml = F("<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>");
+    confirmHtml += F("<style>:root{--bg:#ddd6c4;--sf:#faf5eb;--bd:#b5a688;--tx:#1c1408;--mt:#5e4e38;--gr:#3d5a2e;}");
+    confirmHtml += F("*{box-sizing:border-box;margin:0;padding:0;}");
+    confirmHtml += F("body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);font-size:15px;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}");
+    confirmHtml += F(".card{background:var(--sf);border:1px solid var(--bd);border-left:3px solid var(--gr);border-radius:14px;padding:40px 28px;max-width:380px;width:100%;text-align:center;}");
+    confirmHtml += F("@keyframes spin{to{transform:rotate(360deg)}}");
+    confirmHtml += F(".spinner{width:36px;height:36px;border:3px solid var(--bd);border-top-color:var(--gr);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 20px;}");
+    confirmHtml += F("h2{font-size:18px;font-weight:700;margin-bottom:8px;}");
+    confirmHtml += F("p{color:var(--mt);font-size:14px;}</style></head><body><div class='card'>");
+    confirmHtml += F("<div class='spinner'></div>");
+    confirmHtml += F("<h2>Applying settings&hellip;</h2>");
+    confirmHtml += F("<p id='msg'>Device is rebooting. This takes about 10 seconds.</p>");
+    confirmHtml += F("</div><script>");
+    confirmHtml += F("var attempts=0;");
+    confirmHtml += F("function poll(){");
+    confirmHtml += F("  attempts++;");
+    confirmHtml += F("  if(attempts>30){document.getElementById('msg').textContent='Taking longer than expected \u2014 try refreshing.';return;}");
+    confirmHtml += F("  fetch('/').then(function(r){");
+    confirmHtml += F("    if(r.ok){sessionStorage.removeItem('dlRebooting');window.location.href='/settings?saved=1';}");
+    confirmHtml += F("    else setTimeout(poll,2000);");
+    confirmHtml += F("  }).catch(function(){setTimeout(poll,2000);});");
+    confirmHtml += F("}");
+    confirmHtml += F("if(!sessionStorage.getItem('dlRebooting')){");
+    confirmHtml += F("  sessionStorage.setItem('dlRebooting','1');");
+    confirmHtml += F("  fetch('/reboot',{method:'POST'}).catch(function(){});");
+    confirmHtml += F("  setTimeout(poll,5000);");
+    confirmHtml += F("} else {");
+    confirmHtml += F("  setTimeout(poll,2000);");
+    confirmHtml += F("}");
+    confirmHtml += F("</script></body></html>");
 
     server.send(200, "text/html", confirmHtml);
   }
