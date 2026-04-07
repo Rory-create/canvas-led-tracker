@@ -3,6 +3,9 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
+const Stripe = require('stripe');
+
+const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -184,6 +187,32 @@ function checkAndAlert(units) {
 }
 
 // ── Middleware ─────────────────────────────────────────────────────────────
+
+// Webhook must be registered before express.json() — Stripe needs the raw body for signature verification
+app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+  try {
+    event = webhookSecret
+      ? stripe.webhooks.constructEvent(req.body, sig, webhookSecret)
+      : JSON.parse(req.body);
+  } catch (err) {
+    console.error('[stripe] webhook signature error:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const email = session.customer_details?.email || 'unknown';
+    const total = `$${((session.amount_total || 0) / 100).toFixed(2)}`;
+    console.log(`[stripe] order completed — ${email} — ${total}`);
+    sendDiscordAlert(`🛒 **New order!** ${email} paid ${total}`);
+  }
+
+  res.json({ received: true });
+});
 
 app.use(express.json({ limit: '64kb' }));
 
@@ -374,6 +403,52 @@ app.get('/api/stats', readAuthMiddleware, (req, res) => {
     open_bugs: bugs.filter(b => !b.resolved).length,
     firmware_versions: [...new Set(units.map(u => u.firmware_version))],
   });
+});
+
+// ── Stripe Checkout ────────────────────────────────────────────────────────
+
+// POST /create-checkout-session — create a Stripe Checkout Session and redirect
+app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
+
+  const addCable = req.body && req.body.cable === 'true';
+
+  const lineItems = [
+    {
+      price_data: {
+        currency: 'usd',
+        product_data: { name: 'Due Light', description: 'ESP32 WiFi LED assignment tracker' },
+        unit_amount: 2000, // $20.00
+      },
+      quantity: 1,
+    },
+  ];
+
+  if (addCable) {
+    lineItems.push({
+      price_data: {
+        currency: 'usd',
+        product_data: { name: 'USB-C Cable', description: 'USB-C charging cable add-on' },
+        unit_amount: 200, // $2.00
+      },
+      quantity: 1,
+    });
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: lineItems,
+      allow_promotion_codes: true,
+      shipping_address_collection: { allowed_countries: ['US'] },
+      success_url: 'https://due-light.com/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'https://due-light.com/#pricing',
+    });
+    res.redirect(303, session.url);
+  } catch (err) {
+    console.error('[stripe] checkout session error:', err.message);
+    res.status(500).json({ error: 'Could not start checkout' });
+  }
 });
 
 // POST /api/deploy — pull latest code and restart. Requires API key.

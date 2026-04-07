@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order confirmed — Due Light</title>
+<style>
+  :root {
+    --bg: #ede8da;
+    --text: #2d2a24;
+    --accent: #4d6b3c;
+    --muted: #7a7060;
+    --border: #d4cebe;
+    --card: #f5f1e8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 48px 40px;
+    max-width: 480px;
+    width: 100%;
+  }
+  .led-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 28px;
+  }
+  .led {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+  }
+  .led.green  { background: #4ade80; box-shadow: 0 0 10px #4ade80; }
+  .led.yellow { background: #facc15; box-shadow: 0 0 10px #facc15; }
+  .led.red    { background: #f87171; box-shadow: 0 0 10px #f87171; }
+  h1 { font-size: 26px; font-weight: 700; margin-bottom: 12px; }
+  p { color: var(--muted); font-size: 15px; line-height: 1.6; margin-bottom: 10px; }
+  a.btn {
+    display: inline-block;
+    margin-top: 28px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 12px 28px;
+    border-radius: 8px;
+    text-decoration: none;
+  }
+  a.btn:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="led-row">
+    <div class="led green"></div>
+    <div class="led yellow"></div>
+    <div class="led red"></div>
+  </div>
+  <h1>Order confirmed!</h1>
+  <p>Thanks for ordering Due Light. You'll get a confirmation email shortly.</p>
+  <p>I'll ship it out as soon as possible and send tracking info when it's on the way.</p>
+  <p style="margin-top:16px;">Questions? Email <a href="mailto:hello@due-light.com" style="color:var(--accent)">hello@due-light.com</a></p>
+  <a href="https://setup.due-light.com" class="btn">Set up your device</a>
+</div>
+</body>
+</html>

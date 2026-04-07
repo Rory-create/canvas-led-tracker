@@ -431,10 +431,6 @@ nav {
   background: var(--accent);
   flex-shrink: 0;
 }
-/* TODO: Replace this placeholder button with Stripe Payment Link or Stripe Checkout embed.
-   Stripe docs: https://stripe.com/docs/payments/payment-links
-   For one-time hardware purchase, a Payment Link is simplest.
-   Add STRIPE_PAYMENT_LINK env var and inject it here server-side, or hardcode after creating the link. */
 .buy-btn {
   display: block;
   width: 100%;
@@ -662,22 +658,24 @@ footer a:hover { color: var(--text); }
   <div class="pricing-wrap">
     <div class="pricing-card">
       <div class="price-label">Due Light — Device</div>
-      <div class="price"><sup>$</sup>??</div>
+      <div class="price" id="price-display"><sup>$</sup>20</div>
       <div class="price-note">One-time purchase. No subscription.</div>
       <ul class="feature-list">
-        <li>Due Light device + USB-C cable included</li>
+        <li>Due Light device included</li>
         <li>Works at any school that uses Canvas</li>
         <li>Plugs into a wall outlet</li>
         <li>Takes about 5 minutes — needs a computer to set up</li>
         <li>Updates itself automatically over WiFi</li>
         <li>Rory's Guarantee</li>
       </ul>
-      <!-- TODO: Create a Stripe Payment Link at stripe.com/payment-links and replace
-           the button href below. For embedded checkout, use Stripe.js instead.
-           Recommended: use a Stripe Payment Link for simplicity on first launch.
-           Set the product as a one-time physical purchase and enable shipping collection. -->
-      <button class="buy-btn" disabled>Coming soon</button>
-      <div class="coming-soon-note">Join the waitlist — email <a href="mailto:hello@due-light.com" style="color:var(--accent)">hello@due-light.com</a></div>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:18px;cursor:pointer;font-size:14px;">
+        <input type="checkbox" id="cable-checkbox" style="width:16px;height:16px;accent-color:var(--accent);">
+        Add USB-C cable <span style="color:var(--muted)">+$2</span>
+      </label>
+      <form id="checkout-form" action="/create-checkout-session" method="POST">
+        <input type="hidden" name="cable" id="cable-input" value="false">
+        <button type="submit" class="buy-btn active">Buy now — $<span id="btn-price">20</span></button>
+      </form>
     </div>
   </div>
 </section>
@@ -696,5 +694,19 @@ footer a:hover { color: var(--text); }
   <span>&copy; 2026 Due Light. All rights reserved.</span>
 </footer>
 
+<script>
+  const cableCheckbox = document.getElementById('cable-checkbox');
+  const cableInput = document.getElementById('cable-input');
+  const btnPrice = document.getElementById('btn-price');
+  const priceDisplay = document.getElementById('price-display');
+  if (cableCheckbox) {
+    cableCheckbox.addEventListener('change', () => {
+      const total = cableCheckbox.checked ? 22 : 20;
+      cableInput.value = cableCheckbox.checked ? 'true' : 'false';
+      btnPrice.textContent = total;
+      priceDisplay.innerHTML = `<sup>$</sup>${total}`;
+    });
+  }
+</script>
 </body>
 </html>
