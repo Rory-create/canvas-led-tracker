@@ -326,9 +326,10 @@ Checked: <span>%LAST_CHECK%</span>
 <label><input type="checkbox" name="includeOverdue" %INCLUDE_OVERDUE_CHECKED%> Include overdue assignments</label>
 <small>If you use browser extensions like BetterCanvas, leave this OFF to avoid seeing old completed assignments.</small>
 <label>AP password<input type="text" name="apPassword" value="%AP_PASSWORD%"></label>
-<label><input type="checkbox" name="bugReport" %BUG_REPORT_CHECKED%> Enable auto bug reports</label>
-<small>Automatically report critical errors to GitHub for faster support.</small>
-<label><input type="checkbox" name="debug" %DEBUG_CHECKED%> Debug mode</label>
+<label><input type="checkbox" name="bugReport" %BUG_REPORT_CHECKED%> Send automatic error reports</label>
+<small>When the device hits a critical error, it sends a brief report to help diagnose issues. No personal data is included. Disable if you prefer full privacy.</small>
+<label><input type="checkbox" name="debug" %DEBUG_CHECKED%> Verbose serial logging</label>
+<small>Prints detailed Canvas API and assignment parsing info over USB serial. Useful for troubleshooting — leave on unless you need to reduce serial noise.</small>
 </div>
 <button type="submit" class="btn btn-save">Save Settings</button>
 <button type="button" class="btn btn-refresh" onclick="manualRefresh()">Check Canvas Now</button>
