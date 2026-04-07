@@ -270,7 +270,7 @@ void loop() {
     checkForOTAUpdate();
 
     // Telemetry heartbeat every 5 minutes  no-op if dashboardUrl is not set
-    static unsigned long lastTelemetry = 0;
+    static unsigned long lastTelemetry = ULONG_MAX - (4UL * 60UL * 1000UL); // fires ~1 min after boot
     if (now - lastTelemetry >= 5UL * 60UL * 1000UL) {
       sendTelemetry();
       lastTelemetry = now;
