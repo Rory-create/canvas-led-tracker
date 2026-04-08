@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Due Light — Know your deadlines. No screen required.</title>
 <meta name="description" content="A physical LED indicator for Canvas LMS. Plugs in, syncs automatically, and shows your assignment status at a glance.">
+<link rel="icon" type="image/png" sizes="64x64" href="/logo-64.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/logo-512.png">
+<link rel="apple-touch-icon" href="/logo-512.png">
+<meta property="og:title" content="Due Light — Know your deadlines. No screen required.">
+<meta property="og:description" content="A physical LED indicator for Canvas LMS. Plugs in, syncs automatically, and shows your assignment status at a glance.">
+<meta property="og:image" content="https://due-light.com/logo-512.png">
+<meta property="og:url" content="https://due-light.com">
+<meta property="og:type" content="website">
 <style>
 /* ── LED hardware colors — fixed across all themes ──────────────────── */
 :root {
@@ -506,17 +514,16 @@ footer a:hover { color: var(--text); }
 <body>
 
 <nav>
-  <div class="nav-left">
-    <a href="/" class="nav-logo" style="text-decoration:none;color:inherit;">
-      <div class="led-dot"></div>
-      Due Light
-    </a>
-    <a href="https://setup.due-light.com" class="nav-setup-link">Setup guide</a>
-  </div>
+  <a href="/" class="nav-logo" style="text-decoration:none;color:inherit;">
+    <img src="/logo-64.png" alt="Due Light" style="height:28px;width:auto;">
+    Due Light
+  </a>
   <div class="nav-links">
     <a href="#how-it-works">How it works</a>
     <a href="#colors">Colors</a>
     <a href="#specs">Specs</a>
+    <a href="#delivery">Delivery</a>
+    <a href="https://setup.due-light.com">Setup guide</a>
     <a href="#pricing" class="nav-cta">Buy now</a>
   </div>
 </nav>
@@ -656,12 +663,32 @@ footer a:hover { color: var(--text); }
 
 <hr class="divider">
 
+<!-- Delivery -->
+<section class="section" id="delivery">
+  <div class="section-label">Delivery</div>
+  <h2>Not shipping right now.</h2>
+  <div class="steps" style="grid-template-columns: repeat(2, 1fr);">
+    <div class="step">
+      <div class="step-num">Where</div>
+      <h3>Local delivery only</h3>
+      <p>I'm not set up to ship yet. For now I'll travel to deliver in person near the 19475 area. If you're not nearby, reach out and we'll figure something out.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">How</div>
+      <h3>I'll reach out after you order</h3>
+      <p>Once you place an order I'll contact you at your email to coordinate a time and place. No action needed on your end right after checkout.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
 <!-- Pricing -->
 <section id="pricing">
   <div class="pricing-wrap">
     <div class="pricing-card">
       <div class="price-label">Due Light — Device</div>
-      <div class="price"><sup>$</sup>20</div>
+      <div class="price" id="price-display"><sup>$</sup>20</div>
       <div class="price-note">One-time purchase. No subscription.</div>
       <ul class="feature-list">
         <li>Due Light device included</li>
@@ -671,12 +698,14 @@ footer a:hover { color: var(--text); }
         <li>Updates itself automatically over WiFi</li>
         <li>Rory's Guarantee</li>
       </ul>
-      <label style="display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer;font-size:14px;color:var(--muted);">
-        <input type="checkbox" id="add-cable" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-        Add USB-C cable &mdash; <strong style="color:var(--text);">+$2</strong>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:18px;cursor:pointer;font-size:14px;">
+        <input type="checkbox" id="cable-checkbox" style="width:16px;height:16px;accent-color:var(--accent);">
+        Add USB-C cable <span style="color:var(--muted)">+$2</span>
       </label>
-      <button class="buy-btn" id="buy-btn">Buy now</button>
-      <div id="buy-error" style="display:none;margin-top:10px;text-align:center;font-size:13px;color:#dc2626;"></div>
+      <form id="checkout-form" action="/create-checkout-session" method="POST">
+        <input type="hidden" name="cable" id="cable-input" value="false">
+        <button type="submit" class="buy-btn active">Buy now — $<span id="btn-price">20</span></button>
+      </form>
     </div>
   </div>
 </section>
@@ -685,7 +714,7 @@ footer a:hover { color: var(--text); }
 
 <footer>
   <a href="/" class="nav-logo" style="font-size:14px;text-decoration:none;color:inherit;">
-    <div class="led-dot" style="width:7px;height:7px;"></div>
+    <img src="/logo-64.png" alt="Due Light" style="height:20px;width:auto;">
     Due Light
   </a>
   <div class="footer-links">
@@ -696,31 +725,18 @@ footer a:hover { color: var(--text); }
 </footer>
 
 <script>
-  document.getElementById('buy-btn').addEventListener('click', async function () {
-    const btn = this;
-    const errEl = document.getElementById('buy-error');
-    btn.disabled = true;
-    btn.textContent = 'Loading…';
-    errEl.style.display = 'none';
-
-    try {
-      const addCable = document.getElementById('add-cable').checked;
-      const res = await fetch('/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ addCable }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.url) throw new Error(data.error || 'Unexpected error');
-      window.location.href = data.url;
-    } catch (err) {
-      errEl.textContent = 'Could not start checkout — please try again or email hello@due-light.com';
-      errEl.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'Buy now';
-    }
-  });
+  const cableCheckbox = document.getElementById('cable-checkbox');
+  const cableInput = document.getElementById('cable-input');
+  const btnPrice = document.getElementById('btn-price');
+  const priceDisplay = document.getElementById('price-display');
+  if (cableCheckbox) {
+    cableCheckbox.addEventListener('change', () => {
+      const total = cableCheckbox.checked ? 22 : 20;
+      cableInput.value = cableCheckbox.checked ? 'true' : 'false';
+      btnPrice.textContent = total;
+      priceDisplay.innerHTML = `<sup>$</sup>${total}`;
+    });
+  }
 </script>
-
 </body>
 </html>
