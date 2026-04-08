@@ -172,4 +172,9 @@ void loadConfig() {
     strncpy(systemConfig.dashboardApiKey, DASHBOARD_API_KEY, sizeof(systemConfig.dashboardApiKey) - 1);
     systemConfig.dashboardApiKey[sizeof(systemConfig.dashboardApiKey) - 1] = '\0';
   }
+
+  // Warn loudly if dashboard URL ended up empty — device will never call home
+  if (strlen(systemConfig.dashboardUrl) == 0) {
+    Serial.println("⚠️  WARNING: dashboardUrl is empty — telemetry disabled. Set DASHBOARD_URL in secrets.h and reflash.");
+  }
 }
