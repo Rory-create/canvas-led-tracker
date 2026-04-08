@@ -10,18 +10,11 @@ const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Optional shared secret — set DASHBOARD_API_KEY env var on server.
-// Devices must send the same value in the X-API-Key header.
-// If not set, the server accepts all requests (fine for private deploys).
 const API_KEY = process.env.DASHBOARD_API_KEY || null;
-
-// Human-friendly dashboard password — set DASHBOARD_PASSWORD env var.
-// On correct password, server issues a random session token stored server-side.
-// Tokens expire after 30 days. Rotating the password invalidates all sessions.
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || null;
 const crypto = require('crypto');
-const _sessions = new Map(); // token → expiry timestamp
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const _sessions = new Map();
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function createSession() {
   const token = crypto.randomBytes(32).toString('base64url');
@@ -35,7 +28,6 @@ function isValidSession(token) {
   if (Date.now() > expiry) { _sessions.delete(token); return false; }
   return true;
 }
-// Clean up expired sessions hourly
 setInterval(() => {
   const now = Date.now();
   for (const [token, expiry] of _sessions) {
@@ -43,13 +35,7 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000);
 
-// Discord webhook for alerting — set DISCORD_WEBHOOK_URL env var to enable
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL || null;
-
-// Stripe — set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in .env.
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || null;
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || null;
-const stripe = STRIPE_SECRET_KEY ? Stripe(STRIPE_SECRET_KEY) : null;
 
 const DATA_DIR = path.join(__dirname, 'data');
 const UNITS_FILE = path.join(DATA_DIR, 'units.json');
@@ -62,8 +48,6 @@ function readJSON(file, fallback) {
   catch { return fallback; }
 }
 
-// Serialised write queue — prevents race-condition data loss when multiple
-// devices POST telemetry simultaneously.
 let _writing = false;
 const _writeQueue = [];
 function writeJSON(file, data) {
@@ -80,7 +64,6 @@ function _flushQueue() {
   setImmediate(_flushQueue);
 }
 
-// Bug ID: timestamp + random suffix to prevent millisecond collisions
 function newBugId() {
   return Date.now() * 1000 + Math.floor(Math.random() * 1000);
 }
@@ -92,29 +75,22 @@ function authMiddleware(req, res, next) {
   next();
 }
 
-// Same as authMiddleware but also allows browser sessions via a dashboard session token.
-// Used on read endpoints so the dashboard UI can still load when API_KEY is set.
-// Devices posting telemetry use authMiddleware (stricter); browser reads use this.
 const DASHBOARD_TOKEN = process.env.DASHBOARD_READ_TOKEN || null;
 
 function isLocalhost(req) {
-  if (req.headers['cf-connecting-ip']) return false; // came through Cloudflare Tunnel
+  if (req.headers['cf-connecting-ip']) return false;
   const ip = req.socket.remoteAddress;
   return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
 }
 
 function readAuthMiddleware(req, res, next) {
-  // Requests from localhost (the host PC) are always allowed
   if (isLocalhost(req)) return next();
-  // If no password is configured, allow all reads (open/private deploy)
   if (!DASHBOARD_PASSWORD) return next();
-  // Browser access requires a valid session token (obtained via POST /api/login)
   const key = req.headers['x-api-key'];
   if (isValidSession(key)) return next();
   return res.status(401).json({ error: 'Unauthorized' });
 }
 
-// Simple per-IP rate limiting — max 60 requests per minute per IP
 const _rateCounts = new Map();
 function rateLimitMiddleware(req, res, next) {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -126,7 +102,6 @@ function rateLimitMiddleware(req, res, next) {
   if (entry.count > 60) return res.status(429).json({ error: 'Too many requests' });
   next();
 }
-// Clean up stale rate-limit entries every 5 minutes
 setInterval(() => {
   const now = Date.now();
   for (const [ip, entry] of _rateCounts) {
@@ -134,7 +109,7 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
-const STALE_MS = 30 * 60 * 1000; // 30 minutes offline = stale
+const STALE_MS = 30 * 60 * 1000;
 
 // ── Discord alerting ───────────────────────────────────────────────────────
 
@@ -152,62 +127,50 @@ async function sendDiscordAlert(message) {
   }
 }
 
-// Check all units for stale/error conditions and fire alerts (throttled to 1/unit/incident)
 function checkAndAlert(units) {
   if (!DISCORD_WEBHOOK) return;
   const now = Date.now();
   let changed = false;
-
   for (const unit of units) {
     const name = unit.device_name || unit.device_id;
     const isStale = (now - new Date(unit.last_seen).getTime()) > STALE_MS;
     const hasError = unit.error_code > 0 || unit.consecutive_errors > 2;
-
-    // Stale alert — fire once per offline incident (reset when it comes back)
     if (isStale && !unit._alerted_stale) {
-      unit._alerted_stale = true;
-      changed = true;
+      unit._alerted_stale = true; changed = true;
       sendDiscordAlert(`⚠️ **${name}** has gone offline (no check-in for >30 min) — last seen ${unit.last_seen}`);
     } else if (!isStale && unit._alerted_stale) {
-      unit._alerted_stale = false;
-      changed = true;
+      unit._alerted_stale = false; changed = true;
       sendDiscordAlert(`✅ **${name}** is back online`);
     }
-
-    // Error alert — fire once per new error code
     if (hasError && unit._alerted_error_code !== unit.error_code) {
-      unit._alerted_error_code = unit.error_code;
-      changed = true;
+      unit._alerted_error_code = unit.error_code; changed = true;
       const ERROR_NAMES = ['None','WiFi Disconnect','Canvas Auth','Canvas Server','Time Sync','Memory Low','JSON Parse','Buffer Exhausted'];
       const errName = ERROR_NAMES[unit.error_code] || `Code ${unit.error_code}`;
       sendDiscordAlert(`🔴 **${name}** reporting error: **${errName}** (×${unit.consecutive_errors}) — firmware v${unit.firmware_version}`);
     } else if (!hasError && unit._alerted_error_code > 0) {
-      unit._alerted_error_code = 0;
-      changed = true;
+      unit._alerted_error_code = 0; changed = true;
       sendDiscordAlert(`✅ **${name}** error cleared`);
     }
   }
-
   return changed;
 }
 
 // ── Middleware ─────────────────────────────────────────────────────────────
 
-// Webhook must be registered before express.json() — Stripe needs the raw body for signature verification
+// Webhook must be before express.json() — Stripe needs raw body for signature verification
 app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
+  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
   let event;
   try {
     event = webhookSecret
       ? stripe.webhooks.constructEvent(req.body, sig, webhookSecret)
       : JSON.parse(req.body);
   } catch (err) {
-    console.error('[stripe] webhook signature error:', err.message);
+    console.error('[stripe] webhook error:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
-
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const email = session.customer_details?.email || 'unknown';
@@ -215,13 +178,12 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
     console.log(`[stripe] order completed — ${email} — ${total}`);
     sendDiscordAlert(`🛒 **New order!** ${email} paid ${total}`);
   }
-
   res.json({ received: true });
 });
 
 app.use(express.json({ limit: '64kb' }));
 
-// Host-based routing: due-light.com (and www.) → marketing page; setup.due-light.com → setup guide; everything else → dashboard
+// Host-based routing
 app.get('/', (req, res, next) => {
   const host = (req.headers.host || '').split(':')[0].toLowerCase();
   if (host === 'due-light.com' || host === 'www.due-light.com') {
@@ -235,88 +197,70 @@ app.get('/', (req, res, next) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// POST /api/login — exchange password for a session token
 app.post('/api/login', rateLimitMiddleware, (req, res) => {
   const { password } = req.body || {};
   if (!DASHBOARD_PASSWORD) return res.status(503).json({ error: 'Password auth not configured' });
-  if (!password || password !== DASHBOARD_PASSWORD) {
-    return res.status(401).json({ error: 'Incorrect password' });
-  }
-  const token = createSession();
-  res.json({ token });
+  if (!password || password !== DASHBOARD_PASSWORD) return res.status(401).json({ error: 'Incorrect password' });
+  res.json({ token: createSession() });
 });
 
-// GET /api/whoami — lets the browser check if it's on localhost (auto-auth)
 app.get('/api/whoami', (req, res) => {
   res.json({ localhost: isLocalhost(req) });
 });
 
-// POST /create-checkout-session — start a Stripe Checkout for a Due Light purchase
-// Body: { addCable: boolean }
+// ── Stripe Checkout ──────────────────────────────────────────────────────────
+
 app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
-
   const addCable = req.body && req.body.addCable === true;
-  const lineItems = [
-    {
-      price_data: {
-        currency: 'usd',
-        product_data: { name: 'Due Light' },
-        unit_amount: 2000,
-      },
-      quantity: 1,
+  const lineItems = [{
+    price_data: {
+      currency: 'usd',
+      product_data: { name: 'Due Light', description: 'ESP32 WiFi LED assignment tracker' },
+      unit_amount: 2000,
     },
-  ];
+    quantity: 1,
+  }];
   if (addCable) {
     lineItems.push({
       price_data: {
         currency: 'usd',
-        product_data: { name: 'USB-C Cable' },
+        product_data: { name: 'USB-C Cable', description: 'USB-C charging cable add-on' },
         unit_amount: 200,
       },
       quantity: 1,
     });
   }
-
-  const origin = req.headers.origin || `https://${req.headers.host}`;
   try {
     const session = await stripe.checkout.sessions.create({
-      line_items: lineItems,
       mode: 'payment',
+      line_items: lineItems,
       allow_promotion_codes: true,
       shipping_address_collection: { allowed_countries: ['US'] },
-      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/#pricing`,
+      success_url: 'https://due-light.com/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'https://due-light.com/#pricing',
     });
     res.json({ url: session.url });
   } catch (err) {
-    console.error('[stripe] create-checkout-session error:', err.message);
-    res.status(500).json({ error: 'Failed to create checkout session' });
+    console.error('[stripe] checkout session error:', err.message);
+    res.status(500).json({ error: 'Could not start checkout' });
   }
 });
 
 // ── Device API ─────────────────────────────────────────────────────────────
 
-// POST /api/telemetry  — heartbeat from a device
 app.post('/api/telemetry', rateLimitMiddleware, authMiddleware, (req, res) => {
   console.log(`[telemetry] POST from ${req.headers['cf-connecting-ip'] || req.socket.remoteAddress} — device_id: ${req.body && req.body.device_id}`);
   const body = req.body;
-  if (!body || !body.device_id) {
-    return res.status(400).json({ error: 'device_id required' });
-  }
-
+  if (!body || !body.device_id) return res.status(400).json({ error: 'device_id required' });
   const units = readJSON(UNITS_FILE, []);
   const now = new Date().toISOString();
-
   const existing = units.findIndex(u => u.device_id === body.device_id);
   const prev = existing >= 0 ? units[existing] : {};
-
   const record = {
-    // Preserve operator-set fields from previous record
     notes: prev.notes || '',
     _alerted_stale: prev._alerted_stale || false,
     _alerted_error_code: prev._alerted_error_code || 0,
-    // Device-reported fields
     device_id: body.device_id,
     device_name: body.device_name || body.device_id,
     firmware_version: body.firmware_version || 'unknown',
@@ -334,25 +278,15 @@ app.post('/api/telemetry', rateLimitMiddleware, authMiddleware, (req, res) => {
     ota_version_seen: typeof body.ota_version_seen === 'string' ? body.ota_version_seen : null,
     ip_address: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
   };
-
-  if (existing >= 0) {
-    units[existing] = record;
-  } else {
-    units.push(record);
-  }
-
+  if (existing >= 0) { units[existing] = record; } else { units.push(record); }
   checkAndAlert(units);
   writeJSON(UNITS_FILE, units);
   res.json({ ok: true, unit_count: units.length });
 });
 
-// POST /api/bug  — bug report from a device
 app.post('/api/bug', rateLimitMiddleware, authMiddleware, (req, res) => {
   const body = req.body;
-  if (!body || !body.device_id) {
-    return res.status(400).json({ error: 'device_id required' });
-  }
-
+  if (!body || !body.device_id) return res.status(400).json({ error: 'device_id required' });
   const bugs = readJSON(BUGS_FILE, []);
   const bugId = newBugId();
   bugs.unshift({
@@ -367,22 +301,16 @@ app.post('/api/bug', rateLimitMiddleware, authMiddleware, (req, res) => {
     timestamp: new Date().toISOString(),
     resolved: false,
   });
-
-  // Keep last 500 bug reports
   if (bugs.length > 500) bugs.splice(500);
   writeJSON(BUGS_FILE, bugs);
-
-  // Discord alert for new bug report
   const name = body.device_name || body.device_id;
   sendDiscordAlert(`🐛 **Bug report from ${name}**: ${body.title || body.error_name || 'Unknown error'} (firmware v${body.firmware_version || '?'})`);
-
   res.json({ ok: true, bug_id: bugId });
 });
 
 // ── Dashboard API ──────────────────────────────────────────────────────────
 
 app.get('/api/units', readAuthMiddleware, (req, res) => {
-  // Strip internal alert-state fields from public response
   const units = readJSON(UNITS_FILE, []).map(({ _alerted_stale, _alerted_error_code, ...u }) => u);
   res.json(units);
 });
@@ -400,11 +328,9 @@ app.get('/api/bugs', readAuthMiddleware, (req, res) => {
   const bugs = readJSON(BUGS_FILE, []);
   const limit = Math.min(parseInt(req.query.limit) || 50, 500);
   const unresolved = req.query.unresolved === 'true';
-  const filtered = unresolved ? bugs.filter(b => !b.resolved) : bugs;
-  res.json(filtered.slice(0, limit));
+  res.json((unresolved ? bugs.filter(b => !b.resolved) : bugs).slice(0, limit));
 });
 
-// Resolve a bug — requires auth if API key is set
 app.patch('/api/bugs/:id/resolve', authMiddleware, (req, res) => {
   const bugs = readJSON(BUGS_FILE, []);
   const bug = bugs.find(b => b.id === parseInt(req.params.id));
@@ -414,7 +340,6 @@ app.patch('/api/bugs/:id/resolve', authMiddleware, (req, res) => {
   res.json({ ok: true });
 });
 
-// Update per-device notes
 app.patch('/api/units/:device_id/notes', authMiddleware, (req, res) => {
   const units = readJSON(UNITS_FILE, []);
   const unit = units.find(u => u.device_id === req.params.device_id);
@@ -428,22 +353,17 @@ app.patch('/api/units/:device_id/notes', authMiddleware, (req, res) => {
 app.get('/api/ota', readAuthMiddleware, (req, res) => {
   const units = readJSON(UNITS_FILE, []);
   const now = Date.now();
-  const summary = units.map(u => ({
-    device_id: u.device_id,
-    device_name: u.device_name,
-    firmware_version: u.firmware_version,
-    ota_version_seen: u.ota_version_seen,
-    last_seen: u.last_seen,
-    stale: (now - new Date(u.last_seen).getTime()) > STALE_MS,
-  }));
-  res.json({ units: summary, total: units.length });
+  res.json({ units: units.map(u => ({
+    device_id: u.device_id, device_name: u.device_name,
+    firmware_version: u.firmware_version, ota_version_seen: u.ota_version_seen,
+    last_seen: u.last_seen, stale: (now - new Date(u.last_seen).getTime()) > STALE_MS,
+  })), total: units.length });
 });
 
 app.get('/api/stats', readAuthMiddleware, (req, res) => {
   const units = readJSON(UNITS_FILE, []);
   const bugs = readJSON(BUGS_FILE, []);
   const now = Date.now();
-
   res.json({
     total_units: units.length,
     activated_units: units.filter(u => u.setup_complete).length,
@@ -454,59 +374,10 @@ app.get('/api/stats', readAuthMiddleware, (req, res) => {
   });
 });
 
-// ── Stripe Checkout ────────────────────────────────────────────────────────
-
-// POST /create-checkout-session — create a Stripe Checkout Session and redirect
-app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
-  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
-
-  const addCable = req.body && req.body.cable === 'true';
-
-  const lineItems = [
-    {
-      price_data: {
-        currency: 'usd',
-        product_data: { name: 'Due Light', description: 'ESP32 WiFi LED assignment tracker' },
-        unit_amount: 2000, // $20.00
-      },
-      quantity: 1,
-    },
-  ];
-
-  if (addCable) {
-    lineItems.push({
-      price_data: {
-        currency: 'usd',
-        product_data: { name: 'USB-C Cable', description: 'USB-C charging cable add-on' },
-        unit_amount: 200, // $2.00
-      },
-      quantity: 1,
-    });
-  }
-
-  try {
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      line_items: lineItems,
-      allow_promotion_codes: true,
-      shipping_address_collection: { allowed_countries: ['US'] },
-      success_url: 'https://due-light.com/success?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'https://due-light.com/#pricing',
-    });
-    res.redirect(303, session.url);
-  } catch (err) {
-    console.error('[stripe] checkout session error:', err.message);
-    res.status(500).json({ error: 'Could not start checkout' });
-  }
-});
-
-// POST /api/deploy — pull latest code and restart. Requires API key.
-// Hit this from a browser or curl when you can't physically access the machine.
 app.post('/api/deploy', authMiddleware, (req, res) => {
   if (!API_KEY) return res.status(503).json({ error: 'API key not configured — deploy endpoint disabled for safety' });
   const repoRoot = path.resolve(__dirname, '..');
-  exec(
-    'git pull origin main && pm2 restart canvas-dashboard',
+  exec('git pull origin main && pm2 restart canvas-dashboard',
     { cwd: repoRoot, timeout: 60000 },
     (err, stdout, stderr) => {
       if (err) return res.status(500).json({ error: err.message, stderr });
