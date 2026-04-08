@@ -220,9 +220,11 @@ int fetchCanvasAssignments() {
             preferences.end();
           }
           Serial.println("Canvas fetch successful");
-          // Reset boot-failure counter now that we know the firmware is working
+          // Reset boot-failure counter and mark boot stable
           preferences.begin("boot", false);
           preferences.putInt("bootAttempts", 0);
+          preferences.putBool("bootStable", true);
+          preferences.putInt("quickReboots", 0);
           preferences.end();
           return newStatus;
         } else {
