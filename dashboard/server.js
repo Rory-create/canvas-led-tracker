@@ -262,16 +262,20 @@ app.post('/api/telemetry', rateLimitMiddleware, authMiddleware, (req, res) => {
   const existing = units.findIndex(u => u.device_id === body.device_id);
   const prev = existing >= 0 ? units[existing] : {};
 
+  const isFactoryReset = !!body.factory_reset;
+
   const record = {
     // Preserve operator-set fields from previous record
     notes: prev.notes || '',
     _alerted_stale: prev._alerted_stale || false,
     _alerted_error_code: prev._alerted_error_code || 0,
+    // Factory reset flag: set on reset notification, cleared on normal check-in
+    factory_reset_pending: isFactoryReset ? true : false,
     // Device-reported fields
     device_id: body.device_id,
     device_name: body.device_name || body.device_id,
     firmware_version: body.firmware_version || 'unknown',
-    setup_complete: !!body.setup_complete,
+    setup_complete: isFactoryReset ? false : !!body.setup_complete,
     last_seen: now,
     first_seen: prev.first_seen || now,
     uptime_seconds: Number(body.uptime_seconds) || 0,

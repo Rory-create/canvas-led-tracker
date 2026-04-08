@@ -8,6 +8,8 @@
 #include "telemetry.h"
 #include "version.h"
 #include <esp_task_wdt.h>
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
 
 void handleSerialCommands() {
   if (!DEV_MODE || !Serial.available()) return;
@@ -203,6 +205,53 @@ void setup() {
         preferences.putInt("quickReboots", 0);
         preferences.putBool("bootStable", true);
         preferences.end();
+
+        // Notify dashboard before wiping — WiFi creds still loaded in wifiConfig
+        if (strlen(systemConfig.dashboardUrl) > 0 && strlen(wifiConfig.ssid) > 0) {
+          Serial.println("[BOOT] Notifying dashboard of factory reset...");
+          WiFi.mode(WIFI_STA);
+          WiFi.begin(wifiConfig.ssid, wifiConfig.password);
+          unsigned long t = millis();
+          while (WiFi.status() != WL_CONNECTED && millis() - t < 8000) {
+            delay(200);
+            esp_task_wdt_reset();
+          }
+          if (WiFi.status() != WL_CONNECTED && strlen(wifiConfig.ssid2) > 0) {
+            WiFi.begin(wifiConfig.ssid2, wifiConfig.password2);
+            t = millis();
+            while (WiFi.status() != WL_CONNECTED && millis() - t < 8000) {
+              delay(200);
+              esp_task_wdt_reset();
+            }
+          }
+          if (WiFi.status() == WL_CONNECTED) {
+            uint8_t mac[6]; WiFi.macAddress(mac);
+            char macStr[18];
+            sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X",
+                    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+            String url = String(systemConfig.dashboardUrl);
+            if (!url.endsWith("/")) url += "/";
+            url += "api/telemetry";
+            String payload = String("{\"device_id\":\"") + macStr +
+                             "\",\"device_name\":\"" + systemConfig.deviceName +
+                             "\",\"firmware_version\":\"" + FIRMWARE_VERSION +
+                             "\",\"factory_reset\":true}";
+            WiFiClientSecure client; client.setInsecure();
+            HTTPClient https; https.setTimeout(5000);
+            if (https.begin(client, url)) {
+              https.addHeader("Content-Type", "application/json");
+              if (strlen(systemConfig.dashboardApiKey) > 0)
+                https.addHeader("X-API-Key", systemConfig.dashboardApiKey);
+              int code = https.POST(payload);
+              Serial.printf("[BOOT] Factory reset notified (%d)\n", code);
+              https.end();
+            }
+            WiFi.disconnect(true);
+          } else {
+            Serial.println("[BOOT] WiFi unavailable — skipping dashboard notification");
+          }
+        }
+
         // Flash all LEDs 3× fast to confirm reset visually
         int fpins[] = LED_PINS;
         for (int i = 0; i < 3; i++) {
