@@ -337,7 +337,7 @@ Firmware: <span>%FW_VERSION%</span>
 <div id="refreshResult" class="result"></div>
 <button type="button" class="btn btn-reboot" onclick="if(confirm('Reboot device?'))fetch('/reboot',{method:'POST'});">Reboot</button>
 <button type="button" class="btn btn-reset" onclick="if(confirm('FACTORY RESET? All settings erased!'))fetch('/factory-reset',{method:'POST'});">Factory Reset</button>
-<small style="display:block;margin-top:4px;color:var(--muted);">No access to this page? Unplug and replug 5 times quickly — all LEDs will flash to confirm.</small>
+<small style="display:block;margin-top:4px;color:var(--muted);">No access to this page? Press the small button in the bottom left corner 5 times, pausing 1 second between each press — all LEDs will flash to confirm.</small>
 <div class="snooze-card">
 <div class="snooze-label">Snooze Alerts</div>
 <div class="snooze-sub">Temporarily force the LED green for N hours.</div>
