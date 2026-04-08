@@ -36,12 +36,11 @@ setInterval(() => {
 }, 60 * 60 * 1000);
 
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL || null;
+const DASHBOARD_TOKEN = process.env.DASHBOARD_READ_TOKEN || null;
 
 const DATA_DIR = path.join(__dirname, 'data');
 const UNITS_FILE = path.join(DATA_DIR, 'units.json');
 const BUGS_FILE = path.join(DATA_DIR, 'bugs.json');
-
-// ── Helpers ────────────────────────────────────────────────────────────────
 
 function readJSON(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
@@ -74,8 +73,6 @@ function authMiddleware(req, res, next) {
   if (key !== API_KEY) return res.status(401).json({ error: 'Unauthorized' });
   next();
 }
-
-const DASHBOARD_TOKEN = process.env.DASHBOARD_READ_TOKEN || null;
 
 function isLocalhost(req) {
   if (req.headers['cf-connecting-ip']) return false;
@@ -111,8 +108,6 @@ setInterval(() => {
 
 const STALE_MS = 30 * 60 * 1000;
 
-// ── Discord alerting ───────────────────────────────────────────────────────
-
 async function sendDiscordAlert(message) {
   if (!DISCORD_WEBHOOK) return;
   try {
@@ -145,8 +140,7 @@ function checkAndAlert(units) {
     if (hasError && unit._alerted_error_code !== unit.error_code) {
       unit._alerted_error_code = unit.error_code; changed = true;
       const ERROR_NAMES = ['None','WiFi Disconnect','Canvas Auth','Canvas Server','Time Sync','Memory Low','JSON Parse','Buffer Exhausted'];
-      const errName = ERROR_NAMES[unit.error_code] || `Code ${unit.error_code}`;
-      sendDiscordAlert(`🔴 **${name}** reporting error: **${errName}** (×${unit.consecutive_errors}) — firmware v${unit.firmware_version}`);
+      sendDiscordAlert(`🔴 **${name}** reporting error: **${ERROR_NAMES[unit.error_code] || `Code ${unit.error_code}`}** (×${unit.consecutive_errors}) — firmware v${unit.firmware_version}`);
     } else if (!hasError && unit._alerted_error_code > 0) {
       unit._alerted_error_code = 0; changed = true;
       sendDiscordAlert(`✅ **${name}** error cleared`);
@@ -157,11 +151,11 @@ function checkAndAlert(units) {
 
 // ── Middleware ─────────────────────────────────────────────────────────────
 
-// Webhook must be before express.json() — Stripe needs raw body for signature verification
+// Webhook before express.json() — Stripe needs raw body
 app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
   let event;
   try {
     event = webhookSecret
@@ -183,15 +177,10 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
 
 app.use(express.json({ limit: '64kb' }));
 
-// Host-based routing
 app.get('/', (req, res, next) => {
   const host = (req.headers.host || '').split(':')[0].toLowerCase();
-  if (host === 'due-light.com' || host === 'www.due-light.com') {
-    return res.sendFile(path.join(__dirname, 'public', 'home.html'));
-  }
-  if (host === 'setup.due-light.com') {
-    return res.sendFile(path.join(__dirname, 'public', 'setup.html'));
-  }
+  if (host === 'due-light.com' || host === 'www.due-light.com') return res.sendFile(path.join(__dirname, 'public', 'home.html'));
+  if (host === 'setup.due-light.com') return res.sendFile(path.join(__dirname, 'public', 'setup.html'));
   next();
 });
 
@@ -204,9 +193,7 @@ app.post('/api/login', rateLimitMiddleware, (req, res) => {
   res.json({ token: createSession() });
 });
 
-app.get('/api/whoami', (req, res) => {
-  res.json({ localhost: isLocalhost(req) });
-});
+app.get('/api/whoami', (req, res) => res.json({ localhost: isLocalhost(req) }));
 
 // ── Stripe Checkout ──────────────────────────────────────────────────────────
 
@@ -214,23 +201,13 @@ app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
   const addCable = req.body && req.body.addCable === true;
   const lineItems = [{
-    price_data: {
-      currency: 'usd',
-      product_data: { name: 'Due Light', description: 'ESP32 WiFi LED assignment tracker' },
-      unit_amount: 2000,
-    },
+    price_data: { currency: 'usd', product_data: { name: 'Due Light', description: 'ESP32 WiFi LED assignment tracker' }, unit_amount: 2000 },
     quantity: 1,
   }];
-  if (addCable) {
-    lineItems.push({
-      price_data: {
-        currency: 'usd',
-        product_data: { name: 'USB-C Cable', description: 'USB-C charging cable add-on' },
-        unit_amount: 200,
-      },
-      quantity: 1,
-    });
-  }
+  if (addCable) lineItems.push({
+    price_data: { currency: 'usd', product_data: { name: 'USB-C Cable', description: 'USB-C charging cable add-on' }, unit_amount: 200 },
+    quantity: 1,
+  });
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -258,19 +235,12 @@ app.post('/api/telemetry', rateLimitMiddleware, authMiddleware, (req, res) => {
   const existing = units.findIndex(u => u.device_id === body.device_id);
   const prev = existing >= 0 ? units[existing] : {};
   const record = {
-    notes: prev.notes || '',
-    _alerted_stale: prev._alerted_stale || false,
-    _alerted_error_code: prev._alerted_error_code || 0,
-    device_id: body.device_id,
-    device_name: body.device_name || body.device_id,
-    firmware_version: body.firmware_version || 'unknown',
-    setup_complete: !!body.setup_complete,
-    last_seen: now,
-    first_seen: prev.first_seen || now,
-    uptime_seconds: Number(body.uptime_seconds) || 0,
-    free_heap: Number(body.free_heap) || 0,
-    wifi_rssi: Number(body.wifi_rssi) || 0,
-    cpu_temp: Number(body.cpu_temp) || 0,
+    notes: prev.notes || '', _alerted_stale: prev._alerted_stale || false, _alerted_error_code: prev._alerted_error_code || 0,
+    device_id: body.device_id, device_name: body.device_name || body.device_id,
+    firmware_version: body.firmware_version || 'unknown', setup_complete: !!body.setup_complete,
+    last_seen: now, first_seen: prev.first_seen || now,
+    uptime_seconds: Number(body.uptime_seconds) || 0, free_heap: Number(body.free_heap) || 0,
+    wifi_rssi: Number(body.wifi_rssi) || 0, cpu_temp: Number(body.cpu_temp) || 0,
     assignment_status: Number.isInteger(body.assignment_status) ? body.assignment_status : -1,
     error_code: Number.isInteger(body.error_code) ? Math.max(0, Math.min(body.error_code, 7)) : 0,
     consecutive_errors: Math.max(0, Number(body.consecutive_errors) || 0),
@@ -290,38 +260,31 @@ app.post('/api/bug', rateLimitMiddleware, authMiddleware, (req, res) => {
   const bugs = readJSON(BUGS_FILE, []);
   const bugId = newBugId();
   bugs.unshift({
-    id: bugId,
-    device_id: body.device_id,
-    device_name: body.device_name || body.device_id,
+    id: bugId, device_id: body.device_id, device_name: body.device_name || body.device_id,
     firmware_version: body.firmware_version || 'unknown',
     error_code: Number.isInteger(body.error_code) ? body.error_code : 0,
     error_name: typeof body.error_name === 'string' ? body.error_name : 'UNKNOWN',
     title: typeof body.title === 'string' ? body.title.slice(0, 200) : 'Bug Report',
     diagnostics: body.diagnostics && typeof body.diagnostics === 'object' ? body.diagnostics : {},
-    timestamp: new Date().toISOString(),
-    resolved: false,
+    timestamp: new Date().toISOString(), resolved: false,
   });
   if (bugs.length > 500) bugs.splice(500);
   writeJSON(BUGS_FILE, bugs);
-  const name = body.device_name || body.device_id;
-  sendDiscordAlert(`🐛 **Bug report from ${name}**: ${body.title || body.error_name || 'Unknown error'} (firmware v${body.firmware_version || '?'})`);
+  sendDiscordAlert(`🐛 **Bug report from ${body.device_name || body.device_id}**: ${body.title || body.error_name || 'Unknown error'} (firmware v${body.firmware_version || '?'})`);
   res.json({ ok: true, bug_id: bugId });
 });
 
 // ── Dashboard API ──────────────────────────────────────────────────────────
 
 app.get('/api/units', readAuthMiddleware, (req, res) => {
-  const units = readJSON(UNITS_FILE, []).map(({ _alerted_stale, _alerted_error_code, ...u }) => u);
-  res.json(units);
+  res.json(readJSON(UNITS_FILE, []).map(({ _alerted_stale, _alerted_error_code, ...u }) => u));
 });
 
 app.delete('/api/units/:device_id', authMiddleware, (req, res) => {
   const units = readJSON(UNITS_FILE, []);
   const idx = units.findIndex(u => u.device_id === req.params.device_id);
   if (idx < 0) return res.status(404).json({ error: 'Unit not found' });
-  units.splice(idx, 1);
-  writeJSON(UNITS_FILE, units);
-  res.json({ ok: true });
+  units.splice(idx, 1); writeJSON(UNITS_FILE, units); res.json({ ok: true });
 });
 
 app.get('/api/bugs', readAuthMiddleware, (req, res) => {
@@ -335,9 +298,7 @@ app.patch('/api/bugs/:id/resolve', authMiddleware, (req, res) => {
   const bugs = readJSON(BUGS_FILE, []);
   const bug = bugs.find(b => b.id === parseInt(req.params.id));
   if (!bug) return res.status(404).json({ error: 'Not found' });
-  bug.resolved = true;
-  writeJSON(BUGS_FILE, bugs);
-  res.json({ ok: true });
+  bug.resolved = true; writeJSON(BUGS_FILE, bugs); res.json({ ok: true });
 });
 
 app.patch('/api/units/:device_id/notes', authMiddleware, (req, res) => {
@@ -345,18 +306,16 @@ app.patch('/api/units/:device_id/notes', authMiddleware, (req, res) => {
   const unit = units.find(u => u.device_id === req.params.device_id);
   if (!unit) return res.status(404).json({ error: 'Unit not found' });
   const notes = typeof req.body.notes === 'string' ? req.body.notes.slice(0, 500) : '';
-  unit.notes = notes;
-  writeJSON(UNITS_FILE, units);
-  res.json({ ok: true, notes });
+  unit.notes = notes; writeJSON(UNITS_FILE, units); res.json({ ok: true, notes });
 });
 
 app.get('/api/ota', readAuthMiddleware, (req, res) => {
   const units = readJSON(UNITS_FILE, []);
   const now = Date.now();
   res.json({ units: units.map(u => ({
-    device_id: u.device_id, device_name: u.device_name,
-    firmware_version: u.firmware_version, ota_version_seen: u.ota_version_seen,
-    last_seen: u.last_seen, stale: (now - new Date(u.last_seen).getTime()) > STALE_MS,
+    device_id: u.device_id, device_name: u.device_name, firmware_version: u.firmware_version,
+    ota_version_seen: u.ota_version_seen, last_seen: u.last_seen,
+    stale: (now - new Date(u.last_seen).getTime()) > STALE_MS,
   })), total: units.length });
 });
 
@@ -377,13 +336,10 @@ app.get('/api/stats', readAuthMiddleware, (req, res) => {
 app.post('/api/deploy', authMiddleware, (req, res) => {
   if (!API_KEY) return res.status(503).json({ error: 'API key not configured — deploy endpoint disabled for safety' });
   const repoRoot = path.resolve(__dirname, '..');
-  exec('git pull origin main && pm2 restart canvas-dashboard',
-    { cwd: repoRoot, timeout: 60000 },
-    (err, stdout, stderr) => {
-      if (err) return res.status(500).json({ error: err.message, stderr });
-      res.json({ ok: true, stdout, stderr });
-    }
-  );
+  exec('git pull origin main && pm2 restart canvas-dashboard', { cwd: repoRoot, timeout: 60000 }, (err, stdout, stderr) => {
+    if (err) return res.status(500).json({ error: err.message, stderr });
+    res.json({ ok: true, stdout, stderr });
+  });
 });
 
 // ── Start ──────────────────────────────────────────────────────────────────
