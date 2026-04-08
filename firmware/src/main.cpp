@@ -146,6 +146,60 @@ void setup() {
   for (int p : pins) pinMode(p, OUTPUT);
   setAllLEDsOff();
 
+  // ── Boot button factory reset ──────────────────────────────────────────────
+  // Hold BOOT (GPIO 0) for 5 seconds at power-on to wipe all settings.
+  // Blinks all LEDs while counting down so the user gets visual feedback.
+  #define BOOT_BTN 0
+  pinMode(BOOT_BTN, INPUT_PULLUP);
+  if (digitalRead(BOOT_BTN) == LOW) {
+    Serial.println("[RESET] Boot button held — starting factory reset countdown...");
+    unsigned long holdStart = millis();
+    bool cancelled = false;
+    int lastBlink = -1;
+    while (millis() - holdStart < 5000) {
+      esp_task_wdt_reset();
+      if (digitalRead(BOOT_BTN) == HIGH) { cancelled = true; break; }
+      // Blink count matches seconds elapsed so user knows how long to hold
+      int elapsed = (millis() - holdStart) / 1000;
+      if (elapsed != lastBlink) {
+        lastBlink = elapsed;
+        setAllLEDsOff();
+        delay(80);
+        for (int i = 0; i <= elapsed; i++) {
+          int ledPins[] = LED_PINS;
+          for (int p : ledPins) digitalWrite(p, HIGH);
+          delay(120);
+          setAllLEDsOff();
+          delay(80);
+        }
+      }
+      delay(20);
+    }
+    if (!cancelled && digitalRead(BOOT_BTN) == LOW) {
+      Serial.println("[RESET] Factory reset confirmed — wiping all preferences...");
+      // Flash all LEDs rapidly to confirm
+      for (int i = 0; i < 6; i++) {
+        int ledPins[] = LED_PINS;
+        for (int p : ledPins) digitalWrite(p, HIGH);
+        delay(100);
+        setAllLEDsOff();
+        delay(100);
+      }
+      preferences.begin("config", false);
+      preferences.clear();
+      preferences.end();
+      preferences.begin("boot", false);
+      preferences.clear();
+      preferences.end();
+      Serial.println("[RESET] Done — restarting in setup mode.");
+      delay(500);
+      ESP.restart();
+    } else {
+      Serial.println("[RESET] Cancelled.");
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   Serial.printf(" CPU Temp: %.1fC\n\n", temperatureRead());
 
   // DEV_MODE: Reset non-credential preferences on boot for easier iteration

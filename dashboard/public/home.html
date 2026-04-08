@@ -513,16 +513,18 @@ footer a:hover { color: var(--text); }
 <body>
 
 <nav>
-  <a href="/" class="nav-logo" style="text-decoration:none;color:inherit;">
-    <img src="/logo-64.png" alt="Due Light" style="height:28px;width:auto;">
-    Due Light
-  </a>
+  <div style="display:flex;align-items:center;gap:0;">
+    <a href="/" class="nav-logo" style="text-decoration:none;color:inherit;">
+      <img src="/logo-64.png" alt="Due Light" style="height:28px;width:auto;">
+      Due Light
+    </a>
+    <a href="https://setup.due-light.com" style="font-size:13px;color:var(--muted);margin-left:20px;padding-left:20px;border-left:1px solid var(--border);transition:color 0.2s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Setup guide</a>
+  </div>
   <div class="nav-links">
     <a href="#how-it-works">How it works</a>
     <a href="#colors">Colors</a>
     <a href="#specs">Specs</a>
     <a href="#delivery">Delivery</a>
-    <a href="https://setup.due-light.com">Setup guide</a>
     <a href="#pricing" class="nav-cta">Buy now</a>
   </div>
 </nav>
