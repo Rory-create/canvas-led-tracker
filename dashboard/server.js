@@ -411,7 +411,7 @@ app.get('/api/stats', readAuthMiddleware, (req, res) => {
 app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
 
-  const addCable = req.body && req.body.cable === 'true';
+  const addCable = req.body && req.body.addCable === true;
 
   const lineItems = [
     {
@@ -444,7 +444,7 @@ app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
       success_url: 'https://due-light.com/success?session_id={CHECKOUT_SESSION_ID}',
       cancel_url: 'https://due-light.com/#pricing',
     });
-    res.redirect(303, session.url);
+    res.json({ url: session.url });
   } catch (err) {
     console.error('[stripe] checkout session error:', err.message);
     res.status(500).json({ error: 'Could not start checkout' });
@@ -457,7 +457,7 @@ app.post('/api/deploy', authMiddleware, (req, res) => {
   if (!API_KEY) return res.status(503).json({ error: 'API key not configured — deploy endpoint disabled for safety' });
   const repoRoot = path.resolve(__dirname, '..');
   exec(
-    'git pull origin claude/duelight-esp32-review-1pTqB && pm2 restart canvas-dashboard',
+    'git pull origin main && pm2 restart canvas-dashboard',
     { cwd: repoRoot, timeout: 60000 },
     (err, stdout, stderr) => {
       if (err) return res.status(500).json({ error: err.message, stderr });

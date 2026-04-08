@@ -701,10 +701,8 @@ footer a:hover { color: var(--text); }
         <input type="checkbox" id="cable-checkbox" style="width:16px;height:16px;accent-color:var(--accent);">
         Add USB-C cable <span style="color:var(--muted)">+$2</span>
       </label>
-      <form id="checkout-form" action="/create-checkout-session" method="POST">
-        <input type="hidden" name="cable" id="cable-input" value="false">
-        <button type="submit" class="buy-btn active">Buy now — $<span id="btn-price">20</span></button>
-      </form>
+      <button id="buy-btn" class="buy-btn active">Buy now — $<span id="btn-price">20</span></button>
+      <div id="buy-error" style="display:none;margin-top:10px;text-align:center;font-size:13px;color:#dc2626;"></div>
     </div>
   </div>
 </section>
@@ -725,17 +723,37 @@ footer a:hover { color: var(--text); }
 
 <script>
   const cableCheckbox = document.getElementById('cable-checkbox');
-  const cableInput = document.getElementById('cable-input');
   const btnPrice = document.getElementById('btn-price');
   const priceDisplay = document.getElementById('price-display');
-  if (cableCheckbox) {
-    cableCheckbox.addEventListener('change', () => {
-      const total = cableCheckbox.checked ? 22 : 20;
-      cableInput.value = cableCheckbox.checked ? 'true' : 'false';
-      btnPrice.textContent = total;
-      priceDisplay.innerHTML = `<sup>$</sup>${total}`;
-    });
-  }
+  const buyBtn = document.getElementById('buy-btn');
+  const buyError = document.getElementById('buy-error');
+
+  cableCheckbox.addEventListener('change', () => {
+    const total = cableCheckbox.checked ? 22 : 20;
+    btnPrice.textContent = total;
+    priceDisplay.innerHTML = `<sup>$</sup>${total}`;
+  });
+
+  buyBtn.addEventListener('click', async () => {
+    buyBtn.disabled = true;
+    buyBtn.textContent = 'Loading…';
+    buyError.style.display = 'none';
+    try {
+      const res = await fetch('/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addCable: cableCheckbox.checked }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || 'Unexpected error');
+      window.location.href = data.url;
+    } catch (err) {
+      buyError.textContent = 'Could not start checkout — please try again or email hello@due-light.com';
+      buyError.style.display = 'block';
+      buyBtn.disabled = false;
+      buyBtn.textContent = `Buy now — $${cableCheckbox.checked ? 22 : 20}`;
+    }
+  });
 </script>
 </body>
 </html>
