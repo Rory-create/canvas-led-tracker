@@ -7,8 +7,14 @@
 #include <ArduinoJson.h>
 
 void sendTelemetry() {
-  if (strlen(systemConfig.dashboardUrl) == 0) return;
-  if (WiFi.status() != WL_CONNECTED) return;
+  if (strlen(systemConfig.dashboardUrl) == 0) {
+    Serial.println("[TELEMETRY] Skipped — dashboardUrl not set (check DASHBOARD_URL in secrets.h)");
+    return;
+  }
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("[TELEMETRY] Skipped — WiFi not connected");
+    return;
+  }
 
   // Build JSON payload — 13 fields × ~40 bytes avg = ~520 bytes; 768 gives headroom
   StaticJsonDocument<768> doc;
@@ -52,8 +58,10 @@ void sendTelemetry() {
       https.addHeader("X-API-Key", systemConfig.dashboardApiKey);
     }
     int code = https.POST(payload);
-    if (systemConfig.debugMode) {
-      Serial.printf("[TELEMETRY] POST %s → %d\n", url.c_str(), code);
+    if (code == 200 || code == 201) {
+      Serial.printf("[TELEMETRY] OK (%d) → %s\n", code, url.c_str());
+    } else {
+      Serial.printf("[TELEMETRY] FAILED (%d) → %s\n", code, url.c_str());
     }
     https.end();
   }
