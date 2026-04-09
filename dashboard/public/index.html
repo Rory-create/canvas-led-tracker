@@ -273,6 +273,10 @@ function timeAgo(iso) {
   return Math.round(diff / 86400) + 'd ago';
 }
 
+function shortDate(iso) {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 function isStale(iso) {
   return (Date.now() - new Date(iso).getTime()) > 30 * 60 * 1000;
 }
@@ -378,7 +382,10 @@ function renderUnits(units) {
         </div>
       </div>
       <div class="unit-footer">
-        <span class="last-seen">Last seen ${escHtml(timeAgo(u.last_seen))}${!u.factory_reset_pending && isStale(u.last_seen) ? ' ⚠️ STALE' : ''}</span>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span class="last-seen">Since ${escHtml(shortDate(u.first_seen || u.last_seen))}</span>
+          <span class="last-seen">Last seen ${escHtml(timeAgo(u.last_seen))}${!u.factory_reset_pending && isStale(u.last_seen) ? ' ⚠️ STALE' : ''}</span>
+        </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
           ${u.factory_reset_pending
             ? '<span class="badge error" style="background:rgba(249,115,22,0.15);color:#f97316;border-color:rgba(249,115,22,0.3);">Factory Reset</span>'
