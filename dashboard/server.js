@@ -415,7 +415,7 @@ app.get('/api/stats', readAuthMiddleware, (req, res) => {
 app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
 
-  const addCable = req.body && req.body.addCable === true;
+  const addCable = req.body && req.body.cable === 'true';
 
   const lineItems = [
     {
@@ -448,7 +448,7 @@ app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
       success_url: 'https://due-light.com/success?session_id={CHECKOUT_SESSION_ID}',
       cancel_url: 'https://due-light.com/#pricing',
     });
-    res.json({ url: session.url });
+    res.redirect(303, session.url);
   } catch (err) {
     console.error('[stripe] checkout session error:', err.message);
     res.status(500).json({ error: 'Could not start checkout' });
