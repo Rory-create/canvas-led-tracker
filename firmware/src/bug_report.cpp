@@ -11,11 +11,13 @@ bool shouldReportBug() {
     return false;
   }
 
-  // Check cooldown (1 hour = 3600000ms)
-  unsigned long now = millis();
-  if (now - systemConfig.lastBugReport < 3600000) {
+  // Use Unix time for cooldown so it persists across reboots.
+  // millis() resets to 0 on every boot; time_t is stable once NTP syncs.
+  time_t nowTs;
+  time(&nowTs);
+  if (nowTs > 1000000L && (unsigned long)nowTs - systemConfig.lastBugReport < 3600UL) {
     if (systemConfig.debugMode) {
-      unsigned long remaining = (3600000 - (now - systemConfig.lastBugReport)) / 60000;
+      unsigned long remaining = (3600UL - ((unsigned long)nowTs - systemConfig.lastBugReport)) / 60UL;
       Serial.printf("[BUG] Cooldown active: %lu minutes remaining\n", remaining);
     }
     return false;
@@ -127,7 +129,8 @@ void reportBug() {
     Serial.printf("[BUG] Dashboard POST → %d\n", dc);
     dashHttp.end();
     if (dc == 200 || dc == 201) {
-      systemConfig.lastBugReport = millis();
+      time_t nowTs; time(&nowTs);
+      systemConfig.lastBugReport = (nowTs > 1000000L) ? (unsigned long)nowTs : 0;
       preferences.begin("config", false);
       preferences.putULong("lastReport", systemConfig.lastBugReport);
       preferences.end();

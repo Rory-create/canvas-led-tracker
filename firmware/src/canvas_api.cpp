@@ -262,6 +262,7 @@ int fetchCanvasAssignments() {
 
               // Retry with new buffer size
               Serial.println("   Retrying with increased buffer...\n");
+              http.end();  // must close before re-opening on next attempt
               continue;  // Retry this attempt with new buffer
             } else {
               Serial.println("\nCRITICAL: Cannot increase buffer further!");
