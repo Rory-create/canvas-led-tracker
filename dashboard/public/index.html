@@ -54,6 +54,7 @@ a { color: var(--blue); text-decoration: none; }
 .unit-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 10px; padding: 18px; transition: border-color 0.2s; }
 .unit-card.error { border-color: rgba(239,68,68,0.5); }
 .unit-card.stale { border-color: rgba(234,179,8,0.5); }
+.unit-card.factory-reset { border-color: rgba(249,115,22,0.6); }
 .unit-card.healthy { border-color: rgba(77,107,60,0.5); border-left-color: #3d5a2e; }
 .unit-card.unactivated { border-color: var(--border); opacity: 0.7; }
 
@@ -272,6 +273,10 @@ function timeAgo(iso) {
   return Math.round(diff / 86400) + 'd ago';
 }
 
+function shortDate(iso) {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 function isStale(iso) {
   return (Date.now() - new Date(iso).getTime()) > 30 * 60 * 1000;
 }
@@ -296,6 +301,7 @@ function tempLabel(temp) {
 }
 
 function unitCardClass(u) {
+  if (u.factory_reset_pending) return 'factory-reset';
   if (!u.setup_complete) return 'unactivated';
   if (isStale(u.last_seen)) return 'stale';
   if (u.error_code > 0 || u.consecutive_errors > 2) return 'error';
@@ -303,6 +309,7 @@ function unitCardClass(u) {
 }
 
 function unitDotClass(u) {
+  if (u.factory_reset_pending) return 'grey';
   if (!u.setup_complete || isStale(u.last_seen)) return 'grey';
   if (u.error_code > 0 || u.consecutive_errors > 2) return 'red';
   if (u.consecutive_errors > 0) return 'yellow';
@@ -375,11 +382,16 @@ function renderUnits(units) {
         </div>
       </div>
       <div class="unit-footer">
-        <span class="last-seen">Last seen ${escHtml(timeAgo(u.last_seen))}${isStale(u.last_seen) ? ' ⚠️ STALE' : ''}</span>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span class="last-seen">Since ${escHtml(shortDate(u.first_seen || u.last_seen))}</span>
+          <span class="last-seen">Last seen ${escHtml(timeAgo(u.last_seen))}${!u.factory_reset_pending && isStale(u.last_seen) ? ' ⚠️ STALE' : ''}</span>
+        </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-          <span class="badge ${u.setup_complete ? 'setup' : 'not-setup'}">${u.setup_complete ? 'Active' : 'Not set up'}</span>
+          ${u.factory_reset_pending
+            ? '<span class="badge error" style="background:rgba(249,115,22,0.15);color:#f97316;border-color:rgba(249,115,22,0.3);">Factory Reset</span>'
+            : `<span class="badge ${u.setup_complete ? 'setup' : 'not-setup'}">${u.setup_complete ? 'Active' : 'Not set up'}</span>`}
           <span class="badge fw">v${escHtml(u.firmware_version)}</span>
-          ${u.error_code > 0 ? '<span class="badge error">Error</span>' : ''}
+          ${!u.factory_reset_pending && u.error_code > 0 ? '<span class="badge error">Error</span>' : ''}
         </div>
       </div>
       ${u.notes ? `<div style="margin-top:8px;padding:6px 8px;background:var(--bg);border-radius:5px;font-size:12px;color:var(--muted);">📝 ${escHtml(u.notes)}</div>` : ''}

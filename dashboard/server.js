@@ -215,6 +215,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
 });
 
 app.use(express.json({ limit: '64kb' }));
+app.use(express.urlencoded({ extended: false }));  // parse HTML form POSTs
 
 // Host-based routing: due-light.com (and www.) → marketing page; setup.due-light.com → setup guide; everything else → dashboard
 app.get('/', (req, res, next) => {
@@ -262,16 +263,20 @@ app.post('/api/telemetry', rateLimitMiddleware, authMiddleware, (req, res) => {
   const existing = units.findIndex(u => u.device_id === body.device_id);
   const prev = existing >= 0 ? units[existing] : {};
 
+  const isFactoryReset = !!body.factory_reset;
+
   const record = {
     // Preserve operator-set fields from previous record
     notes: prev.notes || '',
     _alerted_stale: prev._alerted_stale || false,
     _alerted_error_code: prev._alerted_error_code || 0,
+    // Factory reset flag: set on reset notification, cleared on normal check-in
+    factory_reset_pending: isFactoryReset ? true : false,
     // Device-reported fields
     device_id: body.device_id,
     device_name: body.device_name || body.device_id,
     firmware_version: body.firmware_version || 'unknown',
-    setup_complete: !!body.setup_complete,
+    setup_complete: isFactoryReset ? false : !!body.setup_complete,
     last_seen: now,
     first_seen: prev.first_seen || now,
     uptime_seconds: Number(body.uptime_seconds) || 0,
@@ -411,7 +416,7 @@ app.get('/api/stats', readAuthMiddleware, (req, res) => {
 app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
 
-  const addCable = req.body && req.body.addCable === true;
+  const addCable = req.body && req.body.cable === 'true';
 
   const lineItems = [
     {
@@ -444,7 +449,7 @@ app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
       success_url: 'https://due-light.com/success?session_id={CHECKOUT_SESSION_ID}',
       cancel_url: 'https://due-light.com/#pricing',
     });
-    res.json({ url: session.url });
+    res.redirect(303, session.url);
   } catch (err) {
     console.error('[stripe] checkout session error:', err.message);
     res.status(500).json({ error: 'Could not start checkout' });

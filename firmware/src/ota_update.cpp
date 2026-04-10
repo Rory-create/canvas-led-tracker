@@ -83,6 +83,14 @@ void checkForOTAUpdate() {
     return;
   }
 
+  // Reject non-HTTPS firmware URLs — prevents a compromised manifest from
+  // redirecting the device to a plaintext or local-network endpoint.
+  if (strncmp(firmwareUrl, "https://", 8) != 0) {
+    Serial.println("❌ Firmware URL rejected — must start with https://");
+    lastOTAFailure = now;
+    return;
+  }
+
   // Record the version we just read so telemetry can report it
   strncpy(otaVersionSeen, remoteVersion, sizeof(otaVersionSeen) - 1);
   otaVersionSeen[sizeof(otaVersionSeen) - 1] = '\0';

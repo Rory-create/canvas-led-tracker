@@ -102,6 +102,11 @@ _site/                 # Jekyll (GitHub Pages)
 .sass-cache/
 .jekyll-metadata
 
+# -------------------------------
+# Runtime Data (server-generated, never commit)
+# -------------------------------
+dashboard/data/
+
 # But keep these important files
 !.gitignore
 !.gitattributes
