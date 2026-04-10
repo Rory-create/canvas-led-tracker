@@ -46,8 +46,10 @@ async function remoteSHA() {
   return body.sha;
 }
 
+const EXEC_OPTS = { windowsHide: true, stdio: 'pipe' };
+
 function localSHA() {
-  return execSync('git rev-parse HEAD', { cwd: REPO_ROOT }).toString().trim();
+  return execSync('git rev-parse HEAD', { cwd: REPO_ROOT, ...EXEC_OPTS }).toString().trim();
 }
 
 // Returns true (passed), false (failed), or null (still running / no checks yet)
@@ -78,10 +80,10 @@ async function checkAndDeploy() {
     if (passed === false) { log('CI failed — skipping deploy');             return; }
 
     log('CI passed — pulling...');
-    execSync('git pull origin main', { cwd: REPO_ROOT, stdio: 'inherit' });
+    execSync('git pull origin main', { cwd: REPO_ROOT, ...EXEC_OPTS });
 
     log('restarting server...');
-    execSync('pm2 restart canvas-dashboard', { stdio: 'inherit' });
+    execSync('pm2 restart canvas-dashboard', EXEC_OPTS);
 
     log(`deployed ${short(remote)} ✓`);
   } catch (err) {
