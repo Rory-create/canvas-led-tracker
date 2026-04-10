@@ -243,6 +243,39 @@ void setup() {
     preferences.begin("boot", false);
     bootAttempts = preferences.getInt("bootAttempts", 0) + 1;
     preferences.putInt("bootAttempts", bootAttempts);
+
+    // Rapid power-cycle factory reset: if the device is power-cycled 5 times before
+    // the boot is marked stable (30s uptime), wipe NVS config and restart.
+    // This lets users recover from a bad WiFi config without a serial monitor.
+    bool wasStable = preferences.getBool("bootStable", true); // true on very first boot
+    if (!wasStable) {
+      int quickReboots = preferences.getInt("quickReboots", 0) + 1;
+      preferences.putInt("quickReboots", quickReboots);
+      Serial.printf("[BOOT] Quick reboot #%d (unplug 5x to factory reset)\n", quickReboots);
+      if (quickReboots >= 5) {
+        Serial.println("[BOOT] *** FACTORY RESET — wiping config ***");
+        preferences.putInt("quickReboots", 0);
+        preferences.putBool("bootStable", true);
+        preferences.end();
+        // Flash all LEDs 3× fast to confirm reset visually
+        int fpins[] = LED_PINS;
+        for (int i = 0; i < 3; i++) {
+          for (int p : fpins) analogWrite(p, 200);
+          delay(200);
+          for (int p : fpins) analogWrite(p, 0);
+          delay(200);
+        }
+        preferences.begin("config", false);
+        preferences.clear();
+        preferences.end();
+        ESP.restart();
+      }
+    } else {
+      // Stable previous boot — clear any accumulated quick-reboot count
+      preferences.putInt("quickReboots", 0);
+    }
+    preferences.putBool("bootStable", false); // cleared to true after 30s in loop()
+
     preferences.end();
     Serial.printf("[BOOT] Attempt #%d\n", bootAttempts);
   }
@@ -303,6 +336,16 @@ void loop() {
   monitorSystem();
   dnsServer.processNextRequest();
   server.handleClient();
+
+  // Mark boot stable after 30s — resets the power-cycle factory reset counter
+  static bool bootMarkedStable = false;
+  if (!bootMarkedStable && now >= 30000UL) {
+    bootMarkedStable = true;
+    preferences.begin("boot", false);
+    preferences.putBool("bootStable", true);
+    preferences.putInt("quickReboots", 0);
+    preferences.end();
+  }
 
   if (systemConfig.setupComplete) {
     // WiFi reconnect with 30-second backoff to avoid hammering the AP on poor signal

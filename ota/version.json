@@ -1,6 +1,6 @@
 {
-  "version": "1.4.1",
+  "version": "1.4.2",
   "firmware_url": "https://raw.githubusercontent.com/Rory-create/canvas-led-tracker/main/ota/firmware.bin",
-  "release_notes": "OTA on first boot, telemetry fires ~1min after boot, dashboard-only bug reports, earthy save pages, DueLight-XXXX AP name",
+  "release_notes": "UI polish: firmware version in status bar, WiFi status display, darker action buttons, Setup guide in nav-left",
   "mandatory": false
 }
