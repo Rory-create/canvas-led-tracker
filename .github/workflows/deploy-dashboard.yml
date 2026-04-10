@@ -42,9 +42,5 @@ jobs:
 
       - name: Run smoke tests
         run: npx playwright test
-
-      - name: Deploy to production
-        if: success()
-        run: |
-          curl -sf -X POST https://due-light.com/api/deploy \
-            -H "X-API-Key: ${{ secrets.DASHBOARD_API_KEY }}"
+      # Deployment is handled by deploy-watcher.js running on the server.
+      # It polls GitHub every 5 min and pulls automatically once CI passes.
