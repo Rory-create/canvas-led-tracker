@@ -1,0 +1,50 @@
+name: Test & Deploy Dashboard
+
+on:
+  push:
+    branches: [main]
+    paths: ['dashboard/**']
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start server
+        run: node server.js &
+        env:
+          PORT: 3000
+          DASHBOARD_API_KEY: ci-test-key
+          # No STRIPE_SECRET_KEY intentionally — server degrades to 503 gracefully,
+          # and the checkout test verifies it never returns 500 (crash).
+
+      - name: Wait for server to be ready
+        run: npx wait-on http://localhost:3000 --timeout 15000
+
+      - name: Install Playwright browser
+        run: npx playwright install chromium --with-deps
+
+      - name: Run smoke tests
+        run: npx playwright test
+
+      - name: Deploy to production
+        if: success()
+        run: |
+          curl -sf -X POST https://due-light.com/api/deploy \
+            -H "X-API-Key: ${{ secrets.DASHBOARD_API_KEY }}"
