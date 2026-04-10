@@ -45,7 +45,7 @@ test('home page has buy button, correct price, and correct route', async ({ requ
   const res = await request.get(`${BASE}/`, { headers: { Host: 'due-light.com' } });
   const html = await res.text();
   expect(html).toContain('id="buy-btn"');
-  expect(html).toContain('$20');           // catches accidental price edits
+  expect(html).toContain('btn-price">20</span>'); // catches accidental price edits
   expect(html).toContain('/api/checkout'); // catches route renames that break the JS fetch
 });
 
