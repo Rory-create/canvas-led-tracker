@@ -229,6 +229,12 @@ app.get('/', (req, res, next) => {
   next();
 });
 
+// GET /success — Stripe post-payment landing page. Explicit route so both
+// /success (Stripe redirect) and /success.html (direct link) work without Caddy rewriting.
+app.get('/success', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'success.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // POST /api/login — exchange password for a session token
