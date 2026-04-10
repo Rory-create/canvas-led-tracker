@@ -1,5 +1,6 @@
 #include "test_mode.h"
 #include "config.h"
+#include "version.h"
 
 void handleTestMode() {
   if (!DEV_MODE) { server.send(403, "text/plain", "Test mode disabled"); return; }
