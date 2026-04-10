@@ -215,6 +215,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
 });
 
 app.use(express.json({ limit: '64kb' }));
+app.use(express.urlencoded({ extended: false }));  // parse HTML form POSTs
 
 // Host-based routing: due-light.com (and www.) → marketing page; setup.due-light.com → setup guide; everything else → dashboard
 app.get('/', (req, res, next) => {
