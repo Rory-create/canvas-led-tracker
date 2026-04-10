@@ -742,7 +742,7 @@ footer a:hover { color: var(--text); }
     buyBtn.textContent = 'Loading…';
     buyError.style.display = 'none';
     try {
-      const res = await fetch('/create-checkout-session', {
+      const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ addCable: cableCheckbox.checked }),
