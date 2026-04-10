@@ -53,6 +53,7 @@ test('home page has buy button, correct price, and correct route', async ({ requ
 
 test('telemetry endpoint accepts a fake device ping', async ({ request }) => {
   const res = await request.post(`${BASE}/api/telemetry`, {
+    headers: { 'X-API-Key': 'ci-test-key' }, // matches DASHBOARD_API_KEY set in CI workflow
     data: {
       device_id: 'AA:BB:CC:DD:EE:FF',
       firmware_version: '0.0.0-ci-test',
