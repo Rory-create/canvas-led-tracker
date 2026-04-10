@@ -704,7 +704,7 @@ footer a:hover { color: var(--text); }
         <input type="checkbox" id="cable-checkbox" style="width:16px;height:16px;accent-color:var(--accent);">
         Add USB-C cable <span style="color:var(--muted)">+$2</span>
       </label>
-      <form id="checkout-form" action="/create-checkout-session" method="POST">
+      <form id="checkout-form" action="/api/checkout" method="POST">
         <input type="hidden" name="cable" id="cable-input" value="false">
         <button type="submit" class="buy-btn active">Buy now — $<span id="btn-price">20</span></button>
       </form>

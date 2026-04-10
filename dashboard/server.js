@@ -413,7 +413,7 @@ app.get('/api/stats', readAuthMiddleware, (req, res) => {
 // ── Stripe Checkout ────────────────────────────────────────────────────────
 
 // POST /create-checkout-session — create a Stripe Checkout Session and redirect
-app.post('/create-checkout-session', rateLimitMiddleware, async (req, res) => {
+app.post('/api/checkout', rateLimitMiddleware, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
 
   const addCable = req.body && req.body.cable === 'true';
