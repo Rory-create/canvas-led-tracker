@@ -138,13 +138,6 @@ void loadConfig() {
     preferences.getString("tzName", timezoneConfig.displayName, sizeof(timezoneConfig.displayName));
     if (strlen(timezoneConfig.displayName) == 0) strcpy(timezoneConfig.displayName, "US Eastern");
 
-    preferences.getString("devName", systemConfig.deviceName, sizeof(systemConfig.deviceName));
-    if (strlen(systemConfig.deviceName) == 0) {
-      uint8_t mac[6];
-      WiFi.macAddress(mac);
-      snprintf(systemConfig.deviceName, sizeof(systemConfig.deviceName), "DueLight-%02X%02X", mac[4], mac[5]);
-    }
-
     systemConfig.debugMode = preferences.getBool("debug", true);
 
     preferences.getString("apPass", systemConfig.apPassword, sizeof(systemConfig.apPassword));
@@ -159,6 +152,22 @@ void loadConfig() {
   } else {
     Serial.println("⚠️ First time setup required");
   }
+
+  // Always generate device name from MAC — must run regardless of setupComplete so
+  // factory reset produces a correct DueLight-XXXXXX name, not "Canvas_LED_Tracker".
+  // Uses 3 MAC bytes (6 hex chars) to avoid collisions between devices in same batch.
+  {
+    char storedName[32] = "";
+    preferences.getString("devName", storedName, sizeof(storedName));
+    if (strlen(storedName) == 0) {
+      uint8_t mac[6];
+      WiFi.macAddress(mac);
+      snprintf(systemConfig.deviceName, sizeof(systemConfig.deviceName), "DueLight-%02X%02X%02X", mac[3], mac[4], mac[5]);
+    } else {
+      strlcpy(systemConfig.deviceName, storedName, sizeof(systemConfig.deviceName));
+    }
+  }
+
   preferences.end();
 
   // Always apply compile-time dashboard credentials — overrides any NVS value so
