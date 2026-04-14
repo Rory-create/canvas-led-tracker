@@ -106,10 +106,22 @@ void connectWiFi() {
     delay(500);
     Serial.printf("🔍 IP: %s\n", WiFi.localIP().toString().c_str());
 
-    String hostname = String(systemConfig.deviceName);
-    hostname.replace(" ", "");
-    hostname.replace("_", "");
-    hostname.toLowerCase();
+    // Detect if another Due Light device already holds due-light.local.
+    // Start mDNS briefly with a probe name so we can send a query, then
+    // re-init with the real name (due-light or due-light-1).
+    String hostname = "due-light";
+    if (MDNS.begin("due-light-probe")) {
+      delay(200);
+      IPAddress existing = MDNS.queryHost("due-light.local", 1000);
+      if (existing != INADDR_NONE && existing != WiFi.localIP()) {
+        hostname = "due-light-1";
+        Serial.printf("⚠️ mDNS collision: due-light.local taken by %s, using due-light-1.local\n",
+                      existing.toString().c_str());
+      }
+      MDNS.end();
+      delay(100);
+    }
+    strlcpy(systemConfig.mdnsHostname, hostname.c_str(), sizeof(systemConfig.mdnsHostname));
 
     for (int i = 0; i < 3; i++) {
       if (MDNS.begin(hostname.c_str())) {
