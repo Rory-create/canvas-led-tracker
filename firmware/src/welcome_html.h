@@ -51,7 +51,6 @@ select option{background:var(--bg);}
 <body><div class="wrap">
 <div class="logo"><div class="dot"></div>Due Light</div>
 <div class="tag">Initial Setup</div>
-<a class="guide-link" style="pointer-events:none;opacity:0.5;cursor:default;">Full setup guide at setup.due-light.com (open on another device)</a>
 <p class="meta">Firmware v%FW_VERSION%</p>
 <form method="POST" action="/save" onsubmit="return validateSetup()">
 <div class="card">
@@ -124,7 +123,7 @@ select option{background:var(--bg);}
 </div>
 <button type="submit" class="btn btn-save">Save &amp; Continue</button>
 </form>
-<div class="footer">Questions? Visit setup.due-light.com on another device.</div>
+
 </div>
 <script>
 if(/Mobi|Android/i.test(navigator.userAgent)){document.querySelectorAll('.show-pass').forEach(e=>e.style.display='block');}
