@@ -35,7 +35,7 @@ struct TimezoneConfig {
 
 struct SystemConfig {
   bool setupComplete = false;
-  char deviceName[32] = "Canvas_LED_Tracker";
+  char deviceName[32] = "";
   bool debugMode = true;
   char apPassword[64] = "canvas123";
   bool bugReportEnabled = true;
