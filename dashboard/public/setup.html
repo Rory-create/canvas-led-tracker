@@ -215,18 +215,14 @@ footer a:hover { color: var(--text); }
 
 <!-- Video walkthrough -->
 <div class="steps-wrap" style="padding-bottom:0;">
-  <div class="step-card" style="border-left-color: var(--border); padding: 0; overflow: hidden;">
-    <!-- Drop your walkthrough video into dashboard/public/ named setup-walkthrough.mp4 -->
-    <!-- Remove the poster div and uncomment the <video> tag once the file is in place -->
-    <div style="background:#1c1408; border-radius:11px; aspect-ratio:16/9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:#faf5eb; opacity:0.5;">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg>
-      <span style="font-size:14px;">Setup walkthrough video coming soon</span>
-    </div>
-    <!-- Uncomment once setup-walkthrough.mp4 is in dashboard/public/:
-    <video controls style="width:100%; display:block; border-radius:11px;">
-      <source src="/setup-walkthrough.mp4" type="video/mp4">
-    </video>
-    -->
+  <div class="step-card" style="border-left-color: var(--border); padding: 0; overflow: hidden; border-radius:11px;">
+    <iframe
+      src="https://www.youtube.com/embed/S2b6uh6nI10"
+      title="Due Light Setup Guide"
+      style="width:100%; aspect-ratio:16/9; display:block; border:none;"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowfullscreen>
+    </iframe>
   </div>
 </div>
 
