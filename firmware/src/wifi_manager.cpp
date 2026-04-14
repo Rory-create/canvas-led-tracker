@@ -106,10 +106,7 @@ void connectWiFi() {
     delay(500);
     Serial.printf("🔍 IP: %s\n", WiFi.localIP().toString().c_str());
 
-    String hostname = String(systemConfig.deviceName);
-    hostname.replace(" ", "");
-    hostname.replace("_", "");
-    hostname.toLowerCase();
+    String hostname = "due-light";
 
     for (int i = 0; i < 3; i++) {
       if (MDNS.begin(hostname.c_str())) {

@@ -219,7 +219,6 @@ void handleSave() {
   bool isFromAP = (clientIP[0] == apIP[0] && clientIP[1] == apIP[1] && clientIP[2] == apIP[2]);
 
   if (isFromAP) {
-    String localIp = WiFi.localIP().toString();
     String confirmHtml = F("<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>");
     confirmHtml += F("<style>:root{--bg:#ddd6c4;--sf:#faf5eb;--bd:#b5a688;--tx:#1c1408;--mt:#5e4e38;--gr:#3d5a2e;--gw:rgba(61,90,46,.3);}");
     confirmHtml += F("*{box-sizing:border-box;margin:0;padding:0;}");
@@ -234,7 +233,7 @@ void handleSave() {
     confirmHtml += F("<div class='dot'><svg viewBox='0 0 24 24'><polyline points='20 6 9 17 4 12'/></svg></div>");
     confirmHtml += F("<h2>Setup complete!</h2>");
     confirmHtml += F("<p>Due Light is connecting to your home WiFi and will be ready in a moment.</p>");
-    confirmHtml += "<div class='url-box'>http://" + localIp + "</div>";
+    confirmHtml += F("<div class='url-box'>http://due-light.local</div>");
     confirmHtml += F("<p>To adjust settings later, connect to your home WiFi and visit the address above.</p>");
     confirmHtml += F("<p class='note'>This page will close automatically.</p>");
     confirmHtml += F("</div><script>setTimeout(function(){window.close();},4000);</script></body></html>");
