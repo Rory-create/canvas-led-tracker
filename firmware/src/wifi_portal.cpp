@@ -92,6 +92,7 @@ void handleTestCanvas() {
   }
 
   String testToken = server.arg("token");
+  testToken.trim(); // strip whitespace/newlines from copy-paste
   Serial.println(" Testing Canvas token...");
 
   if (WiFi.status() != WL_CONNECTED) {
@@ -142,8 +143,9 @@ void handleTestCanvas() {
     testHttp.end();
 
     String msg, successStr;
-    if (httpCode == 200)      { msg = "Token valid! Canvas connection working."; successStr = "true"; }
+    if      (httpCode == 200) { msg = "Token valid! Canvas connection working."; successStr = "true"; }
     else if (httpCode == 401) { msg = "Invalid token. Generate a new one in Canvas."; successStr = "false"; }
+    else if (httpCode < 0)    { msg = "Connection timed out — check WiFi and try again."; successStr = "false"; }
     else                      { msg = "Canvas error (HTTP " + String(httpCode) + "). Try again."; successStr = "false"; }
 
     server.send(200, "application/json", "{\"success\":" + successStr + ",\"message\":\"" + msg + "\"}");

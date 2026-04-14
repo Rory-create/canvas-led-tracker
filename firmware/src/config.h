@@ -36,6 +36,7 @@ struct TimezoneConfig {
 struct SystemConfig {
   bool setupComplete = false;
   char deviceName[32] = "";
+  char mdnsHostname[32] = "due-light"; // resolved at runtime; may be due-light-1 if collision
   bool debugMode = true;
   char apPassword[64] = "canvas123";
   bool bugReportEnabled = true;

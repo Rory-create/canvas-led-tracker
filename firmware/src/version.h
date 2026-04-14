@@ -2,7 +2,7 @@
 #define VERSION_H
 
 // Semantic versioning: MAJOR.MINOR.PATCH
-#define FIRMWARE_VERSION "1.4.2"
+#define FIRMWARE_VERSION "1.4.3"
 #define BUILD_TIMESTAMP __DATE__ " " __TIME__
 
 // Development mode - resets non-credential preferences on boot
@@ -42,5 +42,6 @@
 // 1.4.0 - Refactor: split 2150-line main.cpp into 7 focused modules; security hardening, WiFi backoff, NTP retry, safe JSON
 // 1.4.1 - OTA on first boot, telemetry fires ~1min after boot, dashboard-only bug reports, earthy save pages, DueLight-XXXX AP name
 // 1.4.2 - UI polish: firmware version in status bar, WiFi status display, darker action buttons, Setup guide in nav-left
+// 1.4.3 - Bug fixes: token whitespace trimming, mDNS collision detection (due-light-1.local), fixed post-setup URL, DueLight-XXXXXX naming after factory reset
 
 #endif

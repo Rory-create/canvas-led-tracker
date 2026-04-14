@@ -163,7 +163,11 @@ void handleSave() {
     wifiConfig.useSecondaryNetwork = strlen(wifiConfig.ssid2) > 0;
   }
   if (server.hasArg("password2")) server.arg("password2").toCharArray(wifiConfig.password2, sizeof(wifiConfig.password2));
-  if (server.hasArg("apiToken")) server.arg("apiToken").toCharArray(canvasConfig.apiToken, sizeof(canvasConfig.apiToken));
+  if (server.hasArg("apiToken")) {
+    String token = server.arg("apiToken");
+    token.trim(); // strip whitespace/newlines from copy-paste
+    token.toCharArray(canvasConfig.apiToken, sizeof(canvasConfig.apiToken));
+  }
 
   if (server.hasArg("canvasSchoolUrl")) {
     String school = server.arg("canvasSchoolUrl");
@@ -233,7 +237,7 @@ void handleSave() {
     confirmHtml += F("<div class='dot'><svg viewBox='0 0 24 24'><polyline points='20 6 9 17 4 12'/></svg></div>");
     confirmHtml += F("<h2>Setup complete!</h2>");
     confirmHtml += F("<p>Due Light is connecting to your home WiFi and will be ready in a moment.</p>");
-    confirmHtml += F("<div class='url-box'>http://due-light.local</div>");
+    confirmHtml += "<div class='url-box'>http://" + String(systemConfig.mdnsHostname) + ".local</div>";
     confirmHtml += F("<p>To adjust settings later, connect to your home WiFi and visit the address above.</p>");
     confirmHtml += F("<p class='note'>This page will close automatically.</p>");
     confirmHtml += F("</div><script>setTimeout(function(){window.close();},4000);</script></body></html>");
