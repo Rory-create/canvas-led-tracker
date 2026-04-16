@@ -1,0 +1,22 @@
+#!/bin/sh
+# Block commits that contain merge conflict markers
+
+FILES=$(git diff --cached --name-only)
+FOUND=""
+
+for f in $FILES; do
+  if [ -f "$f" ] && grep -qE '^(<{7}|={7}|>{7})' "$f"; then
+    FOUND="$FOUND\n  $f"
+  fi
+done
+
+if [ -n "$FOUND" ]; then
+  echo ""
+  echo "ERROR: Merge conflict markers detected in staged files:"
+  printf "$FOUND"
+  echo ""
+  echo ""
+  echo "Fix the conflicts before committing."
+  echo ""
+  exit 1
+fi

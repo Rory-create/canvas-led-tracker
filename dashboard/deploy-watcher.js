@@ -69,6 +69,9 @@ async function checkAndDeploy() {
     const local  = localSHA();
 
     if (remote === local) {
+      // Reset working tree so locally corrupted files (e.g. conflict markers from
+      // a bad git pull) get cleaned up automatically every poll cycle.
+      execSync('git checkout -- .', { cwd: REPO_ROOT, ...EXEC_OPTS });
       log(`up to date (${short(local)})`);
       return;
     }
