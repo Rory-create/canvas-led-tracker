@@ -232,26 +232,39 @@ footer a:hover { color: var(--text); }
   <div class="step-card">
     <div class="step-num">Step 1</div>
     <h2>Plug it in</h2>
-    <p>Plug Due Light into a USB-C wall charger — the same kind used to charge a phone. Any charger works. It does <strong>not</strong> need to be plugged into a computer.</p>
-    <p>The light will blink a few times as it starts up. After about 10 seconds it will be ready to connect to.</p>
+    <p>Plug Due Light into a USB-C wall charger — the same kind used to charge most devices. Any charger works. It does <strong>not</strong> need to be plugged into a computer.</p>
+    <p>The lights will blink a few times as it starts up. After about 10 seconds all three LEDs will pulse slowly — that means it's ready to set up.</p>
   </div>
 
   <!-- Step 2 -->
   <div class="step-card">
     <div class="step-num">Step 2</div>
-    <h2>Connect to Due Light's WiFi</h2>
-    <p>Due Light creates its own temporary WiFi network the first time it powers on. On your computer, open WiFi settings and look for a network named:</p>
-    <div class="callout"><strong>DueLight-</strong> followed by a short code unique to your device (e.g. <code>DueLight-A3F2</code>)</div>
-    <p>Connect to it. Your computer may warn you that this network has no internet — that's expected. Stay connected anyway.</p>
+    <h2>Get your Canvas access key — do this before connecting to Due Light</h2>
+    <div class="callout-warn"><strong>Do this step first, while you still have internet.</strong> Once you connect to Due Light's WiFi in the next step, your computer will temporarily lose internet access and you won't be able to reach Canvas.</div>
+    <p>Due Light reads assignments using a <strong>Canvas access key</strong> — a code that gives it read-only access to the Canvas account. It cannot submit work, change grades, or post anything.</p>
+    <div class="callout-warn"><strong>This must be done on a computer, not a phone.</strong> The Canvas mobile app does not support creating access keys — you need to use a browser on your laptop or desktop.</div>
+    <p>Have your student log into Canvas in a web browser, then:</p>
+    <ul class="substeps">
+      <li><span>Click <strong>Account</strong> in the left sidebar, then <strong>Settings</strong></span></li>
+      <li><span>Scroll down to <strong>Approved Integrations</strong></span></li>
+      <li><span>Click <strong>+ New Access Token</strong></span></li>
+      <li><span>Name it <strong>DueLight</strong> — the name is just for reference</span></li>
+      <li><span>Leave the expiry date blank if possible, or set it as far ahead as Canvas allows</span></li>
+      <li><span>Click <strong>Generate Token</strong>, then copy the long code that appears</span></li>
+    </ul>
+    <div class="callout-warn"><strong>Copy it before closing the window</strong> — Canvas only shows the token once. Paste it somewhere safe (like a Notes app) before moving on.</div>
+    <p>Also note your school's Canvas address — it looks like <code>yourschool.instructure.com</code> and is visible in the browser address bar when logged into Canvas.</p>
   </div>
 
   <!-- Step 3 -->
   <div class="step-card">
     <div class="step-num">Step 3</div>
-    <h2>Open the setup page</h2>
-    <p>Once connected to Due Light's WiFi, open your browser and go to:</p>
-    <div class="callout" style="font-size:16px; font-weight:600; text-align:center; letter-spacing:0.02em;">192.168.4.1</div>
-    <p>You should see the Due Light setup form. If it doesn't load, make sure you're still connected to the DueLight WiFi network and try again.</p>
+    <h2>Connect to Due Light's WiFi</h2>
+    <p>Due Light creates its own temporary WiFi network during setup. On your computer, open WiFi settings and connect to the network named:</p>
+    <div class="callout"><strong>DueLight-</strong> followed by a short code unique to your device (e.g. <code>DueLight-A3F2B1</code>)</div>
+    <p>On most computers a setup page will pop up automatically as soon as you connect — if it does, skip straight to Step 4.</p>
+    <p>If nothing pops up, open your browser and go to <code>192.168.4.1</code> manually.</p>
+    <p>Your computer may warn you that this network has no internet — that's expected. Stay connected anyway.</p>
   </div>
 
   <!-- Step 4 -->
@@ -260,27 +273,15 @@ footer a:hover { color: var(--text); }
     <h2>Enter your home WiFi</h2>
     <p>The setup page will scan for nearby WiFi networks automatically. Select your home network from the list and enter the password.</p>
     <p>Use the <strong>Test WiFi connection</strong> button to confirm it works before moving on.</p>
-    <div class="callout-warn">Make sure to use your <strong>home</strong> WiFi. Due Light needs a permanent connection to check Canvas daily.</div>
+    <div class="callout-warn">Use your <strong>home</strong> WiFi — Due Light needs a permanent connection to check Canvas regularly.</div>
   </div>
 
   <!-- Step 5 -->
   <div class="step-card">
     <div class="step-num">Step 5</div>
-    <h2>Get your student's Canvas access key</h2>
-    <div class="callout-warn" style="font-weight:600;">Open Canvas in a browser on your computer — the Canvas mobile app does not support creating access keys.</div>
-    <p>Due Light reads your student's assignments using a <strong>Canvas access key</strong> — a code that gives it read-only access to their Canvas account. It can't submit anything, change grades, or post on their behalf.</p>
-    <p>Have your student log into Canvas in a web browser, then:</p>
-    <ul class="substeps">
-      <li><span>Click <strong>Account</strong> in the left sidebar, then <strong>Settings</strong></span></li>
-      <li><span>Scroll down to <strong>Approved Integrations</strong></span></li>
-      <li><span>Click <strong>+ New Access Token</strong></span></li>
-      <li><span>Name it <strong>DueLight</strong> — the name is just for their reference</span></li>
-      <li><span>Leave the expiry date blank if possible, or set it as far ahead as Canvas allows</span></li>
-      <li><span>Click <strong>Generate Token</strong>, then copy the long code that appears</span></li>
-    </ul>
-    <div class="callout-warn"><strong>Copy it before closing the window</strong> — Canvas only shows the token once. If you lose it, you'll need to generate a new one.</div>
-    <p>Also enter your school's Canvas address — it usually looks like <code>yourschool.instructure.com</code>. You can find it in the browser address bar when your student is logged into Canvas.</p>
-    <p>Use the <strong>Test Canvas token</strong> button to confirm everything works.</p>
+    <h2>Enter your Canvas access key</h2>
+    <p>Paste the access key you copied in Step 2 into the Canvas token field. Enter your school's Canvas address (<code>yourschool.instructure.com</code>) in the field below it.</p>
+    <p>Use the <strong>Test Canvas token</strong> button to confirm it connects successfully before saving.</p>
   </div>
 
   <!-- Step 6 -->
@@ -302,14 +303,17 @@ footer a:hover { color: var(--text); }
     <div class="step-num">Step 7</div>
     <h2>Save and finish</h2>
     <p>Click <strong>Save & Continue</strong>. Due Light will connect to your home WiFi and check Canvas for the first time. This takes about 30 seconds.</p>
-    <p>The light will show the current assignment status once it's connected. You can now place it anywhere with a wall outlet and WiFi signal.</p>
     <div class="callout">After saving, the DueLight WiFi network will disappear — that's normal. Your computer will reconnect to your home WiFi automatically.</div>
+    <p>Once it's back on your home WiFi, the settings page is available at:</p>
+    <div class="callout" style="font-size:16px; font-weight:600; text-align:center; letter-spacing:0.02em;">due-light.local</div>
+    <p><strong>Bookmark this address.</strong> You'll need it to update your Canvas token when it expires or to change any settings. It only works when your computer is connected to the same WiFi as Due Light.</p>
+    <p>The light will show the current assignment status once connected. You can now place it anywhere with a wall outlet and WiFi signal.</p>
   </div>
 
   <!-- Done -->
   <div class="done-card">
     <h2>You're all set.</h2>
-    <p>Due Light will check Canvas automatically every few hours and update the light on its own. No app, no account, nothing to log into.</p>
+    <p>Due Light will check Canvas automatically every 10 minutes and update the light on its own. No app, no account, nothing to log into.</p>
   </div>
 
 </div>
@@ -321,30 +325,30 @@ footer a:hover { color: var(--text); }
   <details>
     <summary>The light is on but stuck on one color — is something wrong?</summary>
     <div class="faq-body">
-      <p>It may still be connecting for the first time. Give it a minute or two after setup. If it stays stuck, the Canvas token or school address may have been entered incorrectly — go to <code>canvasledtracker.local</code> while connected to your home WiFi to check the settings.</p>
+      <p>It may still be connecting for the first time. Give it a minute or two after setup. If it stays stuck, the Canvas token or school address may have been entered incorrectly — connect to your home WiFi and go to <code>due-light.local</code> in your browser to check the settings.</p>
     </div>
   </details>
 
   <details>
     <summary>I can't find the DueLight WiFi network.</summary>
     <div class="faq-body">
-      <p>If Due Light has been set up before, it won't create the hotspot again automatically — it will try to connect to your home WiFi instead. To reset it and start fresh, <strong>press the small button in the bottom left corner 5 times, pausing about 1 second between each press</strong>. All three LEDs will flash together to confirm the reset, then the device will restart in setup mode and create the <strong>DueLight-XXXX</strong> network again.</p>
-      <p>Alternatively, if you can reach the settings page at <code>canvasledtracker.local</code>, use the Factory Reset button at the bottom.</p>
-      <p>If you've never set it up and still can't see it, try unplugging and replugging the device and waiting 15 seconds.</p>
+      <p>If Due Light has been set up before, it won't create the hotspot again — it will connect to your home WiFi instead. To reset it and start fresh, <strong>press the small button in the bottom left corner 5 times, pausing about 1 second between each press</strong>. All three LEDs will flash together to confirm the reset, then the device will restart in setup mode and create the <strong>DueLight-XXXXXX</strong> network again.</p>
+      <p>Alternatively, if you can reach the settings page at <code>due-light.local</code>, use the Factory Reset button at the bottom.</p>
+      <p>If you've never set it up and still can't see the network, try unplugging and replugging the device and waiting 15 seconds.</p>
     </div>
   </details>
 
   <details>
     <summary>The Canvas token expired. How do I update it?</summary>
     <div class="faq-body">
-      <p>Due Light will warn you on the light before a token expires. To update, connect to your home WiFi and go to <code>canvasledtracker.local</code> in your browser. Generate a new token in Canvas following Step 5 above, paste it in, and save.</p>
+      <p>Due Light will warn you before a token expires. To update it, make sure your computer is on the same WiFi as Due Light, then go to <code>due-light.local</code> in your browser. Generate a new token in Canvas following Step 2 above, paste it in, and save. Remember — token generation requires a computer browser, not the Canvas mobile app.</p>
     </div>
   </details>
 
   <details>
     <summary>We moved or changed our WiFi password. How do I reconnect?</summary>
     <div class="faq-body">
-      <p>Press the small button in the bottom left corner 5 times, pausing about 1 second between each press. All three LEDs will flash together to confirm the reset. It will restart in setup mode and create the <strong>DueLight-XXXX</strong> WiFi hotspot again. Follow the setup steps from the beginning — your Canvas token will be saved and you won't need to re-enter it.</p>
+      <p>Press the small button in the bottom left corner 5 times, pausing about 1 second between each press. All three LEDs will flash to confirm the reset. Due Light will restart in setup mode — follow the setup steps from the beginning. <strong>Note: a factory reset wipes everything</strong>, including your WiFi credentials and Canvas token, so have your Canvas token ready before starting (see Step 2).</p>
     </div>
   </details>
 
@@ -365,7 +369,7 @@ footer a:hover { color: var(--text); }
   <details>
     <summary>Does Due Light need to be near the router?</summary>
     <div class="faq-body">
-      <p>It just needs to be within range of your home WiFi — the same range your phone would need to be on the same network. Most homes have no issues anywhere inside. If you have a large home, a spot closer to a router or WiFi extender works best.</p>
+      <p>It just needs to be within range of your home WiFi — the same range as any other device on your network. Most homes have no issues anywhere inside. If you have a large home, a spot closer to a router or WiFi extender works best.</p>
     </div>
   </details>
 
