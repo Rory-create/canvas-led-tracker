@@ -71,6 +71,7 @@ async function checkAndDeploy() {
     if (remote === local) {
       // Reset working tree so locally corrupted files (e.g. conflict markers from
       // a bad git pull) get cleaned up automatically every poll cycle.
+      log('resetting working tree to match committed state...');
       execSync('git checkout -- .', { cwd: REPO_ROOT, ...EXEC_OPTS });
       log(`up to date (${short(local)})`);
       return;
