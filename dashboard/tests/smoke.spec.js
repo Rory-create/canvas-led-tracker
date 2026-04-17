@@ -74,8 +74,8 @@ test('login returns 401 on wrong password', async ({ request }) => {
   const res = await request.post(`${BASE}/api/login`, {
     data: { password: 'definitely-wrong-password' },
   });
-  // 401 if password auth is configured, 200 with token if no password set (open deploy)
-  expect([200, 401]).toContain(res.status());
+  // 401 if password auth is configured, 503 if disabled, 200 with token if open
+  expect([200, 401, 503]).toContain(res.status());
   if (res.status() === 401) {
     const body = await res.json();
     expect(body).toHaveProperty('error');
