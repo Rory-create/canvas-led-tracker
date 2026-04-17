@@ -64,6 +64,7 @@ pio run --target erase && pio run --target upload
 - **LED Pins:** GPIO 32 (green), 25 (yellow), 27 (red). Hardcoded; matches v1.3.0 board layout.
 - **Version Format:** `MAJOR.MINOR.PATCH` (e.g., "1.3.0"). Increment in `version.h` for each firmware release.
 - **DEV_MODE:** Set `true` for testing only. Resets non-credential config on boot (keeps WiFi/Canvas token). Never ship with `DEV_MODE true`.
+- **Shelved work markers:** When something is deferred, add an inline comment: `// SECURITY low|medium|high: <reason>` or `// TODO low|medium|high: <reason>`. When asked to look for ideas or todos, run `grep -rn "// SECURITY\|// TODO" --include="*.js" --include="*.cpp" --include="*.h" .` — avoids full re-audits.
 
 ## Common Pitfalls
 
