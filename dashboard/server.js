@@ -13,11 +13,17 @@ const PORT = process.env.PORT || 3000;
 // Optional shared secret — set DASHBOARD_API_KEY env var on server.
 // Devices must send the same value in the X-API-Key header.
 // If not set, the server accepts all requests (fine for private deploys).
+// SECURITY LOW: API key is static — no rotation mechanism without reflashing all firmware.
+// When scaling, consider per-device keys or signed payloads (HMAC) so a single leaked key
+// doesn't compromise the whole fleet.
 const API_KEY = process.env.DASHBOARD_API_KEY || null;
 
 // Human-friendly dashboard password — set DASHBOARD_PASSWORD env var.
 // On correct password, server issues a random session token stored server-side.
-// Tokens expire after 30 days. Rotating the password invalidates all sessions.
+// Tokens expire after 7 days. Rotating the password invalidates all sessions.
+// SECURITY LOW: sessions are in-memory only — a server restart logs everyone out and
+// there is no way to invalidate all sessions without restarting the process.
+// Fix when needed: persist sessions to a small SQLite table or signed JWTs.
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || null;
 const crypto = require('crypto');
 const _sessions = new Map(); // token → expiry timestamp
@@ -287,6 +293,10 @@ app.get('/api/whoami', (req, res) => {
 // ── Device API ─────────────────────────────────────────────────────────────
 
 // POST /api/telemetry  — heartbeat from a device
+// SECURITY LOW: no request signing — any client with the API key can spoof telemetry for any
+// device_id, including overwriting data for devices it doesn't own. Fix when needed: include
+// an HMAC of (device_id + timestamp) signed with a per-device secret so the server can verify
+// the payload originated from the real device.
 app.post('/api/telemetry', rateLimitMiddleware, authMiddleware, (req, res) => {
   console.log(`[telemetry] POST from ${req.headers['cf-connecting-ip'] || req.socket.remoteAddress} — device_id: ${req.body && req.body.device_id}`);
   const body = req.body;
@@ -533,6 +543,10 @@ app.post('/api/deploy', authMiddleware, (req, res) => {
 
 // ── Start ──────────────────────────────────────────────────────────────────
 
+// SECURITY LOW: no TLS at the Node level — HTTPS depends entirely on the Cloudflare tunnel.
+// If someone reaches port 3000 directly (e.g. on the local network) traffic is plain HTTP.
+// Fix when needed: add a self-signed cert + https.createServer, or move behind a local
+// reverse proxy (Caddy/nginx) that handles TLS before traffic reaches Node.
 app.listen(PORT, () => {
   console.log(`Canvas LED Dashboard running on port ${PORT}`);
   if (!API_KEY) console.log('Note: DASHBOARD_API_KEY not set — device endpoints unprotected');
