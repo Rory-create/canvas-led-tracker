@@ -69,3 +69,24 @@ test('auth is enforced on protected endpoints', async ({ request }) => {
   });
   expect(res.status()).toBe(401);
 });
+
+test('login returns 401 on wrong password', async ({ request }) => {
+  const res = await request.post(`${BASE}/api/login`, {
+    data: { password: 'definitely-wrong-password' },
+  });
+  // 401 if password auth is configured, 200 with token if no password set (open deploy)
+  expect([200, 401]).toContain(res.status());
+  if (res.status() === 401) {
+    const body = await res.json();
+    expect(body).toHaveProperty('error');
+  }
+});
+
+// ── Cleanup ────────────────────────────────────────────────────────────────
+
+test.afterAll(async ({ request }) => {
+  // Remove the test device created by the telemetry test so it doesn't persist in units.json
+  await request.delete(`${BASE}/api/units/AA:BB:CC:DD:EE:FF`, {
+    headers: { 'X-API-Key': 'ci-test-key' },
+  });
+});

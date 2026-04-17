@@ -21,7 +21,7 @@ const API_KEY = process.env.DASHBOARD_API_KEY || null;
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || null;
 const crypto = require('crypto');
 const _sessions = new Map(); // token → expiry timestamp
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function createSession() {
   const token = crypto.randomBytes(32).toString('base64url');
@@ -49,6 +49,36 @@ const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL || null;
 const DATA_DIR = path.join(__dirname, 'data');
 const UNITS_FILE = path.join(DATA_DIR, 'units.json');
 const BUGS_FILE = path.join(DATA_DIR, 'bugs.json');
+const STARTS_FILE = path.join(DATA_DIR, 'server-starts.json');
+
+// ── Server metrics ─────────────────────────────────────────────────────────
+const os = require('os');
+
+// Ring buffer: one entry per minute, max 480 = 8 hours
+const metricsHistory = [];
+let _lastCpuUsage = process.cpuUsage();
+let _lastCpuTime   = Date.now();
+let _reqCount      = 0;
+
+function _sampleMetrics() {
+  const cpuDelta   = process.cpuUsage(_lastCpuUsage);
+  const timeDelta  = (Date.now() - _lastCpuTime) * 1000; // µs
+  const cpuPct     = Math.min(100, parseFloat(((cpuDelta.user + cpuDelta.system) / timeDelta * 100).toFixed(1)));
+  _lastCpuUsage    = process.cpuUsage();
+  _lastCpuTime     = Date.now();
+
+  const mem = process.memoryUsage();
+  metricsHistory.push({
+    t:          Date.now(),
+    cpu:        cpuPct,
+    heapMB:     Math.round(mem.heapUsed / 1048576),
+    rssMB:      Math.round(mem.rss / 1048576),
+    reqPerMin:  _reqCount,
+  });
+  if (metricsHistory.length > 480) metricsHistory.shift();
+  _reqCount = 0;
+}
+setInterval(_sampleMetrics, 60_000);
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -90,8 +120,6 @@ function authMiddleware(req, res, next) {
 // Same as authMiddleware but also allows browser sessions via a dashboard session token.
 // Used on read endpoints so the dashboard UI can still load when API_KEY is set.
 // Devices posting telemetry use authMiddleware (stricter); browser reads use this.
-const DASHBOARD_TOKEN = process.env.DASHBOARD_READ_TOKEN || null;
-
 function isLocalhost(req) {
   if (req.headers['cf-connecting-ip']) return false; // came through Cloudflare Tunnel
   const ip = req.socket.remoteAddress;
@@ -187,6 +215,9 @@ function checkAndAlert(units) {
 }
 
 // ── Middleware ─────────────────────────────────────────────────────────────
+
+// Count requests for req/min metric
+app.use((req, res, next) => { _reqCount++; next(); });
 
 // Webhook must be registered before express.json() — Stripe needs the raw body for signature verification
 app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
@@ -325,7 +356,7 @@ app.post('/api/bug', rateLimitMiddleware, authMiddleware, (req, res) => {
     error_code: Number.isInteger(body.error_code) ? body.error_code : 0,
     error_name: typeof body.error_name === 'string' ? body.error_name : 'UNKNOWN',
     title: typeof body.title === 'string' ? body.title.slice(0, 200) : 'Bug Report',
-    diagnostics: body.diagnostics && typeof body.diagnostics === 'object' ? body.diagnostics : {},
+    diagnostics: (body.diagnostics && typeof body.diagnostics === 'object' && JSON.stringify(body.diagnostics).length <= 2000) ? body.diagnostics : {},
     timestamp: new Date().toISOString(),
     resolved: false,
   });
@@ -462,6 +493,26 @@ app.post('/api/checkout', rateLimitMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/server-metrics — process health: CPU, memory, request rate, boot history
+app.get('/api/server-metrics', readAuthMiddleware, (req, res) => {
+  const h = metricsHistory;
+  const avg = key => h.length ? parseFloat((h.reduce((s, e) => s + e[key], 0) / h.length).toFixed(1)) : null;
+  const peak = key => h.length ? Math.max(...h.map(e => e[key])) : null;
+
+  const starts = readJSON(STARTS_FILE, []);
+  const since24h = Date.now() - 24 * 60 * 60 * 1000;
+  const recentStarts = starts.filter(s => new Date(s.t).getTime() >= since24h);
+
+  res.json({
+    uptime_seconds: Math.floor(process.uptime()),
+    current: h.length ? { ...h[h.length - 1] } : null,
+    avg8h:  { cpu: avg('cpu'), heapMB: avg('heapMB'), rssMB: avg('rssMB') },
+    peak8h: { cpu: peak('cpu'), heapMB: peak('heapMB'), rssMB: peak('rssMB') },
+    history: h,
+    recent_starts: recentStarts,
+  });
+});
+
 // POST /api/deploy — pull latest code and restart. Requires API key.
 // Hit this from a browser or curl when you can't physically access the machine.
 app.post('/api/deploy', authMiddleware, (req, res) => {
@@ -471,8 +522,11 @@ app.post('/api/deploy', authMiddleware, (req, res) => {
     'git pull origin main && pm2 restart canvas-dashboard',
     { cwd: repoRoot, timeout: 60000 },
     (err, stdout, stderr) => {
-      if (err) return res.status(500).json({ error: err.message, stderr });
-      res.json({ ok: true, stdout, stderr });
+      if (err) {
+        console.error('[deploy] error:', err.message, stderr);
+        return res.status(500).json({ error: 'Deploy failed — check server logs' });
+      }
+      res.json({ ok: true });
     }
   );
 });
@@ -485,4 +539,10 @@ app.listen(PORT, () => {
   if (DASHBOARD_PASSWORD) console.log('Password login enabled');
   else console.log('Note: DASHBOARD_PASSWORD not set — password login disabled');
   if (DISCORD_WEBHOOK) console.log('Discord alerting enabled');
+
+  // Record this boot in server-starts.json (used by /api/server-metrics for crash detection)
+  const starts = readJSON(STARTS_FILE, []);
+  starts.push({ t: new Date().toISOString(), pid: process.pid });
+  if (starts.length > 50) starts.splice(0, starts.length - 50);
+  writeJSON(STARTS_FILE, starts);
 });

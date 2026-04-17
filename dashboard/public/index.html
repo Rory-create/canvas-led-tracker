@@ -109,6 +109,30 @@ a { color: var(--blue); text-decoration: none; }
 .ota-behind { color: var(--yellow); }
 .ota-unknown { color: var(--muted); }
 
+/* Server metrics tab */
+.metrics-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; margin-bottom:20px; }
+.metric-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; }
+.metric-card .m-title { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.metric-card .m-big { font-size:24px; font-weight:700; color:var(--text); line-height:1; }
+.metric-card .m-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+.spark-row { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:20px; }
+.spark-label { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.spark { font-size:16px; letter-spacing:2px; color:var(--blue); font-family:monospace; }
+.boots-table { width:100%; border-collapse:collapse; }
+.boots-table th { text-align:left; color:var(--muted); font-size:12px; font-weight:500; padding:8px 12px; border-bottom:1px solid var(--border); }
+.boots-table td { padding:9px 12px; border-bottom:1px solid var(--border); font-size:13px; }
+.boots-table tr:last-child td { border-bottom:none; }
+.boot-crash { color:var(--yellow); font-weight:500; }
+
+/* Inline notes editor */
+.notes-editor { margin-top:8px; display:flex; flex-direction:column; gap:6px; }
+.notes-editor textarea { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:7px 9px; border-radius:5px; font-size:12px; font-family:inherit; resize:vertical; min-height:60px; outline:none; box-sizing:border-box; }
+.notes-editor textarea:focus { border-color:var(--blue); }
+.notes-editor-btns { display:flex; gap:6px; }
+.notes-save-btn { flex:1; background:var(--blue); color:#fff; border:none; padding:5px; border-radius:5px; cursor:pointer; font-size:11px; font-weight:500; }
+.notes-save-btn:hover { background:#2563eb; }
+.notes-cancel-btn { flex:1; background:none; border:1px solid var(--border); color:var(--muted); padding:5px; border-radius:5px; cursor:pointer; font-size:11px; }
+
 /* Empty state */
 .empty { text-align: center; color: var(--muted); padding: 48px; font-size: 13px; }
 
@@ -195,6 +219,7 @@ a { color: var(--blue); text-decoration: none; }
     <div class="tab active" onclick="switchTab('units')">Units</div>
     <div class="tab" onclick="switchTab('bugs')">Bug Reports</div>
     <div class="tab" onclick="switchTab('ota')">OTA Status</div>
+    <div class="tab" onclick="switchTab('server')">Server</div>
   </div>
 
   <!-- Units tab -->
@@ -233,6 +258,14 @@ a { color: var(--blue); text-decoration: none; }
         </table>
       </div>
       <div id="otaNote" style="color:var(--muted);font-size:12px;padding:8px 0;"></div>
+    </div>
+  </div>
+
+  <!-- Server tab -->
+  <div id="tab-server" class="tab-content">
+    <div class="section">
+      <div class="section-title">Server Health</div>
+      <div id="serverMetrics"><div class="loading">Loading...</div></div>
     </div>
   </div>
 
@@ -394,7 +427,7 @@ function renderUnits(units) {
           ${!u.factory_reset_pending && u.error_code > 0 ? '<span class="badge error">Error</span>' : ''}
         </div>
       </div>
-      ${u.notes ? `<div style="margin-top:8px;padding:6px 8px;background:var(--bg);border-radius:5px;font-size:12px;color:var(--muted);">📝 ${escHtml(u.notes)}</div>` : ''}
+      ${u.notes ? `<div data-notes-display style="margin-top:8px;padding:6px 8px;background:var(--bg);border-radius:5px;font-size:12px;color:var(--muted);">📝 ${escHtml(u.notes)}</div>` : ''}
       <button class="edit-notes-btn" data-device-id="${escHtml(u.device_id)}" style="margin-top:8px;width:100%;background:none;border:1px solid var(--border);color:var(--muted);padding:5px;border-radius:5px;cursor:pointer;font-size:11px;">${u.notes ? 'Edit note' : '+ Add note'}</button>
     </div>`;
   }).join('');
@@ -545,13 +578,13 @@ document.addEventListener('click', async (e) => {
   const notesBtn = e.target.closest('.edit-notes-btn');
   if (notesBtn) {
     const deviceId = notesBtn.dataset.deviceId;
-    editNotes(deviceId);
+    editNotes(deviceId, notesBtn);
   }
 });
 
 
 async function loadAll() {
-  await Promise.all([loadUnits(), loadBugs(), loadOTA(), loadStats()]);
+  await Promise.all([loadUnits(), loadBugs(), loadOTA(), loadStats(), loadServerMetrics()]);
 }
 
 async function loadUnits() {
@@ -590,19 +623,137 @@ async function loadStats() {
   } catch { }
 }
 
-async function editNotes(deviceId) {
+function editNotes(deviceId, btn) {
   const unit = allUnits.find(u => u.device_id === deviceId);
   const current = unit ? (unit.notes || '') : '';
-  const label = unit ? (unit.device_name || unit.device_id) : deviceId;
-  const newNotes = prompt('Notes for ' + label + ':', current);
-  if (newNotes === null) return; // cancelled
-  const r = await fetch(`/api/units/${encodeURIComponent(deviceId)}/notes`, {
-    method: 'PATCH',
-    headers: authHeaders(),
-    body: JSON.stringify({ notes: newNotes }),
-  });
-  if (r.status === 401) { promptApiKey(); return; }
-  loadUnits();
+
+  // Build inline editor, replacing the button (and existing notes div if present)
+  const card = btn.closest('.unit-card');
+  const existingNotes = card.querySelector('[data-notes-display]');
+  if (existingNotes) existingNotes.remove();
+
+  const editor = document.createElement('div');
+  editor.className = 'notes-editor';
+  editor.innerHTML = `
+    <textarea maxlength="500" placeholder="Add a note…">${escHtml(current)}</textarea>
+    <div class="notes-editor-btns">
+      <button class="notes-save-btn">Save</button>
+      <button class="notes-cancel-btn">Cancel</button>
+    </div>`;
+
+  btn.replaceWith(editor);
+  editor.querySelector('textarea').focus();
+
+  editor.querySelector('.notes-cancel-btn').onclick = () => loadUnits();
+
+  editor.querySelector('.notes-save-btn').onclick = async () => {
+    const newNotes = editor.querySelector('textarea').value;
+    const r = await fetch(`/api/units/${encodeURIComponent(deviceId)}/notes`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ notes: newNotes }),
+    });
+    if (r.status === 401) { showLogin(); return; }
+    loadUnits();
+  };
+}
+
+// ── Server metrics ─────────────────────────────────────────────────────────
+
+const SPARK_CHARS = ['▁','▂','▃','▄','▅','▆','▇','█'];
+
+function toSpark(values) {
+  if (!values.length) return '—';
+  const max = Math.max(...values, 1);
+  return values.map(v => SPARK_CHARS[Math.min(7, Math.floor((v / max) * 7.99))]).join('');
+}
+
+function fmtUptime(s) {
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s / 60) + 'm';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+  return Math.floor(s / 86400) + 'd ' + Math.floor((s % 86400) / 3600) + 'h';
+}
+
+function renderServerMetrics(d) {
+  const el = document.getElementById('serverMetrics');
+  if (!d) { el.innerHTML = '<div class="empty">No metrics yet — check back in a minute.</div>'; return; }
+
+  const cur = d.current || {};
+  const avg = d.avg8h || {};
+  const pk  = d.peak8h || {};
+
+  const cpuNow  = cur.cpu  != null ? cur.cpu + '%'  : '—';
+  const memNow  = cur.rssMB != null ? cur.rssMB + ' MB' : '—';
+  const reqNow  = cur.reqPerMin != null ? cur.reqPerMin + '/min' : '—';
+  const cpuAvg  = avg.cpu  != null ? avg.cpu + '%'  : '—';
+  const memAvg  = avg.rssMB != null ? avg.rssMB + ' MB' : '—';
+  const cpuPeak = pk.cpu   != null ? pk.cpu + '%'   : '—';
+
+  // Sparkline: last 60 samples of CPU (1 hr)
+  const last60 = (d.history || []).slice(-60).map(e => e.cpu);
+  const spark   = toSpark(last60);
+
+  // Boot log
+  const starts = d.recent_starts || [];
+  let bootsHtml = '';
+  if (starts.length === 0) {
+    bootsHtml = '<tr><td colspan="2" style="color:var(--muted);padding:12px;text-align:center;">No restarts in last 24h</td></tr>';
+  } else {
+    for (let i = 0; i < starts.length; i++) {
+      const s = starts[i];
+      const prev = starts[i - 1];
+      const dt = new Date(s.t);
+      const timeStr = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' · ' + dt.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      // Flag as likely crash if two restarts within 5 minutes of each other
+      const prevMs = prev ? new Date(prev.t).getTime() : 0;
+      const isCrash = prev && (new Date(s.t).getTime() - prevMs) < 5 * 60 * 1000;
+      bootsHtml += `<tr><td>${escHtml(timeStr)}</td><td class="${isCrash ? 'boot-crash' : ''}">${isCrash ? '⚠ Likely crash restart' : 'Normal restart'}</td></tr>`;
+    }
+  }
+
+  el.innerHTML = `
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="m-title">CPU</div>
+        <div class="m-big">${escHtml(cpuNow)}</div>
+        <div class="m-sub">8h avg ${escHtml(cpuAvg)} · peak ${escHtml(cpuPeak)}</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-title">Memory (RSS)</div>
+        <div class="m-big">${escHtml(memNow)}</div>
+        <div class="m-sub">8h avg ${escHtml(memAvg)}</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-title">Requests</div>
+        <div class="m-big">${escHtml(reqNow)}</div>
+        <div class="m-sub">last minute</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-title">Uptime</div>
+        <div class="m-big">${escHtml(fmtUptime(d.uptime_seconds || 0))}</div>
+        <div class="m-sub">${escHtml(d.recent_starts && d.recent_starts.length ? d.recent_starts.length + ' restart(s) in 24h' : 'no restarts in 24h')}</div>
+      </div>
+    </div>
+    <div class="spark-row">
+      <div class="spark-label">CPU — last ${last60.length} min</div>
+      <div class="spark">${escHtml(spark)}</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+      <table class="boots-table">
+        <thead><tr><th>Time</th><th>Event</th></tr></thead>
+        <tbody>${bootsHtml}</tbody>
+      </table>
+    </div>`;
+}
+
+async function loadServerMetrics() {
+  try {
+    const r = await fetch('/api/server-metrics', { headers: authHeaders() });
+    if (r.status === 401) { showLogin(); return; }
+    const data = await r.json();
+    renderServerMetrics(data);
+  } catch { renderServerMetrics(null); }
 }
 
 // Auto-refresh every 60 seconds — only if authenticated
