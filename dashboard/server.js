@@ -465,6 +465,9 @@ app.post('/api/checkout', rateLimitMiddleware, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
 
   const addCable = !!(req.body && req.body.addCable);
+  const rawPromo = (req.body && typeof req.body.promoCode === 'string') ? req.body.promoCode : '';
+  // Sanitize: only alphanumeric + dash/underscore, max 30 chars
+  const promoCode = rawPromo.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 30);
 
   const lineItems = [
     {
@@ -488,15 +491,32 @@ app.post('/api/checkout', rateLimitMiddleware, async (req, res) => {
     });
   }
 
+  const sessionParams = {
+    mode: 'payment',
+    line_items: lineItems,
+    shipping_address_collection: { allowed_countries: ['US'] },
+    success_url: 'https://due-light.com/success?session_id={CHECKOUT_SESSION_ID}',
+    cancel_url: 'https://due-light.com/#pricing',
+  };
+
+  // Pre-apply referral promo code if provided; fall back to user-typed if not found
+  if (promoCode) {
+    try {
+      const promos = await stripe.promotionCodes.list({ code: promoCode, active: true, limit: 1 });
+      if (promos.data.length) {
+        sessionParams.discounts = [{ promotion_code: promos.data[0].id }];
+      } else {
+        sessionParams.allow_promotion_codes = true;
+      }
+    } catch {
+      sessionParams.allow_promotion_codes = true;
+    }
+  } else {
+    sessionParams.allow_promotion_codes = true;
+  }
+
   try {
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      line_items: lineItems,
-      allow_promotion_codes: true,
-      shipping_address_collection: { allowed_countries: ['US'] },
-      success_url: 'https://due-light.com/success?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'https://due-light.com/#pricing',
-    });
+    const session = await stripe.checkout.sessions.create(sessionParams);
     res.json({ url: session.url });
   } catch (err) {
     console.error('[stripe] checkout session error:', err.message);
