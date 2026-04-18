@@ -82,6 +82,38 @@ test('login returns 401 on wrong password', async ({ request }) => {
   }
 });
 
+// ── Reviews ────────────────────────────────────────────────────────────────
+
+let _testReviewId;
+
+test('reviews: submit and retrieve', async ({ request }) => {
+  const post = await request.post(`${BASE}/api/review`, {
+    data: { rating: 5, name: 'Smoke Test', comment: 'Automated test review', email: 'test@ci.invalid' },
+  });
+  expect(post.status()).toBe(200);
+  const body = await post.json();
+  expect(body.ok).toBe(true);
+  expect(typeof body.review_id).toBe('number');
+  _testReviewId = body.review_id;
+
+  const get = await request.get(`${BASE}/api/reviews`);
+  expect(get.status()).toBe(200);
+  const reviews = await get.json();
+  expect(Array.isArray(reviews)).toBe(true);
+  const found = reviews.find(r => r.id === _testReviewId);
+  expect(found).toBeTruthy();
+  expect(found.rating).toBe(5);
+  expect(found.name).toBe('Smoke Test');
+  expect(found.email).toBeUndefined(); // email must not be exposed in public GET
+});
+
+test('reviews: rejects missing fields', async ({ request }) => {
+  const res = await request.post(`${BASE}/api/review`, {
+    data: { rating: 3, name: 'No comment' }, // missing comment
+  });
+  expect(res.status()).toBe(400);
+});
+
 // ── Cleanup ────────────────────────────────────────────────────────────────
 
 test.afterAll(async ({ request }) => {
@@ -89,4 +121,10 @@ test.afterAll(async ({ request }) => {
   await request.delete(`${BASE}/api/units/AA:BB:CC:DD:EE:FF`, {
     headers: { 'X-API-Key': 'ci-test-key' },
   });
+  // Remove the test review
+  if (_testReviewId) {
+    await request.delete(`${BASE}/api/reviews/${_testReviewId}`, {
+      headers: { 'X-API-Key': 'ci-test-key' },
+    });
+  }
 });

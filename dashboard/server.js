@@ -56,6 +56,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 const UNITS_FILE = path.join(DATA_DIR, 'units.json');
 const BUGS_FILE = path.join(DATA_DIR, 'bugs.json');
 const STARTS_FILE = path.join(DATA_DIR, 'server-starts.json');
+const REVIEWS_FILE = path.join(DATA_DIR, 'reviews.json');
 
 // ── Server metrics ─────────────────────────────────────────────────────────
 const os = require('os');
@@ -501,6 +502,50 @@ app.post('/api/checkout', rateLimitMiddleware, async (req, res) => {
     console.error('[stripe] checkout session error:', err.message);
     res.status(500).json({ error: 'Could not start checkout' });
   }
+});
+
+// ── Reviews ────────────────────────────────────────────────────────────────
+
+// POST /api/review — public, rate-limited
+app.post('/api/review', rateLimitMiddleware, (req, res) => {
+  const { rating, name, comment, email } = req.body || {};
+  const r = parseInt(rating);
+  if (!Number.isInteger(r) || r < 1 || r > 5) return res.status(400).json({ error: 'rating must be 1–5' });
+  if (typeof name !== 'string' || !name.trim()) return res.status(400).json({ error: 'name required' });
+  if (typeof comment !== 'string' || !comment.trim()) return res.status(400).json({ error: 'comment required' });
+
+  const review = {
+    id: newBugId(),
+    rating: r,
+    name: name.trim().slice(0, 100),
+    comment: comment.trim().slice(0, 1000),
+    email: typeof email === 'string' ? email.trim().slice(0, 200) : '',
+    created_at: new Date().toISOString(),
+  };
+
+  const reviews = readJSON(REVIEWS_FILE, []);
+  reviews.unshift(review);
+  if (reviews.length > 1000) reviews.length = 1000;
+  writeJSON(REVIEWS_FILE, reviews);
+  res.json({ ok: true, review_id: review.id });
+});
+
+// GET /api/reviews — public, strips email field
+app.get('/api/reviews', (req, res) => {
+  const reviews = readJSON(REVIEWS_FILE, []);
+  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+  res.json(reviews.slice(0, limit).map(({ email: _e, ...r }) => r));
+});
+
+// DELETE /api/reviews/:id — admin only
+app.delete('/api/reviews/:id', authMiddleware, (req, res) => {
+  const reviews = readJSON(REVIEWS_FILE, []);
+  const id = parseInt(req.params.id);
+  const idx = reviews.findIndex(r => r.id === id);
+  if (idx < 0) return res.status(404).json({ error: 'Not found' });
+  reviews.splice(idx, 1);
+  writeJSON(REVIEWS_FILE, reviews);
+  res.json({ ok: true });
 });
 
 // GET /api/server-metrics — process health: CPU, memory, request rate, boot history
