@@ -220,6 +220,7 @@ a { color: var(--blue); text-decoration: none; }
     <div class="tab" onclick="switchTab('bugs')">Bug Reports</div>
     <div class="tab" onclick="switchTab('ota')">OTA Status</div>
     <div class="tab" onclick="switchTab('server')">Server</div>
+    <div class="tab" onclick="switchTab('reviews')">Reviews</div>
   </div>
 
   <!-- Units tab -->
@@ -269,6 +270,21 @@ a { color: var(--blue); text-decoration: none; }
     </div>
   </div>
 
+  <!-- Reviews tab -->
+  <div id="tab-reviews" class="tab-content">
+    <div class="section">
+      <div class="section-title">Customer Reviews <span class="count" id="reviewCount">0</span></div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <table class="bugs-table" id="reviewsTable">
+          <thead><tr>
+            <th>Date</th><th>Rating</th><th>Name</th><th>Comment</th><th>Email</th><th></th>
+          </tr></thead>
+          <tbody id="reviewsBody"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -286,11 +302,11 @@ function escHtml(str) {
 }
 
 let currentTab = 'units';
-let allUnits = [], allBugs = [], stats = {};
+let allUnits = [], allBugs = [], allReviews = [], stats = {};
 
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach((t, i) => {
-    const names = ['units','bugs','ota'];
+    const names = ['units','bugs','ota','server','reviews'];
     t.classList.toggle('active', names[i] === tab);
   });
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -584,7 +600,7 @@ document.addEventListener('click', async (e) => {
 
 
 async function loadAll() {
-  await Promise.all([loadUnits(), loadBugs(), loadOTA(), loadStats(), loadServerMetrics()]);
+  await Promise.all([loadUnits(), loadBugs(), loadOTA(), loadStats(), loadServerMetrics(), loadReviews()]);
 }
 
 async function loadUnits() {
@@ -647,14 +663,19 @@ function editNotes(deviceId, btn) {
   editor.querySelector('.notes-cancel-btn').onclick = () => loadUnits();
 
   editor.querySelector('.notes-save-btn').onclick = async () => {
-    const newNotes = editor.querySelector('textarea').value;
+    const newNotes = editor.querySelector('textarea').value.trim();
+    const saveBtn = editor.querySelector('.notes-save-btn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
     const r = await fetch(`/api/units/${encodeURIComponent(deviceId)}/notes`, {
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify({ notes: newNotes }),
     });
     if (r.status === 401) { showLogin(); return; }
-    loadUnits();
+    const unit = allUnits.find(u => u.device_id === deviceId);
+    if (unit) unit.notes = newNotes;
+    renderUnits(allUnits);
   };
 }
 
@@ -754,6 +775,40 @@ async function loadServerMetrics() {
     const data = await r.json();
     renderServerMetrics(data);
   } catch { renderServerMetrics(null); }
+}
+
+// ── Reviews ────────────────────────────────────────────────────────────────
+
+async function loadReviews() {
+  try {
+    const r = await fetch('/api/reviews?limit=100', { headers: authHeaders() });
+    if (r.status === 401) { showLogin(); return; }
+    allReviews = await r.json();
+    renderReviews(allReviews);
+  } catch { }
+}
+
+function renderReviews(reviews) {
+  document.getElementById('reviewCount').textContent = reviews.length;
+  const stars = n => '★'.repeat(n) + '☆'.repeat(5 - n);
+  document.getElementById('reviewsBody').innerHTML = reviews.length
+    ? reviews.map(r => `<tr>
+        <td style="white-space:nowrap">${new Date(r.created_at).toLocaleDateString()}</td>
+        <td style="white-space:nowrap;color:var(--yellow)">${stars(r.rating)}</td>
+        <td>${escHtml(r.name)}</td>
+        <td style="max-width:320px">${escHtml(r.comment)}</td>
+        <td style="color:var(--muted)">${escHtml(r.email || '—')}</td>
+        <td><button class="resolve-btn" onclick="deleteReview(${r.id})" style="background:var(--red,#dc2626)">Delete</button></td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" style="color:var(--muted);padding:20px;text-align:center;">No reviews yet.</td></tr>';
+}
+
+async function deleteReview(id) {
+  if (!confirm('Delete this review?')) return;
+  const r = await fetch(`/api/reviews/${id}`, { method: 'DELETE', headers: authHeaders() });
+  if (r.status === 401) { showLogin(); return; }
+  allReviews = allReviews.filter(rev => rev.id !== id);
+  renderReviews(allReviews);
 }
 
 // Auto-refresh every 60 seconds — only if authenticated
