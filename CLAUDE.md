@@ -78,6 +78,24 @@ pio run --target erase && pio run --target upload
 
 None currently. GitHub integration uses standard HTTPS (API token in `version.h`).
 
+## Infrastructure (2026-04-28)
+
+### Dashboard server port
+- **Port: 3002** (moved from 3000). Set via `PORT=3002` in `.env` on the host PC (`C:\Users\roryt\Documents\canvas-led-tracker\.env`).
+- `.env` is gitignored — if ever redeployed or `.env` regenerated, port 3002 must be set manually.
+- **Do not change back to 3000.** Port 3000 is reserved for OpenHands (local LLM agent) which has a hardcoded MCP callback to `host.docker.internal:3000`.
+
+### Cloudflare Tunnel
+- Active config: `C:\cloudflared\config.yml` (not `~/.cloudflared/config.yml` — that is a decoy).
+- All public hostnames route to `localhost:3002`:
+  - `due-light.com`, `www.due-light.com`, `dashboard.due-light.com`, `setup.due-light.com`
+- `develop.due-light.com` routes to `localhost:3000` (OpenHands dev interface).
+
+### Dashboard down?
+1. Check server is running on port 3002: `pm2 logs`
+2. Verify `C:\cloudflared\config.yml` still points to `localhost:3002`
+3. Do not change port back to 3000
+
 ---
 
 **For detailed Canvas payload investigation, memory profiling, or OTA testing:** See `/docs/canvas-memory-analysis.md` (add if needed).
