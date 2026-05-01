@@ -858,6 +858,10 @@ footer a:hover { color: var(--text); }
         <li>Updates itself automatically over WiFi</li>
         <li>Rory's Guarantee</li>
       </ul>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:pointer;font-size:14px;">
+        <input type="checkbox" id="shipping-checkbox" style="width:16px;height:16px;accent-color:var(--accent);">
+        Ship to me <span style="color:var(--muted)">+$4</span>
+      </label>
       <label style="display:flex;align-items:center;gap:10px;margin-bottom:18px;cursor:pointer;font-size:14px;">
         <input type="checkbox" id="cable-checkbox" style="width:16px;height:16px;accent-color:var(--accent);">
         Add USB-C cable <span style="color:var(--muted)">+$2</span>
@@ -884,6 +888,7 @@ footer a:hover { color: var(--text); }
 
 <script>
   const cableCheckbox = document.getElementById('cable-checkbox');
+  const shippingCheckbox = document.getElementById('shipping-checkbox');
   const btnPrice = document.getElementById('btn-price');
   const priceDisplay = document.getElementById('price-display');
   const buyBtn = document.getElementById('buy-btn');
@@ -895,18 +900,21 @@ footer a:hover { color: var(--text); }
     document.getElementById('promo-badge').style.display = 'block';
   }
 
-  function _updatePromoBadgePrice() {
-    if (!_urlPromo) return;
-    const base = cableCheckbox.checked ? 21 : 19;
-    document.getElementById('promo-final-price').textContent = base;
+  function _calcTotal() {
+    return 20 + (cableCheckbox.checked ? 2 : 0) + (shippingCheckbox.checked ? 4 : 0);
   }
 
-  cableCheckbox.addEventListener('change', () => {
-    const total = cableCheckbox.checked ? 22 : 20;
+  function _updatePrice() {
+    const total = _calcTotal();
     btnPrice.textContent = total;
     priceDisplay.innerHTML = `<sup>$</sup>${total}`;
-    _updatePromoBadgePrice();
-  });
+    if (_urlPromo) {
+      document.getElementById('promo-final-price').textContent = total - 1;
+    }
+  }
+
+  cableCheckbox.addEventListener('change', _updatePrice);
+  shippingCheckbox.addEventListener('change', _updatePrice);
 
   // ── Reviews ──────────────────────────────────────────────────────────────
 
@@ -999,7 +1007,7 @@ footer a:hover { color: var(--text); }
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ addCable: cableCheckbox.checked, promoCode: _urlPromo || undefined }),
+        body: JSON.stringify({ addCable: cableCheckbox.checked, addShipping: shippingCheckbox.checked, promoCode: _urlPromo || undefined }),
       });
       const data = await res.json();
       if (!res.ok || !data.url) throw new Error(data.error || 'Unexpected error');
@@ -1008,7 +1016,7 @@ footer a:hover { color: var(--text); }
       buyError.textContent = 'Could not start checkout — please try again or email hello@due-light.com';
       buyError.style.display = 'block';
       buyBtn.disabled = false;
-      buyBtn.textContent = `Buy now — $${cableCheckbox.checked ? 22 : 20}`;
+      buyBtn.textContent = `Buy now — $${_calcTotal()}`;
     }
   });
 </script>

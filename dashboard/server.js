@@ -244,9 +244,20 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const email = session.customer_details?.email || 'unknown';
+    const name = session.customer_details?.name || '';
     const total = `$${((session.amount_total || 0) / 100).toFixed(2)}`;
     console.log(`[stripe] order completed — ${email} — ${total}`);
-    sendDiscordAlert(`🛒 **New order!** ${email} paid ${total}`);
+
+    const shipping = session.shipping_details;
+    let alert;
+    if (shipping) {
+      const a = shipping.address;
+      const addrLines = [a.line1, a.line2, `${a.city}, ${a.state} ${a.postal_code}`].filter(Boolean).join('\n');
+      alert = `🛒 **New order — SHIP IT** ${name} (${email}) — ${total}\n📦 **Ship to:**\n\`\`\`\n${shipping.name}\n${addrLines}\n\`\`\``;
+    } else {
+      alert = `🛒 **New order — LOCAL** ${name || email} — ${total}\n🤝 Contact customer to arrange delivery`;
+    }
+    sendDiscordAlert(alert);
   }
 
   res.json({ received: true });
@@ -465,6 +476,7 @@ app.post('/api/checkout', rateLimitMiddleware, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
 
   const addCable = !!(req.body && req.body.addCable);
+  const addShipping = !!(req.body && req.body.addShipping);
   const rawPromo = (req.body && typeof req.body.promoCode === 'string') ? req.body.promoCode : '';
   // Sanitize: only alphanumeric + dash/underscore, max 30 chars
   const promoCode = rawPromo.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 30);
@@ -494,10 +506,26 @@ app.post('/api/checkout', rateLimitMiddleware, async (req, res) => {
   const sessionParams = {
     mode: 'payment',
     line_items: lineItems,
-    shipping_address_collection: { allowed_countries: ['US'] },
     success_url: 'https://due-light.com/success?session_id={CHECKOUT_SESSION_ID}',
     cancel_url: 'https://due-light.com/#pricing',
   };
+
+  if (addShipping) {
+    // Stripe collects the shipping address automatically when shipping_options is set
+    sessionParams.shipping_options = [
+      {
+        shipping_rate_data: {
+          type: 'fixed_amount',
+          fixed_amount: { amount: 400, currency: 'usd' },
+          display_name: 'Standard Shipping',
+          delivery_estimate: {
+            minimum: { unit: 'business_day', value: 3 },
+            maximum: { unit: 'business_day', value: 7 },
+          },
+        },
+      },
+    ];
+  }
 
   // Pre-apply referral promo code if provided; fall back to user-typed if not found
   if (promoCode) {
