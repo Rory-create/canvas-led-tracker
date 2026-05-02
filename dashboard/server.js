@@ -59,6 +59,7 @@ const STARTS_FILE = path.join(DATA_DIR, 'server-starts.json');
 const REVIEWS_FILE   = path.join(DATA_DIR, 'reviews.json');
 const ORDERS_FILE    = path.join(DATA_DIR, 'orders.json');
 const INVENTORY_FILE = path.join(DATA_DIR, 'inventory.json');
+const CAPITAL_FILE   = path.join(DATA_DIR, 'capital.json');
 
 // ── Server metrics ─────────────────────────────────────────────────────────
 const os = require('os');
@@ -253,6 +254,8 @@ const _SEED_INVENTORY = {
     cases_printed:        { label: 'Printed Cases',        qty: 1 },
   },
 };
+
+const _SEED_CAPITAL = { initial_investment_cents: 0, transactions: [] };
 
 // Determine items from Stripe session amount (price points: $20 base, $2 cable)
 function _itemsFromSession(session) {
@@ -767,6 +770,16 @@ app.patch('/api/orders/:id', readAuthMiddleware, (req, res) => {
   res.json({ ok: true });
 });
 
+// DELETE /api/orders/:id — permanently remove an order
+app.delete('/api/orders/:id', readAuthMiddleware, (req, res) => {
+  const orders = readJSON(ORDERS_FILE, _SEED_ORDERS);
+  const idx    = orders.findIndex(o => o.id === req.params.id);
+  if (idx < 0) return res.status(404).json({ error: 'Not found' });
+  orders.splice(idx, 1);
+  writeJSON(ORDERS_FILE, orders);
+  res.json({ ok: true });
+});
+
 // ── Inventory ──────────────────────────────────────────────────────────────
 
 app.get('/api/inventory', readAuthMiddleware, (req, res) => {
@@ -778,6 +791,71 @@ app.patch('/api/inventory', readAuthMiddleware, (req, res) => {
   if (!body.components || !body.assembled) return res.status(400).json({ error: 'components and assembled required' });
   body.updated_at = new Date().toISOString();
   writeJSON(INVENTORY_FILE, body);
+  res.json({ ok: true });
+});
+
+// ── Capital ────────────────────────────────────────────────────────────────
+
+// GET /api/capital — initial investment + transactions + computed summary
+app.get('/api/capital', readAuthMiddleware, (req, res) => {
+  const capital = readJSON(CAPITAL_FILE, _SEED_CAPITAL);
+  const orders  = readJSON(ORDERS_FILE,  _SEED_ORDERS);
+
+  const revenue_cents  = orders.reduce((s, o) => s + (o.total_cents         || 0), 0);
+  const cogs_cents     = orders.reduce((s, o) => s + (o.material_cost_cents || 0), 0);
+  const gross_profit   = revenue_cents - cogs_cents;
+
+  const txns           = capital.transactions || [];
+  const expense_cents  = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount_cents, 0);
+  const payout_cents   = txns.filter(t => t.type === 'payout' ).reduce((s, t) => s + t.amount_cents, 0);
+  const working_capital = capital.initial_investment_cents + gross_profit - expense_cents - payout_cents;
+
+  res.json({
+    initial_investment_cents: capital.initial_investment_cents,
+    transactions: txns,
+    summary: { revenue_cents, cogs_cents, gross_profit, expense_cents, payout_cents, working_capital },
+  });
+});
+
+// PATCH /api/capital — update initial investment
+app.patch('/api/capital', readAuthMiddleware, (req, res) => {
+  const cents = parseInt(req.body.initial_investment_cents);
+  if (!Number.isFinite(cents) || cents < 0) return res.status(400).json({ error: 'invalid amount' });
+  const capital = readJSON(CAPITAL_FILE, _SEED_CAPITAL);
+  capital.initial_investment_cents = cents;
+  writeJSON(CAPITAL_FILE, capital);
+  res.json({ ok: true });
+});
+
+// POST /api/capital/transactions — add expense or payout
+app.post('/api/capital/transactions', readAuthMiddleware, (req, res) => {
+  const { type, label, amount_cents, date } = req.body || {};
+  if (!['expense','payout'].includes(type)) return res.status(400).json({ error: 'type must be expense or payout' });
+  if (typeof label !== 'string' || !label.trim()) return res.status(400).json({ error: 'label required' });
+  if (!Number.isInteger(amount_cents) || amount_cents <= 0) return res.status(400).json({ error: 'amount_cents must be positive integer' });
+
+  const txn = {
+    id:           'txn_' + newBugId(),
+    type,
+    label:        label.trim().slice(0, 200),
+    amount_cents,
+    date:         typeof date === 'string' ? date : new Date().toISOString(),
+  };
+  const capital = readJSON(CAPITAL_FILE, _SEED_CAPITAL);
+  capital.transactions = [txn, ...(capital.transactions || [])];
+  writeJSON(CAPITAL_FILE, capital);
+  res.json({ ok: true, transaction: txn });
+});
+
+// DELETE /api/capital/transactions/:id
+app.delete('/api/capital/transactions/:id', readAuthMiddleware, (req, res) => {
+  const capital = readJSON(CAPITAL_FILE, _SEED_CAPITAL);
+  const txns    = capital.transactions || [];
+  const idx     = txns.findIndex(t => t.id === req.params.id);
+  if (idx < 0) return res.status(404).json({ error: 'Not found' });
+  txns.splice(idx, 1);
+  capital.transactions = txns;
+  writeJSON(CAPITAL_FILE, capital);
   res.json({ ok: true });
 });
 
