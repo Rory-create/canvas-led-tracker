@@ -199,6 +199,34 @@ a { color: var(--blue); text-decoration: none; }
 .modal-addr-fields { margin-top:8px; display:none; }
 .modal-addr-fields.visible { display:block; }
 
+/* Capital tab */
+.capital-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:22px; }
+.capital-formula { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:18px 22px; margin-bottom:22px; font-size:14px; line-height:2; }
+.capital-formula .cf-row { display:flex; justify-content:space-between; align-items:center; }
+.capital-formula .cf-row.total { border-top:2px solid var(--border); margin-top:6px; padding-top:8px; font-weight:700; font-size:15px; }
+.capital-formula .cf-row.total .cf-val { color:var(--green); }
+.capital-formula .cf-row.negative .cf-val { color:var(--red); }
+.capital-formula .cf-row.indent { padding-left:16px; color:var(--muted); font-size:13px; }
+.cf-label { color:var(--muted); font-size:13px; }
+.capital-formula .cf-row.total .cf-label { color:var(--text); font-size:15px; }
+.inv-input-row { display:flex; align-items:center; gap:10px; margin-bottom:20px; }
+.inv-input-row label { font-size:13px; color:var(--muted); white-space:nowrap; }
+.inv-input-row input { background:var(--surface); border:1px solid var(--border); color:var(--text); padding:7px 10px; border-radius:6px; font-size:14px; width:140px; }
+.inv-input-row button { background:var(--blue); color:#fff; border:none; padding:7px 16px; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; }
+.txn-table { width:100%; border-collapse:collapse; font-size:13px; }
+.txn-table th { text-align:left; color:var(--muted); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding:8px 10px; border-bottom:1px solid var(--border); }
+.txn-table td { padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.txn-table tr:last-child td { border-bottom:none; }
+.txn-expense { color:var(--red); }
+.txn-payout  { color:var(--purple); }
+.add-txn-row { display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+.add-txn-row select, .add-txn-row input { background:var(--surface); border:1px solid var(--border); color:var(--text); padding:6px 10px; border-radius:6px; font-size:13px; }
+.add-txn-row input[type=number] { width:100px; }
+.add-txn-row button { background:var(--green); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; }
+.add-txn-row button:hover { opacity:.85; }
+.del-txn-btn { background:none; border:1px solid var(--border); color:var(--muted); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:11px; }
+.del-txn-btn:hover { border-color:var(--red); color:var(--red); }
+
 /* Tabs */
 .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 0; }
 .tab { padding: 8px 16px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; font-size: 14px; }
@@ -290,6 +318,7 @@ a { color: var(--blue); text-decoration: none; }
   <!-- Tabs -->
   <div class="tabs">
     <div class="tab active" onclick="switchTab('orders')">Orders</div>
+    <div class="tab" onclick="switchTab('capital')">Capital</div>
     <div class="tab" onclick="switchTab('units')">Units</div>
     <div class="tab" onclick="switchTab('bugs')">Bug Reports</div>
     <div class="tab" onclick="switchTab('ota')">OTA Status</div>
@@ -399,6 +428,7 @@ a { color: var(--blue); text-decoration: none; }
           <option value="apple_cash">Apple Cash</option>
           <option value="cash_app">Cash App</option>
           <option value="venmo">Venmo</option>
+          <option value="stripe">Stripe (historical)</option>
         </select>
       </div>
       <div class="modal-row">
@@ -409,6 +439,70 @@ a { color: var(--blue); text-decoration: none; }
       <div class="modal-btns">
         <button class="modal-cancel-btn" onclick="closeOrderModal()">Cancel</button>
         <button class="modal-submit-btn" onclick="submitManualOrder()">Add Order</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Capital tab -->
+  <div id="tab-capital" class="tab-content">
+    <!-- Summary stat cards -->
+    <div class="capital-summary">
+      <div class="stat green">
+        <div class="label">Working Capital</div>
+        <div class="value" id="capWorking" style="font-size:20px;">—</div>
+      </div>
+      <div class="stat blue">
+        <div class="label">Gross Profit</div>
+        <div class="value" id="capGross" style="font-size:20px;">—</div>
+      </div>
+      <div class="stat red">
+        <div class="label">Expenses</div>
+        <div class="value" id="capExpenses" style="font-size:20px;">—</div>
+      </div>
+      <div class="stat purple">
+        <div class="label">Payouts</div>
+        <div class="value" id="capPayouts" style="font-size:20px;">—</div>
+      </div>
+    </div>
+
+    <!-- Initial investment -->
+    <div class="section">
+      <div class="section-title">Initial Investment</div>
+      <div class="inv-input-row">
+        <label>Amount you put in to start:</label>
+        <input type="number" id="capInvestInput" placeholder="0.00" step="0.01" min="0">
+        <button onclick="saveInitialInvestment()">Save</button>
+      </div>
+    </div>
+
+    <!-- Capital formula breakdown -->
+    <div class="section">
+      <div class="section-title">How it breaks down</div>
+      <div class="capital-formula" id="capFormula">
+        <div class="loading">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="section">
+      <div class="section-title">Expenses &amp; Payouts <span class="count" id="capTxnCount">0</span></div>
+      <!-- Add row -->
+      <div class="add-txn-row">
+        <select id="txnType">
+          <option value="expense">Expense</option>
+          <option value="payout">Payout to me</option>
+        </select>
+        <input type="text" id="txnLabel" placeholder="Description (e.g. ESP32 ×5)" style="flex:1;min-width:140px;">
+        <input type="number" id="txnAmount" placeholder="Amount ($)" step="0.01" min="0.01">
+        <button onclick="addTransaction()">+ Add</button>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow-x:auto;">
+        <table class="txn-table">
+          <thead><tr>
+            <th>Date</th><th>Type</th><th>Description</th><th>Amount</th><th></th>
+          </tr></thead>
+          <tbody id="txnBody"><tr><td colspan="5" class="loading">Loading…</td></tr></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -497,7 +591,7 @@ let _inventoryData = null;
 
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach((t, i) => {
-    const names = ['orders','units','bugs','ota','server','reviews'];
+    const names = ['orders','capital','units','bugs','ota','server','reviews'];
     t.classList.toggle('active', names[i] === tab);
   });
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -791,7 +885,7 @@ document.addEventListener('click', async (e) => {
 
 
 async function loadAll() {
-  await Promise.all([loadOrders(), loadInventory(), loadUnits(), loadBugs(), loadOTA(), loadStats(), loadServerMetrics(), loadReviews()]);
+  await Promise.all([loadOrders(), loadCapital(), loadInventory(), loadUnits(), loadBugs(), loadOTA(), loadStats(), loadServerMetrics(), loadReviews()]);
 }
 
 async function loadUnits() {
@@ -1097,6 +1191,10 @@ function renderOrders(orders) {
                 <textarea rows="2" onclick="event.stopPropagation()"
                   onblur="saveOrderField('${escHtml(o.id)}','notes',this.value)">${escHtml(o.notes || '')}</textarea>
               </div>
+              <div style="margin-top:4px;">
+                <button class="del-txn-btn" style="border-color:rgba(239,68,68,0.4);color:var(--red);"
+                  onclick="event.stopPropagation();deleteOrder('${escHtml(o.id)}')">🗑 Delete order</button>
+              </div>
             </div>
           </div>
         </td>
@@ -1146,6 +1244,19 @@ async function saveOrderField(id, field, value) {
   if (r.status === 401) { showLogin(); return; }
   const order = allOrders.find(o => o.id === id);
   if (order) order[field] = value;
+}
+
+async function deleteOrder(id) {
+  if (!confirm('Permanently delete this order? This cannot be undone.')) return;
+  const r = await fetch(`/api/orders/${encodeURIComponent(id)}`, { method: 'DELETE', headers: authHeaders() });
+  if (r.status === 401) { showLogin(); return; }
+  allOrders = allOrders.filter(o => o.id !== id);
+  orderStats.total = allOrders.length;
+  orderStats.revenue_cents = allOrders.reduce((s, o) => s + (o.total_cents || 0), 0);
+  orderStats.profit_cents  = allOrders.reduce((s, o) => s + (o.profit_cents || 0), 0);
+  orderStats.pending = allOrders.filter(o => ['new','building','packed'].includes(o.status)).length;
+  renderOrderStats(orderStats);
+  renderOrders(allOrders);
 }
 
 // ── Manual order modal ─────────────────────────────────────────────────────
@@ -1226,6 +1337,91 @@ async function submitManualOrder() {
   if (r.status === 401) { showLogin(); return; }
   closeOrderModal();
   await loadOrders();
+}
+
+// ── Capital ────────────────────────────────────────────────────────────────
+
+let _capitalData = null;
+
+async function loadCapital() {
+  try {
+    const r = await fetch('/api/capital', { headers: authHeaders() });
+    if (r.status === 401) return;
+    _capitalData = await r.json();
+    renderCapital(_capitalData);
+  } catch {}
+}
+
+function renderCapital(d) {
+  if (!d) return;
+  const s = d.summary || {};
+
+  // Summary cards
+  document.getElementById('capWorking').textContent  = fmtCents(s.working_capital  ?? 0);
+  document.getElementById('capGross').textContent    = fmtCents(s.gross_profit      ?? 0);
+  document.getElementById('capExpenses').textContent = fmtCents(s.expense_cents     ?? 0);
+  document.getElementById('capPayouts').textContent  = fmtCents(s.payout_cents      ?? 0);
+
+  // Initial investment input
+  const investEl = document.getElementById('capInvestInput');
+  if (investEl && !investEl.matches(':focus')) investEl.value = ((d.initial_investment_cents || 0) / 100).toFixed(2);
+
+  // Formula breakdown
+  const wc = s.working_capital ?? 0;
+  document.getElementById('capFormula').innerHTML = `
+    <div class="cf-row"><span class="cf-label">Initial investment</span><span class="cf-val">${fmtCents(d.initial_investment_cents || 0)}</span></div>
+    <div class="cf-row indent"><span class="cf-label">+ Total revenue</span><span class="cf-val">${fmtCents(s.revenue_cents || 0)}</span></div>
+    <div class="cf-row indent"><span class="cf-label">− Cost of goods (materials + fees)</span><span class="cf-val negative" style="color:var(--red)">−${fmtCents(s.cogs_cents || 0)}</span></div>
+    <div class="cf-row indent"><span class="cf-label">= Gross profit from orders</span><span class="cf-val profit-val">${fmtCents(s.gross_profit || 0)}</span></div>
+    <div class="cf-row"><span class="cf-label">− Additional expenses</span><span class="cf-val" style="color:var(--red)">−${fmtCents(s.expense_cents || 0)}</span></div>
+    <div class="cf-row"><span class="cf-label">− Payouts to you</span><span class="cf-val" style="color:var(--purple)">−${fmtCents(s.payout_cents || 0)}</span></div>
+    <div class="cf-row total"><span class="cf-label">Working capital</span><span class="cf-val" style="color:${wc >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtCents(wc)}</span></div>`;
+
+  // Transactions table
+  const txns = d.transactions || [];
+  document.getElementById('capTxnCount').textContent = txns.length;
+  document.getElementById('txnBody').innerHTML = txns.length
+    ? txns.map(t => `<tr>
+        <td style="white-space:nowrap;color:var(--muted)">${new Date(t.date).toLocaleDateString()}</td>
+        <td><span class="txn-${t.type}">${t.type === 'expense' ? '💸 Expense' : '💰 Payout'}</span></td>
+        <td>${escHtml(t.label)}</td>
+        <td style="white-space:nowrap;font-weight:500">−${fmtCents(t.amount_cents)}</td>
+        <td><button class="del-txn-btn" onclick="deleteTransaction('${escHtml(t.id)}')">✕</button></td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" style="color:var(--muted);padding:20px;text-align:center;">No expenses or payouts logged yet.</td></tr>';
+}
+
+async function saveInitialInvestment() {
+  const dollars = parseFloat(document.getElementById('capInvestInput').value);
+  if (isNaN(dollars) || dollars < 0) return;
+  const cents = Math.round(dollars * 100);
+  const r = await fetch('/api/capital', { method:'PATCH', headers: authHeaders(), body: JSON.stringify({ initial_investment_cents: cents }) });
+  if (r.status === 401) { showLogin(); return; }
+  if (_capitalData) _capitalData.initial_investment_cents = cents;
+  await loadCapital();
+}
+
+async function addTransaction() {
+  const type   = document.getElementById('txnType').value;
+  const label  = document.getElementById('txnLabel').value.trim();
+  const amount = parseFloat(document.getElementById('txnAmount').value);
+  if (!label) { alert('Description is required.'); return; }
+  if (isNaN(amount) || amount <= 0) { alert('Enter a valid amount.'); return; }
+  const r = await fetch('/api/capital/transactions', {
+    method:'POST', headers: authHeaders(),
+    body: JSON.stringify({ type, label, amount_cents: Math.round(amount * 100) }),
+  });
+  if (r.status === 401) { showLogin(); return; }
+  document.getElementById('txnLabel').value  = '';
+  document.getElementById('txnAmount').value = '';
+  await loadCapital();
+}
+
+async function deleteTransaction(id) {
+  if (!confirm('Delete this transaction?')) return;
+  const r = await fetch(`/api/capital/transactions/${encodeURIComponent(id)}`, { method:'DELETE', headers: authHeaders() });
+  if (r.status === 401) { showLogin(); return; }
+  await loadCapital();
 }
 
 // ── Inventory ──────────────────────────────────────────────────────────────
