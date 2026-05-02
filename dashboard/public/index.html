@@ -139,6 +139,66 @@ a { color: var(--blue); text-decoration: none; }
 /* Loading */
 .loading { text-align: center; color: var(--muted); padding: 32px; }
 
+/* Orders tab */
+.orders-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
+.order-filter-row { display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+.order-filter-row select { background:var(--surface); border:1px solid var(--border); color:var(--text); padding:6px 10px; border-radius:6px; font-size:13px; cursor:pointer; }
+.order-filter-row button { background:var(--blue); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; margin-left:auto; }
+.order-filter-row button:hover { background:#2563eb; }
+.orders-table { width:100%; border-collapse:collapse; font-size:13px; }
+.orders-table th { text-align:left; color:var(--muted); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
+.orders-table td { padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.orders-table tr:last-child > td { border-bottom:none; }
+.orders-table tr.order-row:hover > td { background:rgba(0,0,0,0.03); cursor:pointer; }
+.orders-table tr.expand-row td { padding:0; }
+.expand-inner { background:var(--bg); border-bottom:1px solid var(--border); padding:14px 16px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.expand-inner label { font-size:11px; color:var(--muted); display:block; margin-bottom:3px; }
+.expand-inner input, .expand-inner textarea { width:100%; background:var(--surface); border:1px solid var(--border); color:var(--text); padding:6px 8px; border-radius:5px; font-size:12px; font-family:inherit; outline:none; }
+.expand-inner textarea { resize:vertical; min-height:54px; }
+.expand-inner input:focus, .expand-inner textarea:focus { border-color:var(--blue); }
+.fulfill-badge { display:inline-block; font-size:11px; padding:2px 7px; border-radius:4px; white-space:nowrap; }
+.fulfill-ship  { background:rgba(59,130,246,0.12); color:#2563eb; }
+.fulfill-local { background:rgba(77,107,60,0.12);  color:#4d6b3c; }
+.status-select { background:var(--surface); border:1px solid var(--border); color:var(--text); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; }
+.profit-val { color:var(--green); font-weight:500; }
+.copy-addr-btn { font-size:11px; background:none; border:1px solid var(--border); color:var(--muted); padding:3px 8px; border-radius:4px; cursor:pointer; white-space:nowrap; }
+.copy-addr-btn:hover { border-color:var(--blue); color:var(--blue); }
+
+/* Inventory */
+.inventory-toggle { font-size:13px; font-weight:600; cursor:pointer; user-select:none; margin-bottom:12px; color:var(--muted); }
+.inventory-toggle:hover { color:var(--text); }
+.inventory-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-bottom:16px; }
+.inv-item { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.inv-item .inv-label { font-size:13px; flex:1; }
+.inv-qty { display:flex; align-items:center; gap:4px; }
+.inv-qty button { width:26px; height:26px; border:1px solid var(--border); background:var(--bg); color:var(--text); border-radius:4px; cursor:pointer; font-size:14px; line-height:1; display:flex; align-items:center; justify-content:center; }
+.inv-qty button:hover { border-color:var(--blue); color:var(--blue); }
+.inv-qty input { width:52px; text-align:center; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:3px 4px; border-radius:4px; font-size:13px; }
+.inv-section-title { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:14px 0 8px; }
+.inv-save-btn { background:var(--blue); color:#fff; border:none; padding:8px 20px; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; }
+.inv-save-btn:hover { background:#2563eb; }
+
+/* Manual order modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:200; }
+.modal-box { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:28px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto; }
+.modal-box h3 { font-size:16px; font-weight:600; margin-bottom:16px; }
+.modal-row { margin-bottom:12px; }
+.modal-row label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+.modal-row input, .modal-row select, .modal-row textarea { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:8px 10px; border-radius:6px; font-size:13px; font-family:inherit; outline:none; }
+.modal-row input:focus, .modal-row select:focus, .modal-row textarea:focus { border-color:var(--blue); }
+.modal-row textarea { resize:vertical; min-height:60px; }
+.modal-checks { display:flex; flex-direction:column; gap:6px; }
+.modal-checks label { display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; color:var(--text); }
+.modal-checks input[type=checkbox] { width:16px; height:16px; cursor:pointer; }
+.modal-total { background:var(--bg); border-radius:8px; padding:10px 14px; font-size:14px; font-weight:600; margin:14px 0; }
+.modal-btns { display:flex; gap:8px; justify-content:flex-end; }
+.modal-btns button { padding:8px 20px; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; }
+.modal-cancel-btn { background:none; border:1px solid var(--border); color:var(--muted); }
+.modal-submit-btn { background:var(--blue); color:#fff; border:none; }
+.modal-submit-btn:hover { background:#2563eb; }
+.modal-addr-fields { margin-top:8px; display:none; }
+.modal-addr-fields.visible { display:block; }
+
 /* Tabs */
 .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 0; }
 .tab { padding: 8px 16px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; font-size: 14px; }
@@ -229,15 +289,132 @@ a { color: var(--blue); text-decoration: none; }
 
   <!-- Tabs -->
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('units')">Units</div>
+    <div class="tab active" onclick="switchTab('orders')">Orders</div>
+    <div class="tab" onclick="switchTab('units')">Units</div>
     <div class="tab" onclick="switchTab('bugs')">Bug Reports</div>
     <div class="tab" onclick="switchTab('ota')">OTA Status</div>
     <div class="tab" onclick="switchTab('server')">Server</div>
     <div class="tab" onclick="switchTab('reviews')">Reviews</div>
   </div>
 
+  <!-- Orders tab -->
+  <div id="tab-orders" class="tab-content active">
+    <!-- Summary stat cards -->
+    <div class="orders-stats">
+      <div class="stat yellow">
+        <div class="label">Pending</div>
+        <div class="value" id="ordStatPending">—</div>
+      </div>
+      <div class="stat blue">
+        <div class="label">Revenue</div>
+        <div class="value" id="ordStatRevenue" style="font-size:22px;">—</div>
+      </div>
+      <div class="stat green">
+        <div class="label">Profit</div>
+        <div class="value" id="ordStatProfit" style="font-size:22px;">—</div>
+      </div>
+      <div class="stat purple">
+        <div class="label">Total Orders</div>
+        <div class="value" id="ordStatTotal">—</div>
+      </div>
+    </div>
+
+    <!-- Filter row -->
+    <div class="order-filter-row">
+      <select id="ordFilterStatus" onchange="renderOrders(allOrders)">
+        <option value="">All statuses</option>
+        <option value="new">New</option>
+        <option value="building">Building</option>
+        <option value="packed">Packed</option>
+        <option value="shipped">Shipped</option>
+        <option value="delivered">Delivered</option>
+        <option value="refunded">Refunded</option>
+      </select>
+      <select id="ordFilterFulfill" onchange="renderOrders(allOrders)">
+        <option value="">All fulfillment</option>
+        <option value="local">Local</option>
+        <option value="shipping">Shipping</option>
+      </select>
+      <button onclick="openOrderModal()">+ Add Order</button>
+    </div>
+
+    <!-- Orders table -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow-x:auto;margin-bottom:24px;">
+      <table class="orders-table" id="ordersTable">
+        <thead><tr>
+          <th>#</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Profit</th><th>Ship?</th><th>Promo</th><th>Status</th><th style="width:32px"></th>
+        </tr></thead>
+        <tbody id="ordersBody"><tr><td colspan="10" class="loading">Loading orders…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Inventory section (collapsible) -->
+    <div class="section">
+      <div class="inventory-toggle" onclick="toggleInventory()">▶ Inventory</div>
+      <div id="inventoryPanel" style="display:none;">
+        <div id="inventoryContent"><div class="loading">Loading inventory…</div></div>
+        <button class="inv-save-btn" onclick="saveInventory()">Save inventory</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual order modal (hidden by default) -->
+  <div class="modal-overlay" id="orderModal" style="display:none;" onclick="if(event.target===this)closeOrderModal()">
+    <div class="modal-box">
+      <h3>Add Manual Order</h3>
+      <div class="modal-row">
+        <label>Customer name *</label>
+        <input id="mName" type="text" placeholder="Full name">
+      </div>
+      <div class="modal-row">
+        <label>Email (optional)</label>
+        <input id="mEmail" type="email" placeholder="customer@example.com">
+      </div>
+      <div class="modal-row">
+        <label>Items</label>
+        <div class="modal-checks">
+          <label><input type="checkbox" id="mItemBase" checked onchange="recalcModalTotal()"> Due Light <span style="color:var(--muted)">(base)</span></label>
+          <label><input type="checkbox" id="mItemCable" onchange="recalcModalTotal()"> USB-C Cable <span style="color:var(--muted)">+$2</span></label>
+          <label><input type="checkbox" id="mItemBase2" onchange="recalcModalTotal()"> Due Light #2 <span style="color:var(--muted)">(2-unit order)</span></label>
+        </div>
+      </div>
+      <div class="modal-row">
+        <label>Shipping</label>
+        <div class="modal-checks">
+          <label><input type="checkbox" id="mShipping" onchange="recalcModalTotal()"> Ship to customer <span style="color:var(--muted)">+$4</span></label>
+        </div>
+        <div class="modal-addr-fields" id="mAddrFields">
+          <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <input id="mAddrLine1" placeholder="Address line 1" style="grid-column:1/-1;">
+            <input id="mAddrCity" placeholder="City">
+            <input id="mAddrState" placeholder="State">
+            <input id="mAddrZip" placeholder="ZIP">
+          </div>
+        </div>
+      </div>
+      <div class="modal-row">
+        <label>Payment method</label>
+        <select id="mPayment">
+          <option value="cash">Cash</option>
+          <option value="apple_cash">Apple Cash</option>
+          <option value="cash_app">Cash App</option>
+          <option value="venmo">Venmo</option>
+        </select>
+      </div>
+      <div class="modal-row">
+        <label>Notes</label>
+        <textarea id="mNotes" placeholder="Any notes…" rows="2"></textarea>
+      </div>
+      <div class="modal-total" id="mTotalDisplay">Total: $20</div>
+      <div class="modal-btns">
+        <button class="modal-cancel-btn" onclick="closeOrderModal()">Cancel</button>
+        <button class="modal-submit-btn" onclick="submitManualOrder()">Add Order</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Units tab -->
-  <div id="tab-units" class="tab-content active">
+  <div id="tab-units" class="tab-content">
     <div class="section">
       <div class="section-title">Deployed Units <span class="count" id="unitCount">0</span></div>
       <div id="unitsGrid" class="units-grid"><div class="loading">Loading units...</div></div>
@@ -314,12 +491,13 @@ function escHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-let currentTab = 'units';
-let allUnits = [], allBugs = [], allReviews = [], stats = {};
+let currentTab = 'orders';
+let allUnits = [], allBugs = [], allReviews = [], allOrders = [], orderStats = {}, stats = {};
+let _inventoryData = null;
 
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach((t, i) => {
-    const names = ['units','bugs','ota','server','reviews'];
+    const names = ['orders','units','bugs','ota','server','reviews'];
     t.classList.toggle('active', names[i] === tab);
   });
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -613,7 +791,7 @@ document.addEventListener('click', async (e) => {
 
 
 async function loadAll() {
-  await Promise.all([loadUnits(), loadBugs(), loadOTA(), loadStats(), loadServerMetrics(), loadReviews()]);
+  await Promise.all([loadOrders(), loadInventory(), loadUnits(), loadBugs(), loadOTA(), loadStats(), loadServerMetrics(), loadReviews()]);
 }
 
 async function loadUnits() {
@@ -822,6 +1000,296 @@ async function deleteReview(id) {
   if (r.status === 401) { showLogin(); return; }
   allReviews = allReviews.filter(rev => rev.id !== id);
   renderReviews(allReviews);
+}
+
+// ── Orders ────────────────────────────────────────────────────────────────
+
+const STATUS_LABELS = { new:'New', building:'Building', packed:'Packed', shipped:'Shipped', delivered:'Delivered', refunded:'Refunded' };
+const PAYMENT_LABELS = { cash:'Cash', apple_cash:'Apple Cash', cash_app:'Cash App', venmo:'Venmo', stripe:'Stripe' };
+
+function fmtCents(c) {
+  return '$' + ((c || 0) / 100).toFixed(2).replace(/\.00$/, '');
+}
+
+async function loadOrders() {
+  try {
+    const r = await fetch('/api/orders', { headers: authHeaders() });
+    if (r.status === 401) { showLogin(); return; }
+    const data = await r.json();
+    allOrders  = data.orders || [];
+    orderStats = data.stats  || {};
+    renderOrderStats(orderStats);
+    renderOrders(allOrders);
+  } catch { document.getElementById('ordersBody').innerHTML = '<tr><td colspan="10" class="empty">Failed to load orders.</td></tr>'; }
+}
+
+function renderOrderStats(s) {
+  document.getElementById('ordStatPending').textContent = s.pending ?? '—';
+  document.getElementById('ordStatRevenue').textContent = s.revenue_cents != null ? fmtCents(s.revenue_cents) : '—';
+  document.getElementById('ordStatProfit').textContent  = s.profit_cents  != null ? fmtCents(s.profit_cents)  : '—';
+  document.getElementById('ordStatTotal').textContent   = s.total ?? '—';
+}
+
+function renderOrders(orders) {
+  const statusFilter  = document.getElementById('ordFilterStatus').value;
+  const fulfillFilter = document.getElementById('ordFilterFulfill').value;
+  const filtered = orders.filter(o =>
+    (!statusFilter  || o.status      === statusFilter) &&
+    (!fulfillFilter || o.fulfillment === fulfillFilter)
+  );
+
+  const body = document.getElementById('ordersBody');
+  if (!filtered.length) {
+    body.innerHTML = '<tr><td colspan="10" class="empty">No orders match your filters.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = filtered.map((o, idx) => {
+    const date    = new Date(o.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    const items   = escHtml((o.items || []).join(', '));
+    const fulfill = o.fulfillment === 'shipping'
+      ? '<span class="fulfill-badge fulfill-ship">📦 Ship</span>'
+      : '<span class="fulfill-badge fulfill-local">🤝 Local</span>';
+    const promo   = o.promo_code ? `<code style="font-size:11px">${escHtml(o.promo_code)}</code>` : '<span style="color:var(--muted)">—</span>';
+    const statusOpts = Object.entries(STATUS_LABELS).map(([v,l]) =>
+      `<option value="${v}" ${o.status === v ? 'selected' : ''}>${l}</option>`
+    ).join('');
+
+    return `
+      <tr class="order-row" data-order-id="${escHtml(o.id)}" onclick="toggleOrderRow(this)">
+        <td style="color:var(--muted);font-size:11px">#${filtered.length - idx}</td>
+        <td style="white-space:nowrap;color:var(--muted)">${date}</td>
+        <td>
+          <div style="font-weight:500">${escHtml(o.customer_name)}</div>
+          ${o.customer_email ? `<div style="font-size:11px;color:var(--muted)">${escHtml(o.customer_email)}</div>` : ''}
+          <div style="font-size:11px;color:var(--muted)">${escHtml(PAYMENT_LABELS[o.payment_method] || o.payment_method)}</div>
+        </td>
+        <td>${items}</td>
+        <td style="white-space:nowrap"><strong>${fmtCents(o.total_cents)}</strong></td>
+        <td class="profit-val">${fmtCents(o.profit_cents)}</td>
+        <td>${fulfill}</td>
+        <td>${promo}</td>
+        <td onclick="event.stopPropagation()">
+          <select class="status-select" onchange="updateOrderStatus('${escHtml(o.id)}', this.value)">
+            ${statusOpts}
+          </select>
+        </td>
+        <td style="text-align:center;color:var(--muted);font-size:16px">›</td>
+      </tr>
+      <tr class="expand-row" id="expand-${escHtml(o.id)}" style="display:none">
+        <td colspan="10">
+          <div class="expand-inner">
+            <div>
+              <label>${o.fulfillment === 'shipping' ? '📦 Shipping address' : '🤝 Delivery'}</label>
+              ${o.fulfillment === 'shipping' && o.shipping_address
+                ? `<div style="font-size:13px;line-height:1.6">${_fmtAddr(o.shipping_address)}</div>
+                   <button class="copy-addr-btn" style="margin-top:6px" onclick="copyAddr('${escHtml(o.id)}')">📋 Copy for Pirate Ship</button>`
+                : `<div style="font-size:13px;color:var(--muted)">Local delivery</div>`}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div>
+                <label>Tracking number</label>
+                <input type="text" value="${escHtml(o.tracking_number || '')}" placeholder="e.g. 9400111899223481234567"
+                  onblur="saveOrderField('${escHtml(o.id)}','tracking_number',this.value)" onclick="event.stopPropagation()">
+              </div>
+              <div>
+                <label>Notes</label>
+                <textarea rows="2" onclick="event.stopPropagation()"
+                  onblur="saveOrderField('${escHtml(o.id)}','notes',this.value)">${escHtml(o.notes || '')}</textarea>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function _fmtAddr(a) {
+  if (!a) return '—';
+  return [a.line1, a.line2, `${a.city || ''}, ${a.state || ''} ${a.postal_code || ''}`.trim()]
+    .filter(Boolean).map(l => escHtml(l)).join('<br>');
+}
+
+function _addrText(orderId) {
+  const o = allOrders.find(x => x.id === orderId);
+  if (!o || !o.shipping_address) return '';
+  const a = o.shipping_address;
+  return [o.customer_name, a.line1, a.line2, `${a.city}, ${a.state} ${a.postal_code}`].filter(Boolean).join('\n');
+}
+
+function copyAddr(orderId) {
+  const text = _addrText(orderId);
+  if (text) navigator.clipboard.writeText(text).then(() => {}).catch(() => {});
+}
+
+function toggleOrderRow(row) {
+  const id = row.dataset.orderId;
+  const expandRow = document.getElementById('expand-' + id);
+  if (!expandRow) return;
+  const hidden = expandRow.style.display === 'none';
+  expandRow.style.display = hidden ? '' : 'none';
+}
+
+async function updateOrderStatus(id, status) {
+  const r = await fetch(`/api/orders/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status }),
+  });
+  if (r.status === 401) { showLogin(); return; }
+  const order = allOrders.find(o => o.id === id);
+  if (order) order.status = status;
+}
+
+async function saveOrderField(id, field, value) {
+  const r = await fetch(`/api/orders/${encodeURIComponent(id)}`, {
+    method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [field]: value }),
+  });
+  if (r.status === 401) { showLogin(); return; }
+  const order = allOrders.find(o => o.id === id);
+  if (order) order[field] = value;
+}
+
+// ── Manual order modal ─────────────────────────────────────────────────────
+
+function openOrderModal() {
+  document.getElementById('mName').value    = '';
+  document.getElementById('mEmail').value   = '';
+  document.getElementById('mItemBase').checked  = true;
+  document.getElementById('mItemCable').checked = false;
+  document.getElementById('mItemBase2').checked = false;
+  document.getElementById('mShipping').checked  = false;
+  document.getElementById('mPayment').value = 'cash';
+  document.getElementById('mNotes').value   = '';
+  document.getElementById('mAddrFields').classList.remove('visible');
+  recalcModalTotal();
+  document.getElementById('orderModal').style.display = 'flex';
+}
+
+function closeOrderModal() {
+  document.getElementById('orderModal').style.display = 'none';
+}
+
+function recalcModalTotal() {
+  const hasShipping = document.getElementById('mShipping').checked;
+  const hasAddrFields = document.getElementById('mAddrFields');
+  if (hasShipping) hasAddrFields.classList.add('visible');
+  else hasAddrFields.classList.remove('visible');
+
+  let total = 0;
+  if (document.getElementById('mItemBase').checked)  total += 2000;
+  if (document.getElementById('mItemBase2').checked) total += 2000;
+  if (document.getElementById('mItemCable').checked) total += 200;
+  if (hasShipping)                                    total += 400;
+  document.getElementById('mTotalDisplay').textContent = `Total: ${fmtCents(total)}`;
+}
+
+async function submitManualOrder() {
+  const name = document.getElementById('mName').value.trim();
+  if (!name) { alert('Customer name is required.'); return; }
+
+  const items = [];
+  if (document.getElementById('mItemBase').checked)  items.push('Due Light');
+  if (document.getElementById('mItemBase2').checked) items.push('Due Light');
+  if (document.getElementById('mItemCable').checked) items.push('USB-C Cable');
+  if (!items.length) { alert('Select at least one item.'); return; }
+
+  const hasShipping = document.getElementById('mShipping').checked;
+  const shippingCents = hasShipping ? 400 : 0;
+  let subtotalCents = 0;
+  subtotalCents += items.filter(i => i === 'Due Light').length * 2000;
+  subtotalCents += items.filter(i => i === 'USB-C Cable').length * 200;
+  const totalCents = subtotalCents + shippingCents;
+
+  let shipping_address = null;
+  if (hasShipping) {
+    shipping_address = {
+      line1:       document.getElementById('mAddrLine1').value.trim(),
+      city:        document.getElementById('mAddrCity').value.trim(),
+      state:       document.getElementById('mAddrState').value.trim(),
+      postal_code: document.getElementById('mAddrZip').value.trim(),
+    };
+  }
+
+  const body = {
+    customer_name:  name,
+    customer_email: document.getElementById('mEmail').value.trim(),
+    items,
+    subtotal_cents: subtotalCents,
+    shipping_cents: shippingCents,
+    total_cents:    totalCents,
+    payment_method: document.getElementById('mPayment').value,
+    fulfillment:    hasShipping ? 'shipping' : 'local',
+    shipping_address,
+    notes:          document.getElementById('mNotes').value.trim(),
+  };
+
+  const r = await fetch('/api/orders', { method:'POST', headers: authHeaders(), body: JSON.stringify(body) });
+  if (r.status === 401) { showLogin(); return; }
+  closeOrderModal();
+  await loadOrders();
+}
+
+// ── Inventory ──────────────────────────────────────────────────────────────
+
+let _invVisible = false;
+
+function toggleInventory() {
+  _invVisible = !_invVisible;
+  document.getElementById('inventoryPanel').style.display = _invVisible ? '' : 'none';
+  document.querySelector('.inventory-toggle').textContent = (_invVisible ? '▼' : '▶') + ' Inventory';
+  if (_invVisible && _inventoryData) renderInventory(_inventoryData);
+}
+
+async function loadInventory() {
+  try {
+    const r = await fetch('/api/inventory', { headers: authHeaders() });
+    if (r.status === 401) return;
+    _inventoryData = await r.json();
+    if (_invVisible) renderInventory(_inventoryData);
+  } catch {}
+}
+
+function renderInventory(data) {
+  if (!data) return;
+  const sections = [
+    { key: 'components', title: 'Components' },
+    { key: 'assembled',  title: 'Assembled' },
+  ];
+  document.getElementById('inventoryContent').innerHTML = sections.map(({ key, title }) => {
+    const items = data[key] || {};
+    return `<div class="inv-section-title">${title}</div>
+      <div class="inventory-grid">${Object.entries(items).map(([k, v]) => `
+        <div class="inv-item">
+          <span class="inv-label">${escHtml(v.label)}</span>
+          <div class="inv-qty">
+            <button onclick="adjInv('${key}','${k}',-1)">−</button>
+            <input type="number" min="0" value="${v.qty}" id="inv-${key}-${k}" style="width:52px;">
+            <button onclick="adjInv('${key}','${k}',1)">+</button>
+          </div>
+        </div>`).join('')}
+      </div>`;
+  }).join('');
+}
+
+function adjInv(section, key, delta) {
+  const el = document.getElementById(`inv-${section}-${key}`);
+  if (!el) return;
+  el.value = Math.max(0, parseInt(el.value || 0) + delta);
+}
+
+async function saveInventory() {
+  if (!_inventoryData) return;
+  const data = JSON.parse(JSON.stringify(_inventoryData));
+  for (const section of ['components', 'assembled']) {
+    for (const key of Object.keys(data[section] || {})) {
+      const el = document.getElementById(`inv-${section}-${key}`);
+      if (el) data[section][key].qty = parseInt(el.value) || 0;
+    }
+  }
+  const r = await fetch('/api/inventory', { method:'PATCH', headers: authHeaders(), body: JSON.stringify(data) });
+  if (r.status === 401) { showLogin(); return; }
+  _inventoryData = data;
+  const btn = document.querySelector('.inv-save-btn');
+  if (btn) { const orig = btn.textContent; btn.textContent = 'Saved!'; setTimeout(() => btn.textContent = orig, 1500); }
 }
 
 // Auto-refresh every 60 seconds — only if authenticated
