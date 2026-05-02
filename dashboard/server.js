@@ -56,7 +56,9 @@ const DATA_DIR = path.join(__dirname, 'data');
 const UNITS_FILE = path.join(DATA_DIR, 'units.json');
 const BUGS_FILE = path.join(DATA_DIR, 'bugs.json');
 const STARTS_FILE = path.join(DATA_DIR, 'server-starts.json');
-const REVIEWS_FILE = path.join(DATA_DIR, 'reviews.json');
+const REVIEWS_FILE   = path.join(DATA_DIR, 'reviews.json');
+const ORDERS_FILE    = path.join(DATA_DIR, 'orders.json');
+const INVENTORY_FILE = path.join(DATA_DIR, 'inventory.json');
 
 // ── Server metrics ─────────────────────────────────────────────────────────
 const os = require('os');
@@ -221,6 +223,67 @@ function checkAndAlert(units) {
   return changed;
 }
 
+// ── Orders helpers ─────────────────────────────────────────────────────────
+
+// Seed data — written once when orders.json doesn't exist yet
+const _SEED_ORDERS = [
+  { id:'manual_1776988800000', stripe_session_id:null, created_at:'2026-04-24T12:00:00Z', customer_name:'Luca Campanella',   customer_email:'', items:['Due Light','USB-C Cable'], subtotal_cents:2000, shipping_cents:0, total_cents:2000, material_cost_cents:700,  profit_cents:1300, payment_method:'cash',       fulfillment:'local', shipping_address:null, promo_code:'', status:'delivered', tracking_number:'', notes:'' },
+  { id:'manual_1776643200004', stripe_session_id:null, created_at:'2026-04-20T16:00:00Z', customer_name:'Daniel Pak',        customer_email:'', items:['Due Light','Due Light'],    subtotal_cents:3400, shipping_cents:0, total_cents:3400, material_cost_cents:1200, profit_cents:2200, payment_method:'cash',       fulfillment:'local', shipping_address:null, promo_code:'', status:'delivered', tracking_number:'', notes:'' },
+  { id:'manual_1776643200003', stripe_session_id:null, created_at:'2026-04-20T14:00:00Z', customer_name:'Advay Kavathekar', customer_email:'', items:['Due Light','USB-C Cable'], subtotal_cents:2000, shipping_cents:0, total_cents:2000, material_cost_cents:700,  profit_cents:1300, payment_method:'cash',       fulfillment:'local', shipping_address:null, promo_code:'', status:'delivered', tracking_number:'', notes:'' },
+  { id:'manual_1776643200002', stripe_session_id:null, created_at:'2026-04-20T12:00:00Z', customer_name:'Justin Lucas',      customer_email:'', items:['Due Light'],             subtotal_cents:1700, shipping_cents:0, total_cents:1700, material_cost_cents:600,  profit_cents:1100, payment_method:'apple_cash', fulfillment:'local', shipping_address:null, promo_code:'', status:'delivered', tracking_number:'', notes:'' },
+  { id:'manual_1776643200001', stripe_session_id:null, created_at:'2026-04-20T10:00:00Z', customer_name:'Caleb Knechel',     customer_email:'', items:['Due Light'],             subtotal_cents:1700, shipping_cents:0, total_cents:1700, material_cost_cents:600,  profit_cents:1100, payment_method:'cash',       fulfillment:'local', shipping_address:null, promo_code:'', status:'delivered', tracking_number:'', notes:'' },
+  { id:'manual_1776643200000', stripe_session_id:null, created_at:'2026-04-20T09:20:00Z', customer_name:'Lance Belcher',     customer_email:'', items:['Due Light'],             subtotal_cents:1700, shipping_cents:0, total_cents:1700, material_cost_cents:600,  profit_cents:1100, payment_method:'cash',       fulfillment:'local', shipping_address:null, promo_code:'', status:'delivered', tracking_number:'', notes:'' },
+  { id:'manual_1760486400000', stripe_session_id:null, created_at:'2025-10-15T00:00:00Z', customer_name:'Kelly Harris Soto', customer_email:'', items:['Due Light'],             subtotal_cents:2000, shipping_cents:0, total_cents:2000, material_cost_cents:688,  profit_cents:1312, payment_method:'stripe',     fulfillment:'local', shipping_address:null, promo_code:'', status:'delivered', tracking_number:'', notes:'' },
+];
+
+const _SEED_INVENTORY = {
+  updated_at: '2026-05-02T00:00:00Z',
+  components: {
+    esp32:          { label: 'ESP32 Boards',      qty: 2 },
+    perfboard:      { label: 'Perfboards',        qty: 12 },
+    resistors_220:  { label: '220Ω Resistors', qty: 999 },
+    resistors_330:  { label: '330Ω Resistors', qty: 10 },
+    rgb_leds:       { label: 'RGB LED Sets',       qty: 96 },
+    usb_cables:     { label: 'USB-C Cables',       qty: 0 },
+    bubble_mailers: { label: '#00 Bubble Mailers', qty: 0 },
+  },
+  assembled: {
+    units_complete:       { label: 'Assembled Units',      qty: 4 },
+    perfboards_assembled: { label: 'Assembled Perfboards', qty: 0 },
+    cases_printed:        { label: 'Printed Cases',        qty: 1 },
+  },
+};
+
+// Determine items from Stripe session amount (price points: $20 base, $2 cable)
+function _itemsFromSession(session) {
+  const sub = session.amount_subtotal || 0;
+  const items = ['Due Light'];
+  if (sub >= 2200) items.push('USB-C Cable');
+  return items;
+}
+
+// Material cost: $6 base + $1 cable + $1 bubble mailer if shipping + Stripe fee
+function _materialCost(session) {
+  const sub   = session.amount_subtotal || 0;
+  const total = session.amount_total    || 0;
+  const hasCable    = sub >= 2200;
+  const hasShipping = (session.shipping_cost?.amount_total || 0) > 0;
+  const stripeFee   = Math.round(total * 0.029 + 30);
+  return 600 + (hasCable ? 100 : 0) + (hasShipping ? 100 : 0) + stripeFee;
+}
+
+function _profit(session) {
+  return (session.amount_total || 0) - _materialCost(session);
+}
+
+// Material cost for manual orders from items array
+function _manualMaterialCost(items, fulfillment) {
+  const unitCount  = items.filter(i => i === 'Due Light').length;
+  const cableCount = items.filter(i => i === 'USB-C Cable').length;
+  const hasShipping = fulfillment === 'shipping';
+  return 600 * unitCount + 100 * cableCount + (hasShipping ? 100 : 0);
+}
+
 // ── Middleware ─────────────────────────────────────────────────────────────
 
 // Count requests for req/min metric
@@ -244,9 +307,49 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const email = session.customer_details?.email || 'unknown';
+    const name  = session.customer_details?.name  || '';
     const total = `$${((session.amount_total || 0) / 100).toFixed(2)}`;
     console.log(`[stripe] order completed — ${email} — ${total}`);
-    sendDiscordAlert(`🛒 **New order!** ${email} paid ${total}`);
+
+    const shipping = session.shipping_details;
+
+    // Persist order to orders.json
+    const order = {
+      id:                 session.id,
+      stripe_session_id:  session.id,
+      created_at:         new Date(session.created * 1000).toISOString(),
+      customer_name:      name,
+      customer_email:     email === 'unknown' ? '' : email,
+      items:              _itemsFromSession(session),
+      subtotal_cents:     session.amount_subtotal  || 0,
+      shipping_cents:     session.shipping_cost?.amount_total || 0,
+      total_cents:        session.amount_total     || 0,
+      material_cost_cents: _materialCost(session),
+      profit_cents:       _profit(session),
+      payment_method:     'stripe',
+      fulfillment:        shipping ? 'shipping' : 'local',
+      shipping_address:   shipping ? shipping.address : null,
+      promo_code:         session.metadata?.promoCode || '',
+      status:             'new',
+      tracking_number:    '',
+      notes:              '',
+    };
+    const orders = readJSON(ORDERS_FILE, _SEED_ORDERS);
+    // Avoid duplicates if webhook fires twice
+    if (!orders.find(o => o.id === order.id)) {
+      orders.unshift(order);
+      writeJSON(ORDERS_FILE, orders);
+    }
+
+    let alert;
+    if (shipping) {
+      const a = shipping.address;
+      const addrLines = [a.line1, a.line2, `${a.city}, ${a.state} ${a.postal_code}`].filter(Boolean).join('\n');
+      alert = `🛒 **New order — SHIP IT** ${name} (${email}) — ${total}\n📦 **Ship to:**\n\`\`\`\n${shipping.name}\n${addrLines}\n\`\`\``;
+    } else {
+      alert = `🛒 **New order — LOCAL** ${name || email} — ${total}\n🤝 Contact customer to arrange delivery`;
+    }
+    sendDiscordAlert(alert);
   }
 
   res.json({ received: true });
@@ -465,6 +568,7 @@ app.post('/api/checkout', rateLimitMiddleware, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
 
   const addCable = !!(req.body && req.body.addCable);
+  const addShipping = !!(req.body && req.body.addShipping);
   const rawPromo = (req.body && typeof req.body.promoCode === 'string') ? req.body.promoCode : '';
   // Sanitize: only alphanumeric + dash/underscore, max 30 chars
   const promoCode = rawPromo.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 30);
@@ -494,10 +598,29 @@ app.post('/api/checkout', rateLimitMiddleware, async (req, res) => {
   const sessionParams = {
     mode: 'payment',
     line_items: lineItems,
-    shipping_address_collection: { allowed_countries: ['US'] },
     success_url: 'https://due-light.com/success?session_id={CHECKOUT_SESSION_ID}',
     cancel_url: 'https://due-light.com/#pricing',
   };
+
+  if (addShipping) {
+    // Stripe collects the shipping address automatically when shipping_options is set
+    sessionParams.shipping_options = [
+      {
+        shipping_rate_data: {
+          type: 'fixed_amount',
+          fixed_amount: { amount: 400, currency: 'usd' },
+          display_name: 'Standard Shipping',
+          delivery_estimate: {
+            minimum: { unit: 'business_day', value: 3 },
+            maximum: { unit: 'business_day', value: 7 },
+          },
+        },
+      },
+    ];
+  }
+
+  // Store promo code in metadata so webhook can read it
+  sessionParams.metadata = { promoCode: promoCode || '' };
 
   // Pre-apply referral promo code if provided; fall back to user-typed if not found
   if (promoCode) {
@@ -565,6 +688,96 @@ app.delete('/api/reviews/:id', authMiddleware, (req, res) => {
   if (idx < 0) return res.status(404).json({ error: 'Not found' });
   reviews.splice(idx, 1);
   writeJSON(REVIEWS_FILE, reviews);
+  res.json({ ok: true });
+});
+
+// ── Orders ─────────────────────────────────────────────────────────────────
+
+// GET /api/orders — all orders newest-first + summary stats
+app.get('/api/orders', readAuthMiddleware, (req, res) => {
+  const orders = readJSON(ORDERS_FILE, _SEED_ORDERS);
+  const nonFinal = ['new', 'building', 'packed'];
+  const stats = {
+    total:         orders.length,
+    revenue_cents: orders.reduce((s, o) => s + (o.total_cents || 0), 0),
+    profit_cents:  orders.reduce((s, o) => s + (o.profit_cents || 0), 0),
+    pending:       orders.filter(o => nonFinal.includes(o.status)).length,
+  };
+  res.json({ orders, stats });
+});
+
+// POST /api/orders — manual order entry
+app.post('/api/orders', readAuthMiddleware, (req, res) => {
+  const b = req.body || {};
+  if (!b.customer_name || typeof b.customer_name !== 'string') return res.status(400).json({ error: 'customer_name required' });
+  if (!Array.isArray(b.items) || !b.items.length) return res.status(400).json({ error: 'items array required' });
+  if (!Number.isInteger(b.total_cents) || b.total_cents < 0) return res.status(400).json({ error: 'total_cents required' });
+
+  const fulfillment = b.fulfillment === 'shipping' ? 'shipping' : 'local';
+  const material    = _manualMaterialCost(b.items, fulfillment);
+  const order = {
+    id:                 'manual_' + newBugId(),
+    stripe_session_id:  null,
+    created_at:         new Date().toISOString(),
+    customer_name:      String(b.customer_name).trim().slice(0, 100),
+    customer_email:     typeof b.customer_email === 'string' ? b.customer_email.trim().slice(0, 200) : '',
+    items:              b.items.map(i => String(i).trim()).filter(Boolean),
+    subtotal_cents:     b.total_cents - (b.shipping_cents || 0),
+    shipping_cents:     Number.isInteger(b.shipping_cents) ? b.shipping_cents : 0,
+    total_cents:        b.total_cents,
+    material_cost_cents: material,
+    profit_cents:       b.total_cents - material,
+    payment_method:     ['cash','cash_app','venmo','apple_cash'].includes(b.payment_method) ? b.payment_method : 'cash',
+    fulfillment,
+    shipping_address:   (fulfillment === 'shipping' && b.shipping_address && typeof b.shipping_address === 'object') ? b.shipping_address : null,
+    promo_code:         typeof b.promo_code === 'string' ? b.promo_code.slice(0, 30) : '',
+    status:             'new',
+    tracking_number:    '',
+    notes:              typeof b.notes === 'string' ? b.notes.trim().slice(0, 500) : '',
+  };
+
+  const orders = readJSON(ORDERS_FILE, _SEED_ORDERS);
+  orders.unshift(order);
+  writeJSON(ORDERS_FILE, orders);
+  res.json({ ok: true, order });
+});
+
+// PATCH /api/orders/:id/status — update status field only
+app.patch('/api/orders/:id/status', readAuthMiddleware, (req, res) => {
+  const STATUSES = ['new','building','packed','shipped','delivered','refunded'];
+  const { status } = req.body || {};
+  if (!STATUSES.includes(status)) return res.status(400).json({ error: 'invalid status' });
+
+  const orders = readJSON(ORDERS_FILE, _SEED_ORDERS);
+  const order  = orders.find(o => o.id === req.params.id);
+  if (!order) return res.status(404).json({ error: 'Not found' });
+  order.status = status;
+  writeJSON(ORDERS_FILE, orders);
+  res.json({ ok: true });
+});
+
+// PATCH /api/orders/:id — update tracking_number and/or notes
+app.patch('/api/orders/:id', readAuthMiddleware, (req, res) => {
+  const orders = readJSON(ORDERS_FILE, _SEED_ORDERS);
+  const order  = orders.find(o => o.id === req.params.id);
+  if (!order) return res.status(404).json({ error: 'Not found' });
+  if (typeof req.body.tracking_number === 'string') order.tracking_number = req.body.tracking_number.slice(0, 100);
+  if (typeof req.body.notes          === 'string') order.notes           = req.body.notes.slice(0, 500);
+  writeJSON(ORDERS_FILE, orders);
+  res.json({ ok: true });
+});
+
+// ── Inventory ──────────────────────────────────────────────────────────────
+
+app.get('/api/inventory', readAuthMiddleware, (req, res) => {
+  res.json(readJSON(INVENTORY_FILE, _SEED_INVENTORY));
+});
+
+app.patch('/api/inventory', readAuthMiddleware, (req, res) => {
+  const body = req.body || {};
+  if (!body.components || !body.assembled) return res.status(400).json({ error: 'components and assembled required' });
+  body.updated_at = new Date().toISOString();
+  writeJSON(INVENTORY_FILE, body);
   res.json({ ok: true });
 });
 
