@@ -49,6 +49,30 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000);
 
+// Dedicated login rate limiter — stricter than the global limiter.
+// 10 attempts per 15 minutes per IP. Separate from general traffic so
+// a burst of page requests can't exhaust login attempts.
+const _loginAttempts = new Map();
+function loginRateLimitMiddleware(req, res, next) {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const now = Date.now();
+  const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+  const MAX     = 10;
+  const entry = _loginAttempts.get(ip) || { count: 0, reset: now + WINDOW_MS };
+  if (now > entry.reset) { entry.count = 0; entry.reset = now + WINDOW_MS; }
+  entry.count++;
+  _loginAttempts.set(ip, entry);
+  if (entry.count > MAX) {
+    const minsLeft = Math.ceil((entry.reset - now) / 60000);
+    return res.status(429).json({ error: `Too many login attempts — try again in ${minsLeft} min` });
+  }
+  next();
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, e] of _loginAttempts) if (now > e.reset) _loginAttempts.delete(ip);
+}, 30 * 60 * 1000);
+
 // Discord webhook for alerting — set DISCORD_WEBHOOK_URL env var to enable
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL || null;
 
@@ -382,7 +406,7 @@ app.get('/success', (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // POST /api/login — exchange password for a session token
-app.post('/api/login', rateLimitMiddleware, (req, res) => {
+app.post('/api/login', loginRateLimitMiddleware, rateLimitMiddleware, (req, res) => {
   const { password } = req.body || {};
   if (!DASHBOARD_PASSWORD) return res.status(503).json({ error: 'Password auth not configured' });
   if (!password || password !== DASHBOARD_PASSWORD) {
@@ -395,6 +419,13 @@ app.post('/api/login', rateLimitMiddleware, (req, res) => {
 // GET /api/whoami — lets the browser check if it's on localhost (auto-auth)
 app.get('/api/whoami', (req, res) => {
   res.json({ localhost: isLocalhost(req) });
+});
+
+// DELETE /api/logout — invalidate the session token server-side
+app.delete('/api/logout', (req, res) => {
+  const key = req.headers['x-api-key'];
+  if (key) _sessions.delete(key);
+  res.json({ ok: true });
 });
 
 // ── Device API ─────────────────────────────────────────────────────────────
@@ -905,9 +936,15 @@ app.post('/api/deploy', authMiddleware, (req, res) => {
 // reverse proxy (Caddy/nginx) that handles TLS before traffic reaches Node.
 app.listen(PORT, () => {
   console.log(`Canvas LED Dashboard running on port ${PORT}`);
+  if (!DASHBOARD_PASSWORD)
+    console.warn('⚠️  WARNING: DASHBOARD_PASSWORD not set — dashboard is publicly readable over the internet!');
+  else
+    console.log('✓  Password login enabled');
+  if (!process.env.STRIPE_WEBHOOK_SECRET)
+    console.warn('⚠️  WARNING: STRIPE_WEBHOOK_SECRET not set — Stripe webhooks are unverified (fake orders possible)');
+  else
+    console.log('✓  Stripe webhook signature verification enabled');
   if (!API_KEY) console.log('Note: DASHBOARD_API_KEY not set — device endpoints unprotected');
-  if (DASHBOARD_PASSWORD) console.log('Password login enabled');
-  else console.log('Note: DASHBOARD_PASSWORD not set — password login disabled');
   if (DISCORD_WEBHOOK) console.log('Discord alerting enabled');
 
   // Record this boot in server-starts.json (used by /api/server-metrics for crash detection)

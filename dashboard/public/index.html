@@ -847,7 +847,8 @@ async function doLogin() {
   }
 }
 
-function doLogout() {
+async function doLogout() {
+  try { await fetch('/api/logout', { method: 'DELETE', headers: authHeaders() }); } catch {}
   sessionStorage.removeItem('dashApiKey');
   showLogin();
 }
