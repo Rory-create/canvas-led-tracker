@@ -186,91 +186,20 @@ nav {
 }
 .btn-secondary:hover { color: var(--text); border-color: var(--muted); }
 
-/* ── Device visual ── */
+/* ── Hero photo ── */
 .device-wrap {
   display: flex;
   justify-content: center;
   align-items: center;
 }
-.device {
-  position: relative;
-  width: 200px;
-  height: 200px;
-  background: #141414;
-  border: 1px solid #2a2a2a;
-  border-radius: 20px;
-  box-shadow:
-    0 0 0 1px #1a1a1a,
-    0 30px 80px rgba(0,0,0,0.6),
-    inset 0 1px 0 rgba(255,255,255,0.04);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
+.hero-photo {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  display: block;
 }
-.device::before {
-  content: '';
-  position: absolute;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 4px;
-  background: #1e1e1e;
-  border-radius: 2px;
-}
-.led-row {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-.led {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  position: relative;
-}
-.led.green {
-  background: var(--green);
-  box-shadow: 0 0 12px var(--glow-green), 0 0 30px var(--glow-green), 0 0 60px rgba(34,197,94,0.15);
-}
-.led.yellow {
-  background: var(--yellow);
-  box-shadow: 0 0 12px var(--glow-yellow), 0 0 30px var(--glow-yellow);
-  opacity: 0.2;
-}
-.led.red {
-  background: var(--red);
-  box-shadow: 0 0 12px var(--glow-red), 0 0 30px var(--glow-red);
-  opacity: 0.2;
-}
-.device-label {
-  font-size: 10px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  color: #333;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-}
-.device-usb {
-  position: absolute;
-  bottom: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 10px;
-  background: #1e1e1e;
-  border: 1px solid #2a2a2a;
-  border-radius: 0 0 4px 4px;
-}
-.device-glow {
-  position: absolute;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(34,197,94,0.08) 0%, transparent 70%);
-  pointer-events: none;
-}
+@media (max-width: 768px) { .hero-photo { max-width: 280px; margin: 0 auto; } }
 
 /* ── How it works ── */
 .section {
@@ -661,25 +590,16 @@ footer a:hover { color: var(--text); }
       <span>Works with Canvas</span>
     </div>
     <h1>Your deadlines,<br><em>at a glance.</em></h1>
-    <p>I started Due Light because if I forgot an assignment, it wasn't because I didn't care, it was because I forgot it existed. Sure I could get a planner, set reminders, but that requires effort.</p>
-    <p>With Due Light I only have to remember to set it up once, not every time I get a new assignment. From then on it's always in the background, a constant reminder for me if I have work to do. No notifications that get lost, no need to set a reminder.</p>
+    <p style="color:var(--muted);font-size:18px;line-height:1.65;margin-bottom:36px;max-width:480px;">A physical reminder of any upcoming tasks. Plug it into power and setup once, and then it wirelessly syncs and let's you know anytime you've got work coming up. No more endless notifications or having to remember to write in a planner.</p>
     <div class="hero-actions">
       <a href="#pricing" class="btn-primary">Get Due Light</a>
       <a href="#how-it-works" class="btn-secondary">See how it works</a>
     </div>
   </div>
   <div class="device-wrap">
-    <div class="device">
-      <div class="device-glow"></div>
-      <div class="device-label">Due Light</div>
-      <div class="led-row">
-        <div class="led green"></div>
-        <div class="led yellow"></div>
-        <div class="led red"></div>
-      </div>
-      <div class="device-label">v1</div>
-      <div class="device-usb"></div>
-    </div>
+    <img src="/photos/product-front.jpg"
+         alt="Due Light device showing green LED"
+         class="hero-photo">
   </div>
 </section>
 
@@ -736,6 +656,16 @@ footer a:hover { color: var(--text); }
 
 <hr class="divider">
 
+<!-- Story -->
+<section class="section" id="story">
+  <div class="section-label">The maker</div>
+  <h2>Why I built this.</h2>
+  <p>I started Due Light because if I forgot an assignment, it wasn't because I didn't care, it was because I forgot it existed. Sure I could get a planner, set reminders, but that requires effort.</p>
+  <p style="margin-top:16px;">With Due Light I only have to remember to set it up once, not every time I get a new assignment. From then on it's always in the background, a constant reminder for me if I have work to do. No notifications that get lost, no need to set a reminder.</p>
+</section>
+
+<hr class="divider">
+
 <!-- Specs -->
 <section class="section" id="specs">
   <div class="section-label">Before you buy</div>
@@ -774,6 +704,12 @@ footer a:hover { color: var(--text); }
       <span class="spec-val">Rory's Guarantee — reach out with any issues, I'll help you out.</span>
     </div>
   </div>
+  <div style="margin-top:32px;text-align:center;">
+    <img src="/photos/product-open.jpg"
+         alt="Inside a Due Light — hand-soldered ESP32 board"
+         style="max-width:380px;width:100%;border-radius:12px;opacity:0.92;">
+    <p style="font-size:12px;color:var(--muted);margin-top:10px;">I hand assemble and solder every unit, and test it myself before shipping.</p>
+  </div>
   <details style="margin-top:20px;">
     <summary style="cursor:pointer;font-size:13px;color:var(--muted);padding:8px 0;list-style:none;display:flex;align-items:center;gap:6px;">
       <span style="font-size:10px;">▶</span> Technical specifications
@@ -802,7 +738,7 @@ footer a:hover { color: var(--text); }
     <div class="step">
       <div class="step-num">How</div>
       <h3>I'll reach out after you order</h3>
-      <p>Once you place an order you'll recieve a confirmation email, and then email when it is shipped or an email when I'm ready to deliver it if you are local to me. I'm just one person so depending on how well my social promotions go it might take a moment until I'll ready to ship, please be patient.</p>
+      <p>Once you place an order you'll receive a confirmation email, and then an email when it is shipped or when I'm ready to deliver it if you are local to me.</p>
     </div>
   </div>
 </section>
