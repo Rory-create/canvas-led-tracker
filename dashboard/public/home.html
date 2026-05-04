@@ -781,7 +781,7 @@ footer a:hover { color: var(--text); }
   <div class="pricing-wrap">
     <div class="pricing-card">
       <div class="price-label">Due Light — Device</div>
-      <div class="price" id="price-display"><sup>$</sup>20</div>
+      <div class="price" id="price-display"><sup>$</sup>24</div>
       <div class="price-note">One-time purchase. No subscription.</div>
       <div id="promo-badge" style="display:none;background:rgba(77,107,60,0.12);border:1px solid var(--accent);border-radius:8px;padding:8px 14px;font-size:13px;color:var(--accent);font-weight:500;margin-bottom:18px;text-align:center;">
         🎉 $1 off applied — you pay $<span id="promo-final-price">19</span>
@@ -794,15 +794,16 @@ footer a:hover { color: var(--text); }
         <li>Updates itself automatically over WiFi</li>
         <li>Rory's Guarantee</li>
       </ul>
-      <label style="display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:pointer;font-size:14px;">
-        <input type="checkbox" id="shipping-checkbox" style="width:16px;height:16px;accent-color:var(--accent);">
-        Ship to me <span style="color:var(--muted)">+$4</span>
+      <label style="display:flex;align-items:center;gap:12px;margin-bottom:6px;cursor:pointer;font-size:14px;font-weight:600;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:12px 14px;">
+        <input type="checkbox" id="shipping-checkbox" checked style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;">
+        <span>Ship to me (US) <span style="color:var(--accent);font-weight:700">+$4</span></span>
       </label>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;padding-left:2px;">Local to Spring City, PA 19475? Uncheck above to skip shipping.</p>
       <label style="display:flex;align-items:center;gap:10px;margin-bottom:18px;cursor:pointer;font-size:14px;">
         <input type="checkbox" id="cable-checkbox" style="width:16px;height:16px;accent-color:var(--accent);">
         Add USB-C cable <span style="color:var(--muted)">+$2</span>
       </label>
-      <button id="buy-btn" class="buy-btn active">Buy now — $<span id="btn-price">20</span></button>
+      <button id="buy-btn" class="buy-btn active">Buy now — $<span id="btn-price">24</span></button>
       <div id="buy-error" style="display:none;margin-top:10px;text-align:center;font-size:13px;color:#dc2626;"></div>
     </div>
   </div>
