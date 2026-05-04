@@ -403,6 +403,58 @@ app.get('/success', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'success.html'));
 });
 
+// GET /robots.txt — host-aware: block dashboard from crawlers, allow public pages
+app.get('/robots.txt', (req, res) => {
+  const host = (req.headers.host || '').split(':')[0].toLowerCase();
+  res.type('text/plain');
+  if (host === 'dashboard.due-light.com') {
+    // Block crawlers entirely — dashboard is behind a password, shouldn't appear in search
+    res.send('User-agent: *\nDisallow: /\n');
+  } else if (host === 'due-light.com' || host === 'www.due-light.com') {
+    res.send([
+      'User-agent: *',
+      'Allow: /',
+      'Disallow: /api/',
+      '',
+      `Sitemap: https://due-light.com/sitemap.xml`,
+    ].join('\n') + '\n');
+  } else {
+    // setup.due-light.com and everything else — allow
+    res.send('User-agent: *\nAllow: /\n');
+  }
+});
+
+// GET /sitemap.xml — public pages only, served on due-light.com
+app.get('/sitemap.xml', (req, res) => {
+  const host = (req.headers.host || '').split(':')[0].toLowerCase();
+  if (host !== 'due-light.com' && host !== 'www.due-light.com') {
+    return res.status(404).send('Not found');
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  res.type('application/xml');
+  res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://due-light.com/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://setup.due-light.com/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://due-light.com/success</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>`);
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // POST /api/login — exchange password for a session token
