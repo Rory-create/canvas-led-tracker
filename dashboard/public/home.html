@@ -781,7 +781,7 @@ footer a:hover { color: var(--text); }
   <div class="pricing-wrap">
     <div class="pricing-card">
       <div class="price-label">Due Light — Device</div>
-      <div class="price" id="price-display"><sup>$</sup>24</div>
+      <div class="price" id="price-display"><sup>$</sup>20</div>
       <div class="price-note">One-time purchase. No subscription.</div>
       <div id="promo-badge" style="display:none;background:rgba(77,107,60,0.12);border:1px solid var(--accent);border-radius:8px;padding:8px 14px;font-size:13px;color:var(--accent);font-weight:500;margin-bottom:18px;text-align:center;">
         🎉 $1 off applied — you pay $<span id="promo-final-price">19</span>
@@ -794,16 +794,11 @@ footer a:hover { color: var(--text); }
         <li>Updates itself automatically over WiFi</li>
         <li>Rory's Guarantee</li>
       </ul>
-      <label style="display:flex;align-items:center;gap:12px;margin-bottom:6px;cursor:pointer;font-size:14px;font-weight:600;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:12px 14px;">
-        <input type="checkbox" id="shipping-checkbox" checked style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;">
-        <span>Ship to me (US) <span style="color:var(--accent);font-weight:700">+$4</span></span>
-      </label>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;padding-left:2px;">Local to Spring City, PA 19475? Uncheck above to skip shipping.</p>
       <label style="display:flex;align-items:center;gap:10px;margin-bottom:18px;cursor:pointer;font-size:14px;">
         <input type="checkbox" id="cable-checkbox" style="width:16px;height:16px;accent-color:var(--accent);">
         Add USB-C cable <span style="color:var(--muted)">+$2</span>
       </label>
-      <button id="buy-btn" class="buy-btn active">Buy now — $<span id="btn-price">24</span></button>
+      <button id="buy-btn" class="buy-btn active">Buy now — $<span id="btn-price">20</span></button>
       <div id="buy-error" style="display:none;margin-top:10px;text-align:center;font-size:13px;color:#dc2626;"></div>
     </div>
   </div>
@@ -823,9 +818,34 @@ footer a:hover { color: var(--text); }
   <span>&copy; 2026 Due Light. All rights reserved.</span>
 </footer>
 
+<!-- Delivery choice modal -->
+<div id="delivery-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:460px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,0.3);">
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em;">How do you want it delivered?</h3>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:24px;">Choose your delivery method to continue to checkout.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+      <button onclick="_proceedToCheckout(true)" id="modal-ship-btn"
+        style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:12px;padding:20px 14px;cursor:pointer;text-align:center;transition:background 0.15s,border-color 0.15s;font-family:inherit;">
+        <div style="font-size:24px;margin-bottom:8px;">📦</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">Ship to me</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">US shipping</div>
+        <div style="font-size:18px;font-weight:700;color:var(--accent);">$<span id="modal-ship-price">24</span></div>
+      </button>
+      <button onclick="_proceedToCheckout(false)" id="modal-local-btn"
+        style="background:var(--subtle);border:1px solid var(--border);border-radius:12px;padding:20px 14px;cursor:pointer;text-align:center;transition:background 0.15s,border-color 0.15s;font-family:inherit;">
+        <div style="font-size:24px;margin-bottom:8px;">🤝</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">Local pickup</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Spring City, PA 19475</div>
+        <div style="font-size:18px;font-weight:700;color:var(--text);">$<span id="modal-local-price">20</span></div>
+      </button>
+    </div>
+    <button onclick="_closeDeliveryModal()"
+      style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;width:100%;padding:4px;">Cancel</button>
+  </div>
+</div>
+
 <script>
   const cableCheckbox = document.getElementById('cable-checkbox');
-  const shippingCheckbox = document.getElementById('shipping-checkbox');
   const btnPrice = document.getElementById('btn-price');
   const priceDisplay = document.getElementById('price-display');
   const buyBtn = document.getElementById('buy-btn');
@@ -838,7 +858,7 @@ footer a:hover { color: var(--text); }
   }
 
   function _calcTotal() {
-    return 20 + (cableCheckbox.checked ? 2 : 0) + (shippingCheckbox.checked ? 4 : 0);
+    return 20 + (cableCheckbox.checked ? 2 : 0);
   }
 
   function _updatePrice() {
@@ -850,8 +870,43 @@ footer a:hover { color: var(--text); }
     }
   }
 
+  function _openDeliveryModal() {
+    const base = _calcTotal();
+    const promoOff = _urlPromo ? 1 : 0;
+    document.getElementById('modal-ship-price').textContent = base + 4 - promoOff;
+    document.getElementById('modal-local-price').textContent = base - promoOff;
+    const modal = document.getElementById('delivery-modal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function _closeDeliveryModal() {
+    document.getElementById('delivery-modal').style.display = 'none';
+    document.body.style.overflow = '';
+    buyBtn.disabled = false;
+    buyBtn.innerHTML = `Buy now — $<span id="btn-price">${_calcTotal()}</span>`;
+  }
+
+  async function _proceedToCheckout(addShipping) {
+    document.getElementById(addShipping ? 'modal-ship-btn' : 'modal-local-btn').textContent = 'Loading…';
+    document.getElementById('delivery-modal').querySelectorAll('button').forEach(b => b.disabled = true);
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addCable: cableCheckbox.checked, addShipping, promoCode: _urlPromo || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || 'Unexpected error');
+      window.location.href = data.url;
+    } catch (err) {
+      _closeDeliveryModal();
+      buyError.textContent = 'Could not start checkout — please try again or email hello@due-light.com';
+      buyError.style.display = 'block';
+    }
+  }
+
   cableCheckbox.addEventListener('change', _updatePrice);
-  shippingCheckbox.addEventListener('change', _updatePrice);
 
   // ── Reviews ──────────────────────────────────────────────────────────────
 
@@ -936,25 +991,13 @@ footer a:hover { color: var(--text); }
   });
   function closeMobileNav() { _mobileNav.classList.remove('open'); }
 
-  buyBtn.addEventListener('click', async () => {
-    buyBtn.disabled = true;
-    buyBtn.textContent = 'Loading…';
+  buyBtn.addEventListener('click', () => {
     buyError.style.display = 'none';
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ addCable: cableCheckbox.checked, addShipping: shippingCheckbox.checked, promoCode: _urlPromo || undefined }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.url) throw new Error(data.error || 'Unexpected error');
-      window.location.href = data.url;
-    } catch (err) {
-      buyError.textContent = 'Could not start checkout — please try again or email hello@due-light.com';
-      buyError.style.display = 'block';
-      buyBtn.disabled = false;
-      buyBtn.textContent = `Buy now — $${_calcTotal()}`;
-    }
+    _openDeliveryModal();
+  });
+
+  document.getElementById('delivery-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('delivery-modal')) _closeDeliveryModal();
   });
 </script>
 </body>
